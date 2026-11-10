@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/openjiuwen/agent-festival/go/internal/adopt"
 	"github.com/openjiuwen/agent-festival/go/internal/ledger"
@@ -41,7 +42,8 @@ func TestX3_BranchA_RetryZeroPortCalls(t *testing.T) {
 		t.Fatalf("X3-1 setup: complete = %q: %s", o.Status, o.Detail)
 	}
 	cm := newCountingModel(nil)
-	out, err := h.nodeEntryExec("op-x3a", fullGrantsN3(), "history-verification", nil, nil, Ports{Model: cm})
+	retryFirst := &firstExecInput{req: requestForT2("op-x3a", "er-1", "ev-1", t2Digest('e'), "br-x3a"), evidence: creditEvidence{}}
+	out, err := h.nodeEntryExec("op-x3a", fullGrantsN3(), "history-verification", nil, retryFirst, Ports{Model: cm})
 	if err != nil {
 		t.Fatalf("X3-1: entry error: %v", err)
 	}
@@ -65,8 +67,9 @@ func TestX3_BranchB_MethodZeroModelCalls(t *testing.T) {
 		InputFields: []string{"overdue_months", "business_request_id"}, Valid: true,
 	})
 	cm := newCountingModel(nil)
-	out, err := h.nodeEntryExec("op-x3b", fullGrantsN3(), "history-verification",
-		map[string]string{"overdue_months": "0", "business_request_id": "br-x3b"}, nil, Ports{Model: cm})
+	kFirst := &firstExecInput{req: requestForT2("op-x3b", "er-1", "ev-1", t2Digest('9'), "br-x3b"), evidence: creditEvidence{}}
+	out, err := h.nodeEntryExec("op-x3b", chainGrants(), "history-verification",
+		map[string]string{"overdue_months": "0", "business_request_id": "br-x3b"}, kFirst, Ports{Model: cm})
 	if err != nil {
 		t.Fatalf("X3-2: entry error: %v", err)
 	}
@@ -78,6 +81,9 @@ func TestX3_BranchB_MethodZeroModelCalls(t *testing.T) {
 	}
 	if !strings.Contains(out.Result.Receipt, "method-x3") {
 		t.Fatalf("X3-2: receipt = %q, want method-x3 — the result must come from the method", out.Result.Receipt)
+	}
+	if s := h.machine.State("op-x3b"); s != adopt.StateCompleted {
+		t.Fatalf("X3-2: lifecycle state = %q, want completed — B produces its own formal result (X3-14)", s)
 	}
 	if cm.calls != 0 {
 		t.Fatalf("X3-2: model port calls = %d, want 0 — method execution is deterministic knowledge reuse, not a model call (60号 先验 #1 declared boundary)", cm.calls)
@@ -110,19 +116,20 @@ func TestX3_BranchC_ModelExactlyOnce(t *testing.T) {
 	// nil first-execution input, and a non-nil input with a nil req (the
 	// panic-prevention half: without `first.req == nil`, machine.Adopt(nil)
 	// nil-derefs). All refuse BEFORE the port fires, so cm stays untouched.
-	if _, err := h.nodeEntryExec("op-x3c-nilmodel", fullGrantsN3(), "history-verification", nil, first, Ports{}); err == nil {
+	nilModelFirst := &firstExecInput{req: requestForT2("op-x3c-nilmodel", "er-1", "ev-1", t2Digest('d'), "br-x3cnm"), evidence: creditEvidence{assetMillions: 35, assetReportOK: true}}
+	if _, err := h.nodeEntryExec("op-x3c-nilmodel", chainGrants(), "history-verification", nil, nilModelFirst, Ports{}); err == nil {
 		t.Fatal("X3-3: nil-Model guard is dead — branch C accepted a nil Model port")
 	}
-	if _, err := h.nodeEntryExec("op-x3c-nilfirst", fullGrantsN3(), "history-verification", nil, nil, Ports{Model: cm}); err == nil {
+	if _, err := h.nodeEntryExec("op-x3c-nilfirst", chainGrants(), "history-verification", nil, nil, Ports{Model: cm}); err == nil {
 		t.Fatal("X3-3: nil-first guard is dead — branch C accepted a nil first-execution input")
 	}
-	if _, err := h.nodeEntryExec("op-x3c-nilreq", fullGrantsN3(), "history-verification", nil, &firstExecInput{}, Ports{Model: cm}); err == nil {
+	if _, err := h.nodeEntryExec("op-x3c-nilreq", chainGrants(), "history-verification", nil, &firstExecInput{}, Ports{Model: cm}); err == nil {
 		t.Fatal("X3-3: nil-req guard half is dead — branch C accepted a first-execution input with a nil adoption request")
 	}
 	if cm.calls != 0 {
 		t.Fatalf("X3-3: nil-guard refusals fired the port %d times, want 0 — guards precede the port", cm.calls)
 	}
-	out, err := h.nodeEntryExec("op-x3c", fullGrantsN3(), "history-verification", nil, first, Ports{Model: cm})
+	out, err := h.nodeEntryExec("op-x3c", chainGrants(), "history-verification", nil, first, Ports{Model: cm})
 	if err != nil {
 		t.Fatalf("X3-3: entry error: %v", err)
 	}
@@ -169,10 +176,12 @@ func TestX3_BranchC_ModelExactlyOnce(t *testing.T) {
 	}
 	// X3-10 (R74 B-1 奇点推论补行): complete → re-enter → branch A serves the
 	// receipt C stored. First execution and retry through ONE entry, closed.
+	// The retry carries the SAME digest (MR !2 X3-13 conflict face).
+	retryFirst3 := &firstExecInput{req: requestForT2("op-x3c", "er-1", "ev-1", t2Digest('e'), "br-x3c"), evidence: creditEvidence{}}
 	if o := h.completeNode("op-x3c"); o.Status != "completed" {
 		t.Fatalf("X3-10 setup: complete = %q: %s", o.Status, o.Detail)
 	}
-	out2, err := h.nodeEntryExec("op-x3c", fullGrantsN3(), "history-verification", nil, nil, Ports{Model: cm})
+	out2, err := h.nodeEntryExec("op-x3c", fullGrantsN3(), "history-verification", nil, retryFirst3, Ports{Model: cm})
 	if err != nil || out2.Branch != "A-retry" {
 		t.Fatalf("X3-10: re-entry = (%v, %q), want (nil, A-retry) — the C-stored artifact must be retry-reachable", err, out2.Branch)
 	}
@@ -197,7 +206,7 @@ func TestX3_BranchC_ModelExactlyOnce(t *testing.T) {
 		overdueOnRecord: []overdueEvent{{durationMonths: 4, monthsAgo: 24}},
 	}
 	cmVeto := newCountingModel(map[string]creditEvidence{"*": vetoEv})
-	outVeto, err := h.nodeEntryExec("op-x3c-veto", fullGrantsN3(), "history-verification", nil,
+	outVeto, err := h.nodeEntryExec("op-x3c-veto", chainGrants(), "history-verification", nil,
 		&firstExecInput{req: requestForT2("op-x3c-veto", "er-1", "ev-1", t2Digest('5'), "br-x3cv"), evidence: vetoEv},
 		Ports{Model: cmVeto})
 	if err != nil || outVeto.Branch != "C-model" || cmVeto.calls != 1 {
@@ -230,7 +239,7 @@ func TestX3_PositiveControl_FailPortMustTrigger(t *testing.T) {
 		req:      requestForT2("op-x3pc", "er-1", "ev-1", t2Digest('f'), "br-x3pc"),
 		evidence: creditEvidence{assetMillions: 35, assetReportOK: true},
 	}
-	out, err := h.nodeEntryExec("op-x3pc", fullGrantsN3(), "history-verification", nil, first, Ports{Model: cm})
+	out, err := h.nodeEntryExec("op-x3pc", chainGrants(), "history-verification", nil, first, Ports{Model: cm})
 	if err != nil {
 		t.Fatalf("X3-4: entry error: %v", err)
 	}
@@ -263,7 +272,8 @@ func TestX3_Overlay_BreakEntry_RKMustGoRed(t *testing.T) {
 	}
 	// (1) the R-path call shape through the REAL entry: branch A, zero port
 	cm := newCountingModel(nil)
-	out, err := h.nodeEntryExec("op-x3o", fullGrantsN3(), "history-verification", nil, nil, Ports{Model: cm})
+	oFirst := &firstExecInput{req: requestForT2("op-x3o", "er-1", "ev-1", t2Digest('f'), "br-x3o"), evidence: creditEvidence{}}
+	out, err := h.nodeEntryExec("op-x3o", fullGrantsN3(), "history-verification", nil, oFirst, Ports{Model: cm})
 	if err != nil || out.Branch != "A-retry" || cm.calls != 0 {
 		t.Fatalf("X3-5: real entry R-path call = (%v, %q, %d calls), want (nil, A-retry, 0)", err, out.Branch, cm.calls)
 	}
@@ -274,8 +284,9 @@ func TestX3_Overlay_BreakEntry_RKMustGoRed(t *testing.T) {
 		"receipt:unused", nil); o.Status != "dispatched" {
 		t.Fatalf("X3-5 setup (in-flight): dispatch = %q: %s", o.Status, o.Detail)
 	}
-	if _, err := h.nodeEntryExec("op-x3o-inflight", fullGrantsN3(), "history-verification", nil, nil, Ports{Model: cm}); err == nil {
-		t.Fatal("X3-5: the entry's error face is unreachable — the flip R/K rely on has no channel")
+	g5i := &firstExecInput{req: requestForT2("op-x3o-inflight", "er-1", "ev-1", t2Digest('3'), "br-x3oi"), evidence: creditEvidence{}}
+	if _, err := h.nodeEntryExec("op-x3o-inflight", chainGrants(), "history-verification", nil, g5i, Ports{Model: cm}); err == nil || !strings.Contains(err.Error(), "in-flight, not completed") {
+		t.Fatalf("X3-5: in-flight error face = %v — must be the guard's own diagnosis (the short form also matches the reused-refusal message, R7 M-1)", err)
 	}
 	if cm.calls != 0 {
 		t.Fatalf("X3-5: model port calls = %d across both faces, want 0", cm.calls)
@@ -293,7 +304,11 @@ func TestX3_AuthorizationAndStateGates(t *testing.T) {
 		t.Fatalf("X3-6 setup: complete = %q: %s", o.Status, o.Detail)
 	}
 	cm := newCountingModel(nil)
-	if _, err := h.nodeEntryExec("op-x3g", nil, "history-verification", nil, nil, Ports{Model: cm}); err == nil {
+	// Matching first (R6 M-1): with nil first the A-branch nil-first refusal
+	// shadows the read gate (both err≠nil) — to KILL the read gate the probe
+	// must carry servable material, so deleting the gate would SERVE.
+	g6 := &firstExecInput{req: requestForT2("op-x3g", "er-1", "ev-1", t2Digest('0'), "br-x3g"), evidence: creditEvidence{}}
+	if _, err := h.nodeEntryExec("op-x3g", nil, "history-verification", nil, g6, Ports{Model: cm}); err == nil {
 		t.Fatal("X3-6: nil-grants caller was accepted — the E5 face is not preserved")
 	}
 	if cm.calls != 0 {
@@ -330,8 +345,13 @@ func TestX3_AuthorizationAndStateGates(t *testing.T) {
 		t.Fatalf("X3-7 setup: dispatch = %q: %s", o.Status, o.Detail)
 	}
 	cm2 := newCountingModel(map[string]creditEvidence{"*": {assetMillions: 35, assetReportOK: true}})
-	if _, err := h.nodeEntryExec("op-x3g-inflight", fullGrantsN3(), "history-verification", nil, nil, Ports{Model: cm2}); err == nil {
-		t.Fatal("X3-7: an in-flight (dispatched, not completed) op was accepted for re-execution — double-fire face")
+	// Full grants + matching first (R6 M-2): read-only callers are refused at
+	// the dispatch gate (shadowing) — only the guard's own diagnosis word
+	// discriminates after every later gate passes.
+	g7 := &firstExecInput{req: requestForT2("op-x3g-inflight", "er-1", "ev-1", t2Digest('2'), "br-x3i"), evidence: creditEvidence{}}
+	_, err7 := h.nodeEntryExec("op-x3g-inflight", chainGrants(), "history-verification", nil, g7, Ports{Model: cm2})
+	if err7 == nil || !strings.Contains(err7.Error(), "in-flight, not completed") {
+		t.Fatalf("X3-7: in-flight refusal = (%v) — must be the guard's own diagnosis (guard deleted reroutes to Adopt-reused, different error)", err7)
 	}
 	if cm2.calls != 0 {
 		t.Fatalf("X3-7: model port calls = %d on an in-flight op, want 0", cm2.calls)
@@ -386,8 +406,9 @@ func TestX3_JunctionRetryAndMethodPrecedence(t *testing.T) {
 		t.Fatalf("X3-11a setup: complete = %q: %s", o.Status, o.Detail)
 	}
 	cm := newCountingModel(nil)
+	jFirst := &firstExecInput{req: requestForT2("op-x3j", "er-1", "ev-1", t2Digest('6'), "br-x3j"), evidence: creditEvidence{}}
 	out, err := h.nodeEntryExec("op-x3j", fullGrantsN3(), "history-verification",
-		map[string]string{"overdue_months": "0", "business_request_id": "br-x3j"}, nil, Ports{Model: cm})
+		map[string]string{"overdue_months": "0", "business_request_id": "br-x3j"}, jFirst, Ports{Model: cm})
 	if err != nil || out.Branch != "A-retry" {
 		t.Fatalf("X3-11a: junction = (%v, %q), want (nil, A-retry) — retry precedence must win over an applicable method", err, out.Branch)
 	}
@@ -409,9 +430,12 @@ func TestX3_JunctionRetryAndMethodPrecedence(t *testing.T) {
 	// guard's refusal, so the pin was fake (guard-after-method mutant stayed
 	// green). Valid inputs make the method SUCCEED if it runs first, so
 	// err == nil becomes the red signal for "guard not preceding method".
-	if _, err := h.nodeEntryExec("op-x3j2", fullGrantsN3(), "history-verification",
-		map[string]string{"overdue_months": "0", "business_request_id": "br-x3j2"}, nil, Ports{Model: cm2}); err == nil {
-		t.Fatal("X3-11b: in-flight op with an applicable method was executed — the guard must precede method dispatch")
+	// Full grants + matching first + diagnosis word (R6 M-2 de-shadowing):
+	// read-only callers are refused at the dispatch gate instead.
+	g11b := &firstExecInput{req: requestForT2("op-x3j2", "er-1", "ev-1", t2Digest('7'), "br-x3j2"), evidence: creditEvidence{}}
+	if _, err := h.nodeEntryExec("op-x3j2", chainGrants(), "history-verification",
+		map[string]string{"overdue_months": "0", "business_request_id": "br-x3j2"}, g11b, Ports{Model: cm2}); err == nil || !strings.Contains(err.Error(), "in-flight, not completed") {
+		t.Fatalf("X3-11b: in-flight+method refusal = %v — the guard must precede method dispatch (full phrase distinguishes from reused message, R7 M-1)", err)
 	}
 	if cm2.calls != 0 {
 		t.Fatalf("X3-11b: model calls = %d, want 0", cm2.calls)
@@ -463,5 +487,210 @@ func TestX3_NoBypassInRKScenarios(t *testing.T) {
 				t.Fatalf("%s contains a direct %q call — the scenario bypassed the unified entry (overlay disease form; resident face of R74 M-2)", fn, sym)
 			}
 		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// MR !2 rows X3-12..16 (81号 §三 frozen): thin row-level pins, one per frozen
+// expectation. Deep coverage lives in the vendored TestMR1Review_* probes
+// (the reviewer's own forms); these pins tie each frozen row to a named test
+// and add the port-count / original-intact faces the row text promises.
+
+func mr2First(op string, ch byte) *firstExecInput {
+	return &firstExecInput{req: requestForT2(op, "er-1", "ev-1", t2Digest(ch), "br-"+op), evidence: creditEvidence{assetMillions: 35, assetReportOK: true}}
+}
+
+func TestX3_12_ReadOnlyCannotProduceEffects(t *testing.T) {
+	// X3-12: read-only grants refuse BOTH effect paths (C here; the B face is
+	// asserted inside) with zero model calls and zero state change.
+	h := newT2Host(t, t.TempDir())
+	cm := newCountingModel(map[string]creditEvidence{"*": {assetMillions: 35, assetReportOK: true}})
+	first := mr2First("op-x312", 'a')
+	if _, err := h.nodeEntryExec("op-x312", fullGrantsN3(), "history-verification", nil, first, Ports{Model: cm}); err == nil {
+		t.Fatal("X3-12: read-only caller produced an effect (C path)")
+	}
+	h.registry.mustPublish(t, knowledgeMethod{ID: "m12", Version: "1.0.0", ServesNode: "history-verification", InputFields: []string{"overdue_months", "business_request_id"}, Valid: true})
+	// VALID inputs (R4 M-1, the 534ac03 lesson form): with nil inputs the
+	// method's own fail-closed contract errors indistinguishably from the
+	// auth gate — the pin was fake (gate-moved-into-C mutant stayed green).
+	bInputs := map[string]string{"overdue_months": "0", "business_request_id": "br-op-x312b"}
+	if _, err := h.nodeEntryExec("op-x312b", fullGrantsN3(), "history-verification", bInputs, mr2First("op-x312b", 'b'), Ports{Model: cm}); err == nil {
+		t.Fatal("X3-12: read-only caller produced an effect (B path)")
+	}
+	if cm.calls != 0 || h.machine.State("op-x312") != "" || h.machine.State("op-x312b") != "" {
+		t.Fatalf("X3-12: side effects on refusal — calls=%d states=%q/%q", cm.calls, h.machine.State("op-x312"), h.machine.State("op-x312b"))
+	}
+
+	// B-face nil-first pin (R5 M-1, the shadowing family's fifth instance):
+	// method published + nil first + valid inputs + chainGrants → the effect-
+	// path command-material guard must refuse BEFORE the B branch's first.req
+	// deref — zero calls, zero state.
+	if _, err := h.nodeEntryExec("op-x312c", chainGrants(), "history-verification", bInputs, nil, Ports{Model: cm}); err == nil {
+		t.Fatal("X3-12: nil-first accepted on the B path — command-material guard's B face is dead")
+	}
+	if cm.calls != 0 || h.machine.State("op-x312c") != "" {
+		t.Fatalf("X3-12 B-face: side effects — calls=%d state=%q", cm.calls, h.machine.State("op-x312c"))
+	}
+}
+
+func TestX3_13_ChangedRetryConflictsOriginalIntact(t *testing.T) {
+	// X3-13: same op, changed material → Conflict; the ORIGINAL result stays
+	// untouched and the model is not re-invoked.
+	h := newT2Host(t, t.TempDir())
+	cm := newCountingModel(map[string]creditEvidence{"*": {assetMillions: 35, assetReportOK: true}})
+	if _, err := h.nodeEntryExec("op-x313", chainGrants(), "history-verification", nil, mr2First("op-x313", 'c'), Ports{Model: cm}); err != nil {
+		t.Fatalf("X3-13 setup: %v", err)
+	}
+	if o := h.completeNode("op-x313"); o.Status != "completed" {
+		t.Fatalf("X3-13 setup: complete = %q: %s", o.Status, o.Detail)
+	}
+	orig, _ := h.store.get("op-x313")
+	changed := mr2First("op-x313", 'd') // different digest
+	if _, err := h.nodeEntryExec("op-x313", fullGrantsN3(), "history-verification", nil, changed, Ports{Model: cm}); err == nil {
+		t.Fatal("X3-13: changed material accepted as retry")
+	}
+	after, _ := h.store.get("op-x313")
+	if after.Receipt != orig.Receipt || after.CmdDigest != orig.CmdDigest {
+		t.Fatalf("X3-13: original result was disturbed — %q/%q → %q/%q", orig.Receipt, orig.CmdDigest, after.Receipt, after.CmdDigest)
+	}
+	if cm.calls != 1 {
+		t.Fatalf("X3-13: model calls = %d, want 1 (conflict must not re-invoke)", cm.calls)
+	}
+	// Serve-variant pin (R8 M-1): same op, same digest, DIFFERENT brID/evidence
+	// — κ=digest is the material binding (R7 M-2 semantic): same κ = same
+	// material = serve the original is CORRECT, not Conflict. A κ-widening
+	// mutant (adding brID to the comparison) must turn this red.
+	sameK := mr2First("op-x313", 'c') // same digest as original
+	sameK.req.Identity.BusinessRequestID = "br-different-context"
+	sameK.evidence.assetMillions = 20
+	outV, errV := h.nodeEntryExec("op-x313", fullGrantsN3(), "history-verification", nil, sameK, Ports{Model: cm})
+	if errV != nil || outV.Branch != "A-retry" || outV.Result.Receipt != orig.Receipt {
+		t.Fatalf("X3-13 serve-variant: (%v, %q) — same κ (digest) with different brID/evidence must SERVE the original, not Conflict (κ=digest is the binding, R7 M-2)", errV, outV.Branch)
+	}
+	if cm.calls != 1 {
+		t.Fatalf("X3-13 serve-variant: model calls = %d, want still 1", cm.calls)
+	}
+}
+
+func TestX3_14_KnowledgeLifecycle_CompleteThenRetryServesOwn(t *testing.T) {
+	// X3-14: B completes synchronously (own formal result, digest-bound);
+	// a retry serves THAT result via A — zero model calls.
+	h := newT2Host(t, t.TempDir())
+	h.registry.mustPublish(t, knowledgeMethod{ID: "m14", Version: "1.0.0", ServesNode: "history-verification", InputFields: []string{"overdue_months", "business_request_id"}, Valid: true})
+	cm := newCountingModel(nil)
+	first := mr2First("op-x314", '5')
+	out, err := h.nodeEntryExec("op-x314", chainGrants(), "history-verification",
+		map[string]string{"overdue_months": "0", "business_request_id": "br-op-x314"}, first, Ports{Model: cm})
+	if err != nil || out.Branch != "B-method" || h.machine.State("op-x314") != adopt.StateCompleted {
+		t.Fatalf("X3-14: B lifecycle = (%v, %q, state=%q)", err, out.Branch, h.machine.State("op-x314"))
+	}
+	out2, err := h.nodeEntryExec("op-x314", fullGrantsN3(), "history-verification", nil, first, Ports{Model: cm})
+	if err != nil || out2.Branch != "A-retry" || out2.Result.Receipt != out.Result.Receipt {
+		t.Fatalf("X3-14: retry = (%v, %q) — must serve B's own result via A", err, out2.Branch)
+	}
+	if cm.calls != 0 {
+		t.Fatalf("X3-14: model calls = %d, want 0", cm.calls)
+	}
+}
+
+func TestX3_15_ClaimBeforeInvoke_ConcurrentSingleInvocation(t *testing.T) {
+	// X3-15: Adopt precedes Invoke — a concurrent second caller of the SAME
+	// op+material is refused while the first is inside the model; the model
+	// fires exactly once. (Deep channel form: vendored ConcurrentSameOperation.)
+	h := newT2Host(t, t.TempDir())
+	model := &reviewBlockingModel{entered: make(chan struct{}, 2), release: make(chan struct{})}
+	done := make(chan error, 2)
+	call := func() {
+		_, err := h.nodeEntryExec("op-x315", chainGrants(), "history-verification", nil, mr2First("op-x315", '6'), Ports{Model: model})
+		done <- err
+	}
+	go call()
+	<-model.entered // first is INSIDE the model ⇒ Adopt already claimed
+	go call()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("X3-15: second concurrent caller was admitted — no ownership")
+		}
+	case <-time.After(2 * time.Second):
+		close(model.release)
+		t.Fatal("X3-15: second caller neither refused nor finished")
+	}
+	close(model.release)
+	<-done // first finishes
+	if model.calls.Load() != 1 {
+		t.Fatalf("X3-15: model invoked %d times, want exactly 1", model.calls.Load())
+	}
+}
+
+func TestX3_12B_DowngradedEffectGrantRefused(t *testing.T) {
+	// X3-12B (R2 F-2 pin): an execute action under a DOWNGRADED effect
+	// (Effect:"none") must not admit the irreversible effect path — the
+	// dispatch gate compares the Effect rank, not just the action string.
+	h := newT2Host(t, t.TempDir())
+	cm := newCountingModel(map[string]creditEvidence{"*": {assetMillions: 35, assetReportOK: true}})
+	downgraded := []ledger.Grant{
+		{Kind: "data", Selector: "ledger://credit/e2e", Actions: []string{"read"}, Effect: "none"},
+		{Kind: "tool", Selector: "tool://credit-transfer", Actions: []string{"execute"}, Effect: "none"},
+	}
+	if _, err := h.nodeEntryExec("op-x312b2", downgraded, "history-verification", nil, mr2First("op-x312b2", '4'), Ports{Model: cm}); err == nil {
+		t.Fatal("X3-12B: downgraded effect grant admitted the irreversible path")
+	}
+	if cm.calls != 0 || h.machine.State("op-x312b2") != "" {
+		t.Fatalf("X3-12B: side effects — calls=%d state=%q", cm.calls, h.machine.State("op-x312b2"))
+	}
+}
+
+func TestX3_12C_BFaceMethodErrorRefused(t *testing.T) {
+	// X3-12C (R6 M-3): pathological inputs through the ENTRY on the B path —
+	// the method's error must refuse (a swallow-err mutant would turn a
+	// zero-value receipt into a completed formal result).
+	h := newT2Host(t, t.TempDir())
+	h.registry.mustPublish(t, knowledgeMethod{ID: "m12c", Version: "1.0.0", ServesNode: "history-verification", InputFields: []string{"overdue_months", "business_request_id"}, Valid: true})
+	cm := newCountingModel(nil)
+	badInputs := map[string]string{"overdue_months": "not-a-number", "business_request_id": "br-op-x312c"}
+	if _, err := h.nodeEntryExec("op-x312c", chainGrants(), "history-verification", badInputs, mr2First("op-x312c", 'e'), Ports{Model: cm}); err == nil {
+		t.Fatal("X3-12C: pathological method inputs produced a formal result — the entry must refuse on method error")
+	}
+	if cm.calls != 0 || h.machine.State("op-x312c") != "" {
+		t.Fatalf("X3-12C: side effects — calls=%d state=%q", cm.calls, h.machine.State("op-x312c"))
+	}
+	if _, ok := h.store.get("op-x312c"); ok {
+		t.Fatal("X3-12C: a stored result exists for a refused execution")
+	}
+}
+
+func TestX3_16A_NilFirstRetryOnCompletedRefused(t *testing.T) {
+	// X3-16A (R1 M-2 conservation pin): a completed+stored op retried with NO
+	// command material must be refused — historical READ is a different
+	// operation. Deleting the nil-first guard must turn this red (the guard
+	// had zero killers before this pin — conservation law violation found by
+	// review R1).
+	h := newT2Host(t, t.TempDir())
+	cm := newCountingModel(map[string]creditEvidence{"*": {assetMillions: 35, assetReportOK: true}})
+	if _, err := h.nodeEntryExec("op-x316a", chainGrants(), "history-verification", nil, mr2First("op-x316a", '3'), Ports{Model: cm}); err != nil {
+		t.Fatalf("X3-16A setup: %v", err)
+	}
+	if o := h.completeNode("op-x316a"); o.Status != "completed" {
+		t.Fatalf("X3-16A setup: complete = %q", o.Status)
+	}
+	if _, err := h.nodeEntryExec("op-x316a", fullGrantsN3(), "history-verification", nil, nil, Ports{Model: cm}); err == nil {
+		t.Fatal("X3-16A: nil-first retry on completed+stored was served — the command-material guard is dead")
+	}
+	if cm.calls != 1 {
+		t.Fatalf("X3-16A: model calls = %d, want 1 (refusal must not re-invoke)", cm.calls)
+	}
+}
+
+func TestX3_16_IdentityMismatchZeroEffects(t *testing.T) {
+	// X3-16: outer opID ≠ request opID → refuse with no execution call and no
+	// adoption state for EITHER id.
+	h := newT2Host(t, t.TempDir())
+	cm := newCountingModel(map[string]creditEvidence{"*": {assetMillions: 35, assetReportOK: true}})
+	if _, err := h.nodeEntryExec("op-outer-316", chainGrants(), "history-verification", nil, mr2First("op-inner-316", '7'), Ports{Model: cm}); err == nil {
+		t.Fatal("X3-16: identity mismatch accepted")
+	}
+	if cm.calls != 0 || h.machine.State("op-inner-316") != "" || h.machine.State("op-outer-316") != "" {
+		t.Fatalf("X3-16: polluted state — calls=%d inner=%q outer=%q", cm.calls, h.machine.State("op-inner-316"), h.machine.State("op-outer-316"))
 	}
 }

@@ -81,7 +81,12 @@ type ModelPort interface {
 | X3-9 | C 首执**全流程**（R74 B-1 清偿补行） | Model=1 | machine=dispatched + store 有判定派生回执（新任务身份） | 60号 §一.1 冻结规格原文「经 adopt 机 Adopt→Dispatch→store.put 全流程」——首版实现漏流程属未记录偏离，R74 空白子以临时探针证伪后补行 |
 | X3-10 | C→完成→重试**经入口闭环**（R74 B-1 奇点推论补行） | 首次 Model=1，二次 Model=0 | 二次调用走 A 支路返回 C 存的回执 |
 | X3-11a | **A×B 交界**：completed+方法在场（hub-R1 M-1 补行） | Model=0 | **A 胜**——原回执返回，方法不重执行 | 验收边界 #1「同一节点实例重试复用原结果」——有方法的节点必有历史重试，交界为生产最常见形态；支路重排突变曾全套件存活绿 |
-| X3-11b | **守卫×B 交界**：在途+方法在场（同上补行） | Model=0 | 守卫拒（先于方法执行） | X3-7 双重执行面在方法在场形态下的钉——重排突变同杀 | 198789653 §五.5「首次执行、重试与新任务经过同一入口」——无 X3-9 流程则 C 路径对 A 不可达，统一入口对首执空心 |
+| X3-11b | 守卫×B 交界：在途+方法在场 | Model=0 | 守卫拒（先于方法执行） | X3-7 双面钉；hub-R1 M-1 补行 | 198789653 §五.5「首次执行、重试与新任务经过同一入口」——无 X3-9 流程则 C 路径对 A 不可达，统一入口对首执空心 |
+| X3-12 | read-only 调用者走 B/C 任一效径（MR !2 补行） | Model=0 | **拒**+零状态变更 | 评审 RV-01：RequiredForDispatch ⊄ EffectiveAuthority ⇒ 不得 dispatched |
+| X3-13 | A 重试：同 op 改 digest（MR !2 补行） | Model=0 | **Conflict 拒**+原结果不动 | 评审 RV-02：κ_new≠κ_old ⇒ Conflict 不能返回执行成功 |
+| X3-14 | B→完成→重试（含方法失效+reopen）（MR !2 补行） | 首次 Model=0；重试 Model=0 | B 同步完成产自己的正式结果；重试走 A 返回该结果 | 评审 RV-03：CommonLifecycle 对所有执行路径适用 |
+| X3-15 | 并发同 op 同材料首执（MR !2 补行） | Model=恰 1 | 第二请求在途拒；Adopt（=claim）先于 Invoke | 评审 RV-04：ActiveOwners(o)≤1 |
+| X3-16 | outer opID≠req opID（MR !2 补行） | Model=0 | 拒+双 op 零状态（Δexec=0∧Δadoption=0） | 评审 RV-05 不变量 |
 
 **Γ 失败判据**（预注册）：
 - X3-1/2/3 任一端口计数与预期不符 → 实现错
@@ -117,7 +122,7 @@ type ModelPort interface {
 
 ## 五、验证协议（2026-11-08 执行完毕——全部通过）
 
-1. ✅ X3 矩阵全绿（原八行 7 个测试函数：X3-6/X3-7 同函数两段；R74 清偿补 X3-9/X3-10 两行并入 X3-3 + 新增 tripwire X3_NoBypass——现十行 8 个测试函数，`grep -c '^func Test' x3_entry_test.go` = 8 当轮复算）
+1. ✅ X3 矩阵全绿（X3-1..8 预冻结 7 函数；R74 补 X3-9/10；hub-R1 补 X3-11a/b；MR !2 补 X3-12..16——矩阵表 17 行（`grep -c '^\| X3' 60-n3-scope-prior.md` 当轮复算；X3-16A/X3-12B 为守卫钉无表行）+16 个 X3 测试函数（`grep -c '^func TestX3' x3_entry_test.go` = 17 当轮复算，含 R6-R8 补钉）+vendor 六探针（mr1_review_test.go））
 2. ✅ 既有全量 `go test ./... -count=1 -race` 21 包绿（零回归，failingProbe 退役后复跑）
 3. ✅ 变异探针五连（cp 备份纪律，逐个还原后复跑全绿）：
    - **M1 删支路 A** → `TestX3_BranchA` + `TestT2R_PersistedReceiptAcrossRestart` **双红**

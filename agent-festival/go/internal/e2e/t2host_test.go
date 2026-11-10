@@ -54,6 +54,10 @@ type storedResult struct {
 	BusinessReqID string   `json:"business_request_id"`
 	EvaluationRev string   `json:"evaluation_revision"`
 	KnowledgeUsed string   `json:"knowledge_used,omitempty"`
+	// CmdDigest is the command-material binding (κ) this result was produced
+	// under — the retry-conflict face (MR !2 X3-13/RV-02): a retry carrying a
+	// different digest must Conflict, never silently serve this result.
+	CmdDigest string `json:"cmd_digest,omitempty"`
 }
 
 // resultStore is the T2 host's persistence for node results. It is NOT the
@@ -464,6 +468,52 @@ func requestForT2(op, revision, evidence, digest, brID string) *adopt.Request {
 	}
 }
 
+// dispatchRequiredGrants is the EFFECT-level grant an execution path must be
+// covered by before it may adopt/dispatch (MR !2 X3-12/RV-01): read alone
+// authorizes serving results, never producing new business effects.
+func dispatchRequiredGrants() []ledger.Grant {
+	return []ledger.Grant{{Kind: "tool", Selector: "tool://credit-transfer", Actions: []string{"execute"}, Effect: "irreversible"}}
+}
+
+// grantsCoverEffect is the DISPATCH-gate coverage check — unlike
+// grantsCoverRead (the R29 m-5 read-face subset, which deliberately ignores
+// Effect because reads are Effect:"none" here), the effect gate compares the
+// Effect rank: a downgraded grant (execute action under Effect:"none") must
+// not admit an irreversible effect path (R2 F-2 — the pinned
+// Effect:"irreversible" was decorative under the read checker).
+func grantsCoverEffect(live, pinned []ledger.Grant) bool {
+	for _, p := range pinned {
+		covered := false
+		for _, l := range live {
+			if l.Kind != p.Kind || l.Selector != p.Selector || l.Effect != p.Effect {
+				continue
+			}
+			allActions := true
+			for _, a := range p.Actions {
+				has := false
+				for _, la := range l.Actions {
+					if la == a {
+						has = true
+						break
+					}
+				}
+				if !has {
+					allActions = false
+					break
+				}
+			}
+			if allActions {
+				covered = true
+				break
+			}
+		}
+		if !covered {
+			return false
+		}
+	}
+	return len(pinned) > 0
+}
+
 // grantsCoverRead is the T2 fixture's grant-coverage check — SAME SHAPE
 // as the machine's grantsCover but a DELIBERATE SUBSET (R29 m-5 honesty):
 // no effect-rank comparison (reads are Effect:"none" in this fixture) and
@@ -639,48 +689,78 @@ func (cm *countingModel) Invoke(opID string, evidence creditEvidence) s1Verdict 
 // Authorization (E5 semantics preserved): the entry checks grants BEFORE
 // any branch is taken — unauthorized callers get zero port calls.
 func (h *t2Host) nodeEntryExec(opID string, callerGrants []ledger.Grant, nodeKind string, inputs map[string]string, first *firstExecInput, ports Ports) (NodeOutcome, error) {
-	// authorization gate first (the E5/D-04 face — same check as the old entry)
+	// X3-16 (RV-05): identity precheck — the outer opID and the adoption
+	// request's inner opID must agree BEFORE any state write: a mismatch
+	// refuses with zero execution calls and zero adoption side effects.
+	if first != nil && first.req != nil && first.req.Identity.OperationID != opID {
+		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] outer op %q ≠ request op %q: identity mismatch rejected with no effects (Δexecution=0 ∧ Δadoption=0)", opID, first.req.Identity.OperationID)
+	}
+	// authorization gate (the E5/D-04 read face — serving results needs read)
 	if !grantsCoverRead(callerGrants, []ledger.Grant{{Kind: "data", Selector: "ledger://credit/e2e", Actions: []string{"read"}, Effect: "none"}}) {
 		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: caller not authorized (the E5/D-04 face preserved)", opID)
 	}
-	// Branch A: same-instance retry — completed + stored → serve original
+
+	// Branch A: same-instance retry — completed + stored → serve original,
+	// but only under the SAME command material (MR !2 X3-13/RV-02): the retry
+	// carries κ_new via first.req.PayloadDigest and must equal the stored
+	// binding. A nil first on a completed op is a missing command — historical
+	// READ is a different operation, not this entry's ExecuteRetry.
 	if s := h.machine.State(opID); s == adopt.StateCompleted {
-		if r, ok := h.store.get(opID); ok {
-			return NodeOutcome{Branch: "A-retry", Result: r}, nil
+		r, ok := h.store.get(opID)
+		if !ok {
+			return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: op is completed but no stored result found — nothing to serve", opID)
 		}
-		// completed but nothing stored — the old entry's third face, kept
-		// distinct from in-flight (R74 m-2: the diagnosis word must be true)
-		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: op is completed but no stored result found — nothing to serve", opID)
+		if first == nil || first.req == nil {
+			return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: retry of a completed op requires command material (digest) — historical read is a separate operation", opID)
+		}
+		if first.req.PayloadDigest != r.CmdDigest {
+			return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: command conflict — retry digest %q ≠ stored binding %q (same execution, changed material ⇒ Conflict)", opID, first.req.PayloadDigest, r.CmdDigest)
+		}
+		return NodeOutcome{Branch: "A-retry", Result: r}, nil
 	}
-	// X3-7 (frozen matrix): an op that EXISTS in the machine but is not yet
-	// completed is in-flight — falling through to C would re-execute (double-
-	// fire the model port on) an op that is already dispatched. The entry
-	// refuses, zero port calls — the old entry's non-completed semantics.
+	// X3-7 in-flight guard (unchanged): an op that exists but is not completed
+	// is owned by an in-flight execution — refuse, zero port calls.
 	if s := h.machine.State(opID); s != "" {
 		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: op is %q (in-flight, not completed) — retry serves completed results only", opID, s)
 	}
-	// Branch B: new task, valid method → method.execute (zero model calls)
+	// X3-12 (RV-01): every EFFECT-producing path (B and C) additionally
+	// requires dispatch-level authority — read alone never admits new
+	// business effects (the caller's grants, never chainGrants() constants).
+	if !grantsCoverEffect(callerGrants, dispatchRequiredGrants()) {
+		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: caller lacks dispatch-level authority (execute on the business capability) — read alone cannot produce effects", opID)
+	}
+	if first == nil || first.req == nil {
+		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: effect paths require command material (adoption request + evidence) — fail-loud, never panic", opID)
+	}
+	// Branch B: new task, valid method → the method's result goes through the
+	// SAME lifecycle as C (MR !2 X3-14/RV-03): adopt→dispatch→store→complete.
+	// K produces its own formal result; after completion a retry serves it
+	// (branch A) and method invalidation never silently re-executes history.
 	if method, ok := h.registry.findForNode(nodeKind); ok {
 		r, err := method.execute(inputs)
 		if err != nil {
 			return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: branch B method execute: %w", opID, err)
 		}
-		return NodeOutcome{Branch: "B-method", Result: r}, nil
+		r.BusinessReqID = first.req.Identity.BusinessRequestID
+		r.EvaluationRev = first.req.Identity.EvaluationRevision
+		r.CmdDigest = first.req.PayloadDigest
+		return h.commitOutcome(opID, first, "B-method", r)
 	}
-	// Branch C: first execution — model port exactly once, then the FULL
-	// machine flow (60号 §一.1 frozen spec: Invoke → Adopt→Dispatch→store.put;
-	// R74 B-1: the flow is what makes the C path's retry reachable)
+	// Branch C: first execution — CLAIM then compute (MR !2 X3-15/RV-04):
+	// Adopt precedes Invoke, so the machine's single-winner semantics ARE the
+	// execution ownership; a concurrent second caller either sees the in-flight
+	// state above or receives "reused" here — both refuse, exactly one invoke.
 	if ports.Model == nil {
 		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: branch C requires a non-nil Model port (fail-loud, never panic)", opID)
 	}
-	if first == nil || first.req == nil {
-		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: branch C requires a first-execution input (adoption request + evidence) — fail-loud, never panic", opID)
-	}
-	v := ports.Model.Invoke(opID, first.evidence)
 	o := h.machine.Adopt(first.req)
+	if o.Status == "reused" {
+		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: op already claimed by an in-flight execution (adoption reused) — refusing to double-invoke", opID)
+	}
 	if o.Status != "adopted" {
 		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: branch C adopt = %q: %s", opID, o.Status, o.Detail)
 	}
+	v := ports.Model.Invoke(opID, first.evidence)
 	if o2 := h.machine.Dispatch(opID, chainGrants()); o2.Status != "dispatched" {
 		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: branch C dispatch = %q: %s", opID, o2.Status, o2.Detail)
 	}
@@ -689,11 +769,37 @@ func (h *t2Host) nodeEntryExec(opID string, callerGrants []ledger.Grant, nodeKin
 		Facts:         []string{"model_port_verdict:" + v.kind},
 		BusinessReqID: first.req.Identity.BusinessRequestID,
 		EvaluationRev: first.req.Identity.EvaluationRevision,
+		CmdDigest:     first.req.PayloadDigest,
 	}
 	if err := h.store.put(opID, result); err != nil {
 		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: branch C store put: %w", opID, err)
 	}
 	return NodeOutcome{Branch: "C-model", Result: result, Verdict: v}, nil
+}
+
+// commitOutcome is the shared completion tail for the B effect path (C
+// cannot use it — its Adopt must PRECEDE Invoke for ownership, a different
+// shape). The machine-internal dispatch consumes the host's live chain
+// grants (the E6 revocation-check form); the CALLER-authority face is the
+// entry's dispatch gate, checked before this tail. Persists the formal
+// result bound to the command digest and marks completed — the unified
+// lifecycle that makes a produced result retry-reachable (branch A).
+func (h *t2Host) commitOutcome(opID string, first *firstExecInput, branch string, r storedResult) (NodeOutcome, error) {
+	if o2 := h.machine.Adopt(first.req); o2.Status == "reused" {
+		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: op already claimed by an in-flight execution (adoption reused)", opID)
+	} else if o2.Status != "adopted" {
+		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: %s adopt = %q: %s", opID, branch, o2.Status, o2.Detail)
+	}
+	if o2 := h.machine.Dispatch(opID, chainGrants()); o2.Status != "dispatched" {
+		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: %s dispatch = %q: %s", opID, branch, o2.Status, o2.Detail)
+	}
+	if err := h.store.put(opID, r); err != nil {
+		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: %s store put: %w", opID, branch, err)
+	}
+	if o3 := h.machine.MarkCompleted(opID); o3.Status != "completed" {
+		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: %s complete = %q: %s", opID, branch, o3.Status, o3.Detail)
+	}
+	return NodeOutcome{Branch: branch, Result: r}, nil
 }
 
 // adoptAndDispatch is the standard first-pass flow: adopt + dispatch +
@@ -714,6 +820,7 @@ func (h *t2Host) adoptAndDispatch(op, revision, evidence, digest, brID string, r
 		Facts:         facts,
 		BusinessReqID: brID,
 		EvaluationRev: revision,
+		CmdDigest:     digest,
 	}); err != nil {
 		h.t.Fatalf("T2 result store put failed: %v", err)
 	}
