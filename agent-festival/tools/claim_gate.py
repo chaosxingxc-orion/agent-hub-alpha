@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Claim gate v2.4: counting-closure claims must carry command evidence nearby.
+"""Claim gate v2.5: counting-closure claims must carry command evidence nearby.
 
 The write-path discipline (runbook §五 rule 1: 数字先跑后写) in mechanical
 form. Historical incidents this gate family exists for (all real, all in
@@ -36,9 +36,12 @@ Usage:
         with an explicit "executed=K/SKIPPED=J" count so "0 OK + 0 MISMATCH
         because nothing ever ran" is machine-visible without touching rc.
     python3 tools/claim_gate.py --selftest        # boundary spec, exit 1 on drift
-    python3 tools/claim_gate.py --census          # three axes: units (21) × pin,
+    python3 tools/claim_gate.py --census          # four axes: units (21) × pin,
                                                   # execution whitelist (5) × pin,
-                                                  # refusal reasons × pin (v2.3;
+                                                  # refusal reasons (15) × pin,
+                                                  # grammar table entries (22) ×
+                                                  # pin (v2.3 added the reasons
+                                                  # axis, v2.5 the grammar axis;
                                                   # member counts are frozen
                                                   # tuples, derived and diffed —
                                                   # this help line, like every
@@ -326,6 +329,123 @@ reopen a CLOSED form):
         asymmetry (deleting only the ~ branch flips RR36 alone; deleting
         the / branch flips nothing because containment catches it —
         redundancy is what the deletion was for).
+  CLOSED in v2.5 (fix-25 round, outer-v24 F1–F9 minimal repairs — every item
+    below was RED-proofed before landing; the "B-lite: retire the git
+    execution face" route was REVOKED in-loop: it is a 主线 105 strategic
+    call, and both strategic alternatives (i) refuse-on-exec-capable-config-key
+    / (ii) disable the face stay REGISTERED PENDING, not silently adopted):
+    (F5/B) the repo-config execution face that v2.4's env block CLAIMED closed
+        ("no external diff/textconv, no prompts … must not re-spawn our
+        sandbox escapees") was FALSE for the victim repo's OWN .git/config:
+        log.showSignature=true + gpg.program=<evil> + a crafted gpgsig commit
+        made the whitelisted POSITIVE shape `git log --oneline` re-spawn the
+        attacker (outer q3d A: verdict OK, marker=True). Fixed minimally: the
+        hardened prefix now carries "-c","log.showSignature=false" (the
+        out-of-tree proof in run/gate-showsig-fix.py). The load-bearing half
+        is the pin, not the prose: M9 had shown NO existing pin held the
+        second layer, so RR69 poisons a hermetic repo the same way, asserts
+        verdict OK AND the marker sentinel absent — delete the -c pair and
+        RR69 goes red on a real observable effect, not on a string.
+    (F7/M) the --no-ext-diff injection was a DEAD branch (argv spy: after the
+        v2.4 prefix insert argv[2] is ALWAYS '-c', so the
+        `argv[2] in ("log","show","diff")` test never fired — M2=0 FAIL, and
+        81 §九 listed the flag as shipped content). The prefix and the
+        post-sub flag now come from ONE helper (_git_harden), the diff-capable
+        sub receives --no-ext-diff IMMEDIATELY AFTER the sub token (a position
+        git actually parses), and the position is pinned structurally
+        (ENV-harden-argv-log / ENV-harden-argv-revparse: mutating the insert
+        index, dropping the flag, or adding it to a non-diff sub flips them).
+    (F1/M) _flag_grammar is fail-CLOSED: a whitelisted tool/sub with no
+        grammar table now refuses as "no-grammar-table" (the 15th refusal
+        reason; AXIS3 member; RR70 holds its want_reason via the new
+        no-table-member opt, which temporarily extends RERUN_READONLY exactly
+        the way the outer's fail-open experiment did) and the ENV-grammar-
+        invariant pin asserts every RERUN_READONLY member HAS a table — the
+        v2.4 disease ("add a member, forget the table ⇒ 0 FAIL and zero
+        constraint") now cannot pass green.
+    (F2/M) the grammar tables became a CLOSED SET: census AXIS4(grammar)
+        derives the 22 entries from the LIVE dicts, diffs them against the
+        frozen _EXPECTED_GRAMMAR both ways (member count included — the N4-B
+        lesson, fourth axis), then blanks each entry on its own table line and
+        requires ≥1 pin flip. The coverage battery's 15 silent acceptance
+        entries (real accept-face effect, zero pins — typo/delete shipped
+        green while real docs would have flipped to refused) now each carry an
+        OK positive pin, RR53–RR68.
+    (F6/M) PATH is no longer inherited unchecked: the one variable the
+        sanitized env passed through verbatim, including empty/relative
+        components — an empty component means "search the CWD", and the CWD is
+        the DOCUMENT's directory, so a planted ./git executed under the
+        whitelist (outer q3d F6: value-drift line from the attacker's output).
+        _run_cmd now filters components to absolute ones and executes only the
+        resolution of that filtered PATH by _exe_search — a local execvp-style
+        search (no hit ⇒ exec-unavailable SKIP). WHY not shutil.which, said
+        out because it is a lesson not a footnote: which resolves a RELATIVE
+        component against the GATE's cwd while the child resolves it against
+        the DOCUMENT's — so the first version of this fix shipped a pin whose
+        plant was invisible to the resolver and mutation ME stayed green on
+        the exec side. Pinned by RR71 (PATH=".:<real>" + a planted ./wc that
+        touches a marker ⇒ the REAL wc answers, marker absent; ME-unfilter-PATH
+        now flips RR71 + ENV-path-clean) and ENV-path-clean (unit half).
+    (F8/M) marker/leak evidence left /tmp: --selftest now runs the repo-root
+        review_guard_probes.py (邢's verbatim probes, the file the mainline
+        shipped as the consumer of this gate) as the PRB-* tier — accepted=
+        False ∧ synthetic_marker_written=False ∧ read_outside_synthetic_file=
+        False asserted in the permanent suite; a moved copy prints a VISIBLE
+        ABSENT line (never silence) and still counts as the run's own record.
+    (F9/minor) the v2.4 trio RENUMBERED — RR37-files0-from→RR50-files0-from,
+        RR38-ext-diff-p→RR51-ext-diff-p, RR39-cluster-positive→
+        RR52-cluster-positive: the shorthand "RR37-39" collided with the
+        v2.3-era holders RR37-rerun-arrow-twin / RR38-unclosed-fence /
+        RR39-block-stop-hash (full cids were unique; reviewers searching by
+        shorthand read the wrong pin). Every bare RR37/RR38/RR39 mention in
+        the v2.3-era text of this file means the OLD holders. Convention debt
+        (numbering rules) stays 移交登记 4, for the next brief.
+    (F3/minor) single-source cleanup: the `--pretty` special case inside
+        _flag_grammar is DELETED — the table regex "--pretty.*" is now the one
+        truth (they were the same rule written twice; M3 proved deleting
+        either half flipped nothing — and the entry itself was listed NO EFFECT
+        by the coverage battery until RR68 gave it a holder); `import re as _re`
+        is gone (module-level re was already imported — the function-local
+        import habit belongs to os/subprocess in this file, not to re).
+  OPEN faces CREATED by v2.5 (third-face record — killed / newly opened /
+    platform-scoped; all measured this round, none assumed):
+    (1) KILLED on the DEFAULT face: none (key diff v2.4→v2.5 = 0, re-measured
+        by running both gates over the corpus). On the --rerun face the
+        executed SET is unchanged (20 executed rows, verdict lines identical —
+        recount by rerunning both versions, never by editing this prose): what
+        changed for the 2 executed git rows is only the hardened argv (one
+        more -c pair, absolute tool path), never the verdict.
+    (2) NEWLY OPENED, over-skip side ONLY: a tool that exists ONLY under a
+        relative PATH component now SKIPS as exec-unavailable instead of
+        executing — zero corpus carriers, RR71 pins the direction; and a
+        whitelist member without a grammar table now refuses
+        (no-grammar-table) where v2.4 would have executed it unconstrained —
+        constructible only by editing the whitelist, which the invariant pin
+        makes red anyway, so no real-doc form changed verdict.
+    (3) `--` (end-of-options) STILL refuses as non-allowlist-flag for wc/grep/
+        log. Evaluated this round against the coordinator's ruling (评估入表,
+        当前语料零载体，登记即可): 32 constructed over-refusal forms, zero
+        corpus carriers → deliberately NOT widened (adding it opens an
+        execution face nobody pastes; the loop law is register, not gamble).
+        A future doc that hits it must re-adjudicate HERE, at this line.
+    (4) the repo-config exec set remains an OPEN SET of keys (fsmonitor,
+        hooks, textconv, credential helpers, …): v2.5 blocks and pins the ONE
+        constructible gpg face; faces probed inert this round stay inert by
+        measurement, not by claim (core.pager without a tty, builtin-priority
+        vs alias, --ext-diff refused by grammar). The (i)/(ii) strategy choice
+        is 主线 105's; this file does not claim "no external execution" beyond
+        what RR69/PRB/q3d-battery re-runs demonstrate.
+    (5) PRB tier coupling: it locates the probes file as
+        <gate>/../../review_guard_probes.py — correct for the repo layout
+        (agent-festival/tools vs root), prints the visible ABSENT line for any
+        other placement (out-of-tree mutant copies included, which is why the
+        census mutation counts are NOT inflated by it).
+    (6) BSD/GNU platform scope of the new positive pins: `wc --lines` is NOT a
+        BSD option — RR53 asserts the platform-STABLE half only (the shape
+        REACHES the executor ⇒ MISMATCH either way: BSD cmd-failed, GNU
+        value-drift; same discipline as RR35); `grep --extended-regexp` and
+        every git-family entry exist on both sides and pin OK. macOS ran every
+        pin here; the Linux/GNU face is 105's to re-run.
   OPEN faces CREATED by v2.3 (third-face record — killed / newly opened /
     FP; all measured this round, none assumed):
     (1) KILLED: none on the DEFAULT face — snapshot key diff 0 and
@@ -850,6 +970,13 @@ def _has_flag(argv, short):
                for t in argv[1:])
 
 
+# One table entry PER LINE, including its regex tuple: census AXIS4 anchors an
+# entry at the line that starts with its key (the same token may sit on another
+# line — "-l" is both a wc and an ls-tree entry — so a whole-file replace would
+# mutate the wrong site and measure nothing, the P-Ⅱ anchor lesson), and a
+# wrapped entry simply has no anchor. v2.5 wrote "log" across two lines and
+# AXIS4 correctly refused to guess: token-anchor count 0 → UNPINNED, three
+# entries (the layout, not the pinning, was the bug).
 _GRAMMAR = {
     "wc":   ({"-l", "--lines"}, ()),
     "grep": ({"--count", "--extended-regexp"}, ("-[cE]+",)),
@@ -857,8 +984,7 @@ _GRAMMAR = {
 _GIT_GRAMMAR = {
     "rev-parse": ({"--short", "--verify", "--abbrev-ref", "--sq"}, ()),
     "ls-tree":   ({"-r", "--name-only", "-l", "--long", "-t", "--full-name"}, ()),
-    "log":       ({"--oneline", "--no-color", "--decorate", "--no-ext-diff"},
-                  ("--pretty.*", "--format=.*", "-[0-9]+")),
+    "log":       ({"--oneline", "--no-color", "--decorate", "--no-ext-diff"}, ("--pretty.*", "--format=.*", "-[0-9]+")),
 }
 
 def _flag_grammar(tool, sub, argv):
@@ -867,8 +993,16 @@ def _flag_grammar(tool, sub, argv):
     execution-extending options (`wc --files0-from`, `git log --ext-diff -p`)
     pass the surface checks yet read outside data or spawn external programs.
     Every '-'-leading token must match the per-tool allowlist (exact set plus
-    regexes); anything else refuses as non-allowlist-flag WITHOUT executing."""
-    import re as _re
+    regexes); anything else refuses as non-allowlist-flag WITHOUT executing.
+    v2.5 F1: FAIL-CLOSED — a whitelisted member that has NO table used to get
+    ZERO constraint (the outer's fail-open experiment: add ("git","show") +
+    sync _EXPECTED_CMD ⇒ 0 FAIL, every shape accepted). No table now refuses
+    as "no-grammar-table" (AXIS3 member, RR70 want_reason holder), and the
+    ENV-grammar-invariant pin asserts every RERUN_READONLY member HAS one.
+    v2.5 F3: `--pretty` lives ONLY in the table regex now — the former code
+    special case double-wrote the same rule (deleting either half flipped
+    nothing, so the entry was unmutable-proof); bare `--pretty` still matches
+    via "--pretty.*" (.* over the empty string)."""
     if tool == "git":
         table = _GIT_GRAMMAR.get(sub)
         rest = argv[2:]
@@ -876,14 +1010,12 @@ def _flag_grammar(tool, sub, argv):
         table = _GRAMMAR.get(tool)
         rest = argv[1:]
     if table is None:
-        return None
+        return "no-grammar-table"
     exact, regexes = table
     for t in rest:
         if not t.startswith("-"):
             continue
-        if t in exact or any(_re.fullmatch(rx, t) for rx in regexes):
-            continue
-        if tool == "git" and sub == "log" and t.startswith("--pretty"):
+        if t in exact or any(re.fullmatch(rx, t) for rx in regexes):
             continue
         return "non-allowlist-flag"
     return None
@@ -1067,7 +1199,10 @@ def _guard(text: str, docdir=None):
     way not executed, not echoed. v2.3: every reason string this function
     emits is a member of the closed set enforced by census AXIS3 — each has
     at least one RERUN_CASE pin asserting it via the want_reason field, so
-    renaming or deleting any generation site flips at least one pin red."""
+    renaming or deleting any generation site flips at least one pin red.
+    v2.5 adds the 15th member, no-grammar-table (the fail-closed half of the
+    grammar layer — see _flag_grammar), and the PATH/exec-resolution face is
+    now constrained downstream in _run_cmd (F6), not here."""
     text = _md_unescape(text)
     for ch in ("`", "$(", "<", ">", "\n"):
         if ch in text:
@@ -1126,27 +1261,120 @@ def _guard(text: str, docdir=None):
     return None, "not-whitelisted"
 
 
+_GIT_HARDEN_PREFIX = ["--no-pager", "-c", "diff.external=", "-c",
+                      "core.pager=cat", "-c", "log.showSignature=false",
+                      "-c", "color.ui=never"]
+_GIT_DIFF_SUBS = ("log", "show", "diff")
+
+
+def _git_harden(argv):
+    """v2.5 (F5 B + F7 M) — the ONE place the git execution prefix is built.
+
+    What is neutralised, and what that claim is worth:
+    GIT_CONFIG_GLOBAL/SYSTEM=/dev/null + GIT_CONFIG_NOSYSTEM=1 kill the USER
+    and SYSTEM config layers; the injected -c pairs override the REPO-LOCAL
+    layer for exactly the keys measured reachable: diff.external (blanked),
+    core.pager (blanked to cat), log.showSignature (OFF — the v2.4 hole:
+    a victim repo with showSignature=true + gpg.program=<evil> + a crafted
+    gpgsig commit made the whitelisted POSITIVE shape `git log --oneline`
+    re-spawn the attacker's program, outer q3d A: verdict OK, marker=True)
+    and color.ui (never — the exit25 M-ANSI hole: repo-local color.ui=always
+    coloured the same POSITIVE shape's piped output and false-refused a
+    faithful plain paste as value-drift; RR72 pins it, non-exec-capable so
+    outside the 105 strategy handoff set).
+    HONEST RESIDUAL (OPEN faces v2.5 (4)): repo-local config is an OPEN SET of
+    exec-capable keys (fsmonitor, hooks, textconv, credential helpers, …);
+    argv-level neutralisation cannot enumerate it, so this file does NOT claim
+    "no external execution" — it claims the one constructible face is blocked
+    AND pinned (RR69's marker sentinel, the PRB probes tier, the q3d battery
+    re-run). The strategic routes — (i) refuse on any exec-capable config key,
+    (ii) retire the git execution face (B-lite) — belong to 主线 105 and are
+    NOT taken in-loop.
+    F7 (the dead branch): v2.4 tested argv[2] AFTER inserting its own prefix,
+    where argv[2] is always '-c', so --no-ext-diff was NEVER injected (M2:
+    deleting it flipped zero pins — while 81 §九 listed the flag as shipped).
+    The sub token now sits at index 1+len(prefix) and the flag rides
+    IMMEDIATELY after it, the position git parses; the insert position is
+    pinned structurally by the ENV-harden-argv cases."""
+    out = [argv[0]] + _GIT_HARDEN_PREFIX + list(argv[1:])
+    si = 1 + len(_GIT_HARDEN_PREFIX)
+    if len(out) > si and out[si] in _GIT_DIFF_SUBS:
+        out.insert(si + 1, "--no-ext-diff")
+    return out
+
+
+def _path_clean(raw):
+    """v2.5 F6 — the PATH components a rerun may search, in order, ABSOLUTE
+    entries only. The v2.4 executor inherited os.environ["PATH"] verbatim, and
+    an EMPTY component means "search the CWD" — the CWD being the document's
+    own directory — so `PATH=:$PATH` plus a planted ./git ran the attacker's
+    binary under the whitelist (outer q3d F6: the value-drift line quoted the
+    evil output); a RELATIVE component (., ./bin) is the same cwd-search by
+    another name and is just as common in hand-edited CI PATHs. Dropping them
+    keeps resolution deterministic. A tool that exists ONLY under such a
+    component now skips as exec-unavailable — safe direction, OPEN faces v2.5
+    (2), zero corpus carriers, pinned by RR71 and ENV-path-clean."""
+    import os
+    return [c for c in raw.split(os.pathsep) if c and os.path.isabs(c)]
+
+
+def _exe_search(name, comps, cwd):
+    """v2.5 F6 — a deterministic execvp-style PATH search. shutil.which was
+    the obvious choice and is WRONG for this job: it resolves a RELATIVE
+    component against the GATE's own cwd, while the child would resolve it
+    against the DOCUMENT's directory (the spawn cwd) — so a planted ./wc in
+    the doc dir stayed invisible to the resolver and RR71 could not see the
+    hole it pins. This mirror resolves "" (the POSIX cwd-search spelling) and
+    any relative component against the spawn cwd exactly as execvp does; a
+    name containing '/' is refused (the guard's path-disguise rule asserted
+    at the last mile too). Fed the _path_clean()'d list the answer is
+    absolute by construction, and no hit ⇒ the "unavailable" SKIP branch."""
+    import os
+    if not name or "/" in name:
+        return None
+    for c in comps:
+        d = cwd if not c else (c if os.path.isabs(c) else os.path.join(cwd, c))
+        p = os.path.join(d, name)
+        try:
+            if os.path.isfile(p) and os.access(p, os.X_OK):
+                return p
+        except OSError:
+            continue
+    return None
+
+
 def _run_cmd(argv, cwd, timeout):
     """argv-direct exec, never shell, capture stdout, bounded by timeout.
     stdin is /dev/null: a whitelisted count tool that was pasted WITHOUT its
     target would otherwise read the terminal (real-doc noise found while
     calibrating; the operand gate below refuses that shape first anyway).
+    v2.5 F6: the head token is resolved over the _path_clean()'d PATH by
+    _exe_search BEFORE the spawn and the resolved path is what execs — the
+    guard's path-disguise rule (bare token only) can no longer be bypassed
+    through PATH itself, and no empty/relative component can point the search
+    at the document's own directory. A missing resolution is the
+    "unavailable" status ⇒ SKIPPED-UNSAFE (exec-unavailable), never an error
+    (collision R2: SKIP is the safe side).
     Returns (status, stdout, stderr) with status in ok/failed/timeout/unavailable."""
     import subprocess, os
-    env = {"PATH": os.environ.get("PATH", ""), "LANG": "C.UTF-8",
-           "LC_ALL": "C.UTF-8"}
     argv = list(argv)
-    if argv and argv[0] == "git":
-        # v2.4: no user/system config, no external diff/textconv, no pager,
-        # no prompts, no locks — the invoked program must not re-spawn our
-        # sandbox escapees (review P1-2: shell=False never constrained THAT).
+    if not argv:
+        return "unavailable", "", ""
+    comps = _path_clean(os.environ.get("PATH", ""))
+    env = {"PATH": os.pathsep.join(comps), "LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"}
+    exe = _exe_search(argv[0], comps, cwd)
+    if not exe:
+        return "unavailable", "", ""
+    is_git = argv[0] == "git"
+    argv[0] = exe
+    if is_git:
+        # no user/system config, no external diff/textconv, no pager, no
+        # signature-spawned gpg, no prompts, no locks — _git_harden states
+        # what this does and does NOT claim (v2.5 F5/F7).
         env.update({"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM":
                     "/dev/null", "GIT_CONFIG_NOSYSTEM": "1",
                     "GIT_OPTIONAL_LOCKS": "0", "GIT_TERMINAL_PROMPT": "0"})
-        argv[1:1] = ["--no-pager", "-c", "diff.external=", "-c",
-                     "core.pager=cat"]
-        if len(argv) > 2 and argv[2] in ("log", "show", "diff"):
-            argv.insert(3, "--no-ext-diff")
+        argv = _git_harden(argv)
     try:
         p = subprocess.run(argv, cwd=cwd, capture_output=True, text=True,
                            encoding="utf-8", errors="replace",
@@ -1342,11 +1570,24 @@ RERUN_CASES = [
     #   opts: repo (make a one-commit git repo here), git ({KEY: cmd} → run and
     #   substitute {KEY} into the doc), timeout (seconds), sentinel (must NOT
     #   exist after the run), commits (expected commit count after the run),
-    #   no-echo-head (v2.1 RR27), viol (v2.3 RR37: expected bool(violations)
+    #   no-echo-head (v2.1 RR27), viol (v2.3 RR37-rerun-arrow-twin: expected
+    #   bool(violations)
     #   for want=None cases — default True like RR15b, False asserts the
     #   violations/rerun #→ exemptions are TWINS), bare-env (v2.3 RR46: empty
     #   PATH for the case window so the executed tool is absent → the
     #   exec-unavailable skip branch).
+    #   v2.5 NEW opts (each one the harness side of a permanent pin):
+    #   gpg-poison (RR69, F5): after the repo is built, craft a commit object
+    #   with a gpgsig header and set log.showSignature=true + gpg.program to an
+    #   in-temp script that touches MARKER — the exact outer q3d A construction
+    #   — so the sentinel assertion (marker must NOT exist after the run) has
+    #   teeth on the executed env layer M9 proved nothing held.
+    #   no-table-member (RR70, F1): temporarily extends RERUN_READONLY with a
+    #   ("git","show") member that has NO grammar table — the outer's fail-open
+    #   experiment as a permanent want_reason holder for no-grammar-table.
+    #   path-poison (RR71, F6): runs the case with PATH=".:<real PATH>" and a
+    #   planted executable ./wc that touches MARKER — the empty/relative-
+    #   component attack; the real wc must answer and the sentinel stay absent.
     ("RR01-equal", "OK", None, ["```", "wc -l data.txt", "10 data.txt", "```", "本批共 10 行。"],
      {"data.txt": _D10}, {}),                                          # matrix RR01
     ("RR02-stale", "RERUN-MISMATCH", None, ["```", "wc -l data.txt", "11 data.txt", "```", "本批共 10 行。"],
@@ -1433,12 +1674,12 @@ RERUN_CASES = [
      {"data.txt": _GREP2}, {}),                                         # -f/PATH concatenated form → flag-path-form, refuse WITHOUT executing
     ("RR29-equals-flag-path", "SKIPPED-UNSAFE", "flag-path-form", ["```", "grep -c --file=/etc/passwd data.txt", "1", "```", "本批共 1 行。"],
      {"data.txt": _GREP2}, {}),                                         # --file=PATH equals form → same refusal (RR24/RR09 prove pure path-free flags stay executable — regression self-proof)
-    ("RR37-files0-from", "SKIPPED-UNSAFE", "non-allowlist-flag", ["```", "wc -l --files0-from targets", "1", "```", "本批共 1 行。"],
-     {"data.txt": _GREP2, "targets": "/etc/passwd\0data.txt\0"}, {}),  # v2.4 P1-1 (review 4550440277): operand IN docdir whose CONTENT points outside — argv scope checks cannot see through it; grammar refuses before execution
-    ("RR38-ext-diff-p", "SKIPPED-UNSAFE", "non-allowlist-flag", ["```", "git log -1 --oneline --ext-diff -p", "x", "```", "本批共 1 行。"],
-     {"data.txt": _GREP2}, {}),                                          # v2.4 P1-2 (review 4550440291): execution-extending git options refused by grammar; _run_cmd env hygiene is the second layer (marker never created — see guard probe)
-    ("RR39-cluster-positive", "OK", None, ["```", "grep -cE foo data.txt", "2", "```", "共 2 处。"],
-     {"data.txt": "foo foo\nbar\nfoo\n"}, {}),                          # positive control: legitimate -cE cluster STILL executes and verifies — the grammar must not become refuse-everything (acceptance rule 2)
+    ("RR50-files0-from", "SKIPPED-UNSAFE", "non-allowlist-flag", ["```", "wc -l --files0-from targets", "1", "```", "本批共 1 行。"],
+     {"data.txt": _GREP2, "targets": "/etc/passwd\0data.txt\0"}, {}),  # v2.4 P1-1 (review 4550440277), RENUMBERED from RR37-files0-from in v2.5 F9 (the shorthand collided with RR37-rerun-arrow-twin): operand IN docdir whose CONTENT points outside — argv scope checks cannot see through it; grammar refuses before execution
+    ("RR51-ext-diff-p", "SKIPPED-UNSAFE", "non-allowlist-flag", ["```", "git log -1 --oneline --ext-diff -p", "x", "```", "本批共 1 行。"],
+     {"data.txt": _GREP2}, {}),                                          # v2.4 P1-2 (review 4550440291), was RR38-ext-diff-p (v2.5 F9): execution-extending git options refused by grammar; _git_harden env hygiene is the second layer (marker never created — RR69 and the PRB tier are its holders)
+    ("RR52-cluster-positive", "OK", None, ["```", "grep -cE foo data.txt", "2", "```", "共 2 处。"],
+     {"data.txt": "foo foo\nbar\nfoo\n"}, {}),                          # was RR39-cluster-positive (v2.5 F9): positive control — a legitimate -cE cluster STILL executes and verifies, the grammar must not become refuse-everything (acceptance rule 2)
     # ---- RR30/RR31: per-component pins for the flag-path rule (inner
     # re-review m-A: the rule tests /, ~, .. but only / had coverage —
     # deleting the ~ or .. branch left all pins green). Both forms are
@@ -1456,7 +1697,9 @@ RERUN_CASES = [
     ("RR20-log-unbounded", "SKIPPED-UNSAFE", "log-unbounded-shape", ["```", "git log", "…", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {}}),                                    # bare `git log` mention (35号:3 carrier) — bounded-shape gate (RR09 pins the accepted shape)
     # ---- v2.3 收编 pins (outer-r2 镜二② 13-face list, face # → case; the
-    # fixR-A brief's core four are RR32/RR37/RR38/RR48 — unbalanced-quote
+    # fixR-A brief's core four are RR32/RR37-rerun-arrow-twin/
+    # RR38-unclosed-fence/RR48 (the v2.4 trio left this list when v2.5 F9
+    # renumbered it to RR50/51/52) — unbalanced-quote
     # (M-2), the rerun-side #→ twin, the unclosed-fence extension, and the
     # markdown-unescape OUTSIDE-quote half (M-1, the P4 identity mutant's
     # zero-red face). Faces the brief deems not separately pinnable are
@@ -1513,6 +1756,96 @@ RERUN_CASES = [
     ("RR48-md-escaped-dquote", "SKIPPED-UNSAFE", "unbalanced-quote",
      ["```", 'wc -l foo\\"bar.txt', "1 x", "```", "本批共 10 行。"],
      {"data.txt": _D10}, {}),                                            # face#1 (M-1 core): OUTSIDE quotes the markdown \" unescapes to a REAL quote before tokenizing — the display-escape intent becomes shell state (header face v2.1(3) recorded this tokenization change; it had no probe). Identity-mutating _md_unescape keeps the backslash, shlex eats the pair, the literal-name operand EXECUTES (cmd-failed MISMATCH) → this is the P4 zero-red face, now RED on mutation.
+    # ---- v2.5 pins (outer-v24 fix list). RR53–RR68 are the F2 half: the
+    # coverage battery found 15/22 grammar entries with a REAL accept-face
+    # effect and ZERO pins (delete or typo one of them and the whole suite
+    # stayed green while every pasted `wc --lines` / `ls-tree -r` doc silently
+    # flipped to refused) — each entry now has a positive carrier, and census
+    # AXIS4 blanks each entry on its own table line and demands a flip.
+    # RR69 (F5) pins the EXECUTED-ENVIRONMENT layer with an observable effect
+    # (marker sentinel), RR70 (F1) the fail-closed grammar label, RR71 (F6)
+    # the PATH-resolution face. ----
+    ("RR53-wc-lines-long", "RERUN-MISMATCH", None,
+     ["```", "wc --lines data.txt", "99 data.txt", "```", "本批共 10 行。"],
+     {"data.txt": _D10}, {}),                                            # F2 wc/--lines — platform-stable like RR35: BSD wc has no --lines (cmd-failed), GNU prints 10 data.txt (value-drift); EITHER WAY the shape REACHES the executor, which is what the table entry grants. Blank "--lines" ⇒ SKIPPED ⇒ flips.
+    ("RR54-grep-ere-long", "OK", None,
+     ["```", "grep --extended-regexp -c x data.txt", "2", "```", "本批共 2 行。"],
+     {"data.txt": _GREP2}, {}),                                          # F2 grep/--extended-regexp long twin executes (GNU/ugrep/BSD all spell it)
+    ("RR55-revparse-abbrev-ref", "OK", None,
+     ["```", "git rev-parse --abbrev-ref HEAD", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git rev-parse --abbrev-ref HEAD"}}),
+    ("RR56-revparse-sq", "OK", None,
+     ["```", "git rev-parse --sq HEAD", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git rev-parse --sq HEAD"}}),
+    ("RR57-revparse-verify", "OK", None,
+     ["```", "git rev-parse --verify HEAD", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git rev-parse --verify HEAD"}}),
+    ("RR58-lstree-r", "OK", None,
+     ["```", "git ls-tree -r HEAD", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git ls-tree -r HEAD"}}),
+    ("RR59-lstree-l", "OK", None,
+     ["```", "git ls-tree -l HEAD", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git ls-tree -l HEAD"}}),
+    ("RR60-lstree-t", "OK", None,
+     ["```", "git ls-tree -t HEAD", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git ls-tree -t HEAD"}}),
+    ("RR61-lstree-name-only", "OK", None,
+     ["```", "git ls-tree --name-only HEAD", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git ls-tree --name-only HEAD"}}),
+    ("RR62-lstree-long", "OK", None,
+     ["```", "git ls-tree --long HEAD", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git ls-tree --long HEAD"}}),
+    ("RR63-lstree-full-name", "OK", None,
+     ["```", "git ls-tree --full-name HEAD", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git ls-tree --full-name HEAD"}}),
+    ("RR64-log-decorate", "OK", None,
+     ["```", "git log --decorate --oneline -1", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git log --decorate --oneline -1"}}),
+    ("RR65-log-nocolor", "OK", None,
+     ["```", "git log --no-color --oneline -1", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git log --no-color --oneline -1"}}),
+    ("RR66-log-noextdiff", "OK", None,
+     ["```", "git log --no-ext-diff --oneline -1", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git log --no-ext-diff --oneline -1"}}),
+    ("RR67-log-format-h", "OK", None,
+     ["```", "git log --format=%h -1", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git log --format=%h -1"}}),      # F2 log regex --format=.*
+    ("RR68-log-pretty-eq", "OK", None,
+     ["```", "git log --pretty=format:%h -1", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "git": {"V1": "git log --pretty=format:%h -1"}}),  # F2/F3: the ONLY holder of the --pretty regex now that the code special case is gone — the battery had called the entry "NO EFFECT (dead)" because the double write shadowed it; blanking "--pretty.*" flips THIS
+    ("RR69-showsig-poison", "OK", None,
+     ["```", "git log --oneline", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "gpg-poison": True, "sentinel": "MARKER",
+          "git": {"V1": "git -c log.showSignature=false log --oneline"}}),
+    # F5, the observable-effect pin the v2.4 round never had (M9: every pin
+    # stayed green with the whole env-sanitisation block reverted to v2.3).
+    # Construction = outer q3d A: gpgsig header on the commit object +
+    # log.showSignature=true + gpg.program=<script that touches MARKER>. The
+    # whitelist shape here is the POSITIVE one acceptance 2 insists must keep
+    # working, so the refusal cannot be bought by rejecting everything: the
+    # verdict must be OK AND the marker must not exist. Delete the
+    # log.showSignature=false -c pair and gpg runs — RR69 flips red on the
+    # sentinel, not on a string.
+    ("RR70-no-grammar-table", "SKIPPED-UNSAFE", "no-grammar-table",
+     ["```", "git show --stat HEAD", "1", "```", "本批共 1 行。"],
+     {}, {"no-table-member": True}),                                     # F1: the outer's fail-open experiment (whitelist member without a grammar table) as a permanent want_reason holder — refuses WITHOUT executing; renaming the label flips this, and the ENV-grammar-invariant pin makes the member itself impossible to add silently.
+    ("RR72-color-ui-poison", "OK", None,
+     ["```", "git log --oneline", "{V1}", "```", "本批共 10 行。"],
+     {}, {"repo": True, "color-poison": True,
+          "git": {"V1": "git -c color.ui=never log --oneline"}}),
+    # exit25 M-ANSI (outer round 2, 2026-11-13): a victim repo whose own
+    # .git/config sets color.ui=always injects ANSI into the whitelisted
+    # POSITIVE shape `git log --oneline`; a faithful plain-text paste then
+    # fails value-drift (rc=1, false refusal of the acceptance-2 shape).
+    # Same threat model as F5 (repo-config write access), same one-line
+    # recipe (-c on the command line outranks repo-local AND include.path —
+    # precedence live-tested by the outer). Not exec-capable, so it is NOT
+    # part of the 105 strategy handoff set. Delete the color.ui=never pair
+    # and the executor's paste goes coloured — RR72 flips red on the drift
+    # itself, an observable effect, not a string.
+    ("RR71-path-relative-poison", "OK", None,
+     ["```", "wc -l data.txt", "10 data.txt", "```", "本批共 10 行。"],
+     {"data.txt": _D10}, {"path-poison": True, "sentinel": "MARKER"}),  # F6: PATH=".:<real>" + an executable ./wc planted in the doc dir that touches MARKER — v2.4 searched the CWD and ran the plant (OK verdict from the attacker, marker=True); v2.5 drops the relative component, the REAL wc answers, and the sentinel stays absent.
 ]
 
 _RERUN_GIT_ENV = {
@@ -1539,11 +1872,56 @@ def _plant_files(d, files):
             open(p, "w", encoding="utf-8").write(content)
 
 
+def _poison_repo(d, env):
+    """v2.5 F5 — the RR69 construction, ported VERBATIM from the outer's q3d
+    A segment (the run that first made the marker appear under a passing
+    verdict): rewrite the single commit so it CARRIES a gpgsig header, point
+    HEAD at it, then set log.showSignature=true and gpg.program=<script that
+    touches MARKER> in the REPO-LOCAL config. The document lives in this repo,
+    so the whitelisted positive shape `git log --oneline` executes exactly
+    where the poison is — which is the whole point: the guard's grammar and
+    the operand fence are correct about THIS shape (it must keep executing —
+    acceptance 2), only the executed environment can be wrong. MARKER is
+    removed on entry so no stale state can fake a pass or a fail."""
+    import os
+    import subprocess
+    marker = os.path.join(d, "MARKER")
+    if os.path.exists(marker):
+        os.remove(marker)
+    evil = os.path.join(d, "evil-gpg.sh")
+    open(evil, "w", encoding="utf-8").write(f"#!/bin/sh\ntouch {marker}\nexit 2\n")
+    os.chmod(evil, 0o755)
+    raw = subprocess.run(["git", "cat-file", "-p", "HEAD"], cwd=d, env=env,
+                         capture_output=True, text=True).stdout
+    hdr, _, body = raw.partition("\n\n")
+    obj = (hdr + "\ngpgsig -----BEGIN PGP SIGNATURE-----\n\n zz\n"
+           "-----END PGP SIGNATURE-----\n\n" + body)
+    sha = subprocess.run(["git", "hash-object", "-t", "commit", "-w", "--stdin"],
+                         cwd=d, env=env, capture_output=True, text=True,
+                         input=obj).stdout.strip()
+    subprocess.run(["git", "update-ref", "refs/heads/gatepoison", sha], cwd=d,
+                   env=env, capture_output=True)
+    subprocess.run(["git", "symbolic-ref", "HEAD", "refs/heads/gatepoison"],
+                   cwd=d, env=env, capture_output=True)
+    subprocess.run(["git", "config", "log.showSignature", "true"], cwd=d,
+                   env=env, capture_output=True)
+    subprocess.run(["git", "config", "gpg.program", evil], cwd=d, env=env,
+                   capture_output=True)
+    if os.path.exists(marker):          # the construction itself must be inert
+        os.remove(marker)
+    return evil
+
+
 def _rerun_selftest() -> int:
     """Executes RERUN_CASES in throwaway temp dirs (hermetic: planted files,
     a temp git repo, a fifo for the timeout branch — never the real corpus).
     Returns the number of drifted cases; prints selftest ok/FAIL lines so
-    --census flip counting covers this tier too."""
+    --census flip counting covers this tier too.
+    v2.5: three new opts (gpg-poison / no-table-member / path-poison) each
+    mutate the EXECUTION CONTEXT of one case only — the PATH and the
+    RERUN_READONLY globals are restored in the same finally that guards the
+    rerun call, so no later case (or tier) can observe them."""
+    global RERUN_READONLY
     import os
     import shutil
     import subprocess
@@ -1562,6 +1940,11 @@ def _rerun_selftest() -> int:
                                capture_output=True)
                 subprocess.run(["git", "commit", "-qm", "init"], cwd=d, env=env, check=True,
                                capture_output=True)
+                if opts.get("gpg-poison"):      # v2.5 F5: RR69's poisoned repo
+                    _poison_repo(d, env)
+                if opts.get("color-poison"):    # exit25 M-ANSI: RR72's vector —
+                    subprocess.run(["git", "config", "color.ui", "always"],
+                                   cwd=d, env=env, check=True, capture_output=True)
                 if opts.get("no-echo-head"):    # content the executor knows but stdout must never show
                     headsha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=d, env=env,
                                              capture_output=True, text=True).stdout.strip()
@@ -1577,14 +1960,32 @@ def _rerun_selftest() -> int:
                 _plant_files(d, files)
                 path = os.path.join(d, "doc.md")
                 open(path, "w", encoding="utf-8").write("\n".join(doc) + "\n")
-            if opts.get("bare-env"):           # v2.3 RR46: the whitelisted tool is ABSENT at exec time
+            _old_path = None
+            if opts.get("bare-env") or opts.get("path-poison"):
                 _old_path = os.environ.get("PATH")
-                os.environ["PATH"] = ""
+                if opts.get("bare-env"):      # v2.3 RR46: the whitelisted tool is ABSENT at exec time
+                    os.environ["PATH"] = ""
+                else:                         # v2.5 F6 RR71: PATH=".:<real>" — a RELATIVE
+                    # component means "search the document's own directory", and that
+                    # directory now carries an executable literally named wc. With the
+                    # v2.5 filter the component is dropped and the REAL wc answers; with
+                    # the filter deleted the plant runs, answers "10 data.txt" (so the
+                    # VERDICT would still look fine) and the sentinel is what catches it.
+                    os.environ["PATH"] = "." + os.pathsep + _old_path
+                    open(os.path.join(d, "wc"), "w", encoding="utf-8").write(
+                        '#!/bin/sh\ntouch MARKER\necho "10 data.txt"\n')
+                    os.chmod(os.path.join(d, "wc"), 0o755)
+            _member_saved = None
+            if opts.get("no-table-member"):   # v2.5 F1 RR70: the outer's fail-open
+                _member_saved = RERUN_READONLY    # experiment as a permanent pin —
+                RERUN_READONLY = RERUN_READONLY + (("git", "show"),)
             try:
                 got_list = rerun_verdicts(path, timeout=opts.get("timeout"))
             finally:
-                if opts.get("bare-env"):
+                if _old_path is not None:
                     os.environ["PATH"] = _old_path
+                if _member_saved is not None:
+                    RERUN_READONLY = _member_saved
             got = got_list[0][2] if len(got_list) == 1 else (None if not got_list else "MULTI")
             ok = (got == want)
             if ok and want_reason is not None:  # v2.3: the refusal LABEL is pinned, not just the verdict —
@@ -1640,10 +2041,42 @@ _EXPECTED_CMD = ("git rev-parse", "git log", "git ls-tree", "grep -c", "wc -l")
 # iterate itself smaller into a green; a removal is NAMED as AXIS3 missing).
 _EXPECTED_REASONS = ("empty-segment", "exec-unavailable", "flag-path-form",
                      "log-unbounded-shape", "missing-required-flag", "multi-segment",
-                     "no-operand", "non-allowlist-flag", "not-whitelisted",
+                     "no-grammar-table", "no-operand", "non-allowlist-flag",
+                     "not-whitelisted",
                      "outside-docdir",
                      "path-disguise", "shell-metachar", "unbalanced-quote",
                      "write-flag")
+# v2.5 F1: "no-grammar-table" is the 15th member (the fail-closed refuse —
+# RR70 holds its want_reason, ENV-grammar-invariant makes it unreachable by
+# accident). F2: the grammar TABLES are now a closed set too, axis four: the
+# derived entry list comes from the live _GRAMMAR/_GIT_GRAMMAR objects (never
+# a hand-copied mirror), diffed against this frozen 22-member register, then
+# mutated blank-on-its-own-line — an entry may be deleted or typo-fixed only
+# over the flip of its RR53–RR68 positive carrier.
+_EXPECTED_GRAMMAR = ("grep/exact/--count", "grep/exact/--extended-regexp",
+                     "grep/regex/-[cE]+", "log/exact/--decorate",
+                     "log/exact/--no-color", "log/exact/--no-ext-diff",
+                     "log/exact/--oneline", "log/regex/--format=.*",
+                     "log/regex/--pretty.*", "log/regex/-[0-9]+",
+                     "ls-tree/exact/--full-name", "ls-tree/exact/--long",
+                     "ls-tree/exact/--name-only", "ls-tree/exact/-l",
+                     "ls-tree/exact/-r", "ls-tree/exact/-t",
+                     "rev-parse/exact/--abbrev-ref", "rev-parse/exact/--short",
+                     "rev-parse/exact/--sq", "rev-parse/exact/--verify",
+                     "wc/exact/--lines", "wc/exact/-l")
+
+
+def _derive_grammar():
+    """AXIS4 derivation from the LIVE dicts (P-Ⅰ law: a hand-maintained mirror
+    drifts silently green). Naming is "<table-key>/<kind>/<token>" — the
+    table-key is the dict's own key (tool name for _GRAMMAR, subcommand for
+    _GIT_GRAMMAR) and doubles as the anchor that locates the entry's SOURCE
+    LINE, which is what makes the per-line blanking mutation unambiguous."""
+    entries = []
+    for key, (exact, regexes) in list(_GRAMMAR.items()) + list(_GIT_GRAMMAR.items()):
+        entries += [f"{key}/exact/{t}" for t in exact]
+        entries += [f"{key}/regex/{rx}" for rx in regexes]
+    return tuple(sorted(entries))
 
 
 def _derive_reasons(src: str):
@@ -1692,7 +2125,13 @@ def _census() -> int:
     rename MUST flip >=1 want_reason holder or the label prints UNPINNED
     and names AXIS3. This extends "census is DURABLE" from the two closed
     sets to the third, at zero new methodology — and its limits are stated
-    in the header (OPEN faces v2.3 (2): labels, not branch semantics)."""
+    in the header (OPEN faces v2.3 (2): labels, not branch semantics).
+    v2.5 AXIS4(grammar) (outer-v24 F2): the fourth closed set — the option
+    tables the v2.4 round shipped WITHOUT an axis, which is exactly why 15
+    of their 22 entries could be deleted or typo-fixed in silence. Derived
+    from the live dicts, diffed against _EXPECTED_GRAMMAR both ways, then
+    blanked entry-by-entry on its own table line; every entry must flip a
+    positive carrier. Methodology unchanged, only the set gets named."""
     base = Path(__file__).read_text(encoding="utf-8")
     rc = 0
     unpinned = []
@@ -1806,6 +2245,63 @@ def _census() -> int:
         print("census: AXIS3(reasons) per-member flip scan incomplete — count FAIL above is the verdict")
     else:
         print(f"census: AXIS3(reasons) ALL {len(_EXPECTED_REASONS)} refusal reasons pinned via want_reason")
+    # ---- AXIS4 (v2.5 F2, outer-v24 fix item 5): the grammar TABLES were the
+    # last closed set without an axis — and the coverage battery proved what
+    # that meant: 15 of 22 entries had a real ACCEPT-face effect and zero
+    # pins, so deleting or typo-ing one shipped green while every pasted
+    # `wc --lines` / `git ls-tree -r` doc silently flipped to refused (the
+    # mirror image of the M11 anti-cheat: refuse-everything is caught,
+    # accept-nothing is not). Structure = AXIS1-3 again: derive from the LIVE
+    # dicts, diff against the frozen register BOTH ways with the member count
+    # pinned, then mutate each entry — anchor = the entry's quoted token ON
+    # ITS OWN TABLE LINE (the same token may live on another line: "-l" is
+    # both a wc and an ls-tree entry, so a whole-file replace would mutate
+    # the wrong site and measure nothing; the per-line anchor is asserted
+    # unique the way AXIS2 asserts its token). Mutation blanks the token to
+    # the empty string, which behaves as REMOVED (a token can never equal ""
+    # because the loop only inspects '-'-leading ones, and fullmatch("",…)
+    # never matches) — so a blanked entry is a deleted entry, and every
+    # entry must flip at least one of the RR53–RR68 positive carriers. ----
+    gram = _derive_grammar()
+    missing4 = [x for x in _EXPECTED_GRAMMAR if x not in gram]
+    extra4 = [x for x in gram if x not in _EXPECTED_GRAMMAR]
+    axis4_countfail = bool(missing4 or extra4)
+    if axis4_countfail:
+        rc = 1
+        print(f"census: AXIS4(grammar) FAIL derived {len(gram)} != pinned {len(_EXPECTED_GRAMMAR)}; "
+              f"missing={missing4!r} unexpected={extra4!r} — the option grammar is a closed set "
+              f"since v2.5: an entry added or removed must re-pin its positive carrier (N4-B lesson, "
+              f"fourth axis)")
+    ungram = []
+    for entry in gram:
+        key, kind, tok = entry.split("/", 2)
+        lines = base.split("\n")
+        hits = [i for i, l in enumerate(lines) if l.strip().startswith(f'"{key}":')]
+        if len(hits) != 1:
+            print(f"census: AXIS4(grammar) table-line anchor for {key!r} count {len(hits)} (want 1)")
+            ungram.append(entry)
+            continue
+        i = hits[0]
+        qtok = f'"{tok}"'
+        if lines[i].count(qtok) != 1:
+            print(f"census: AXIS4(grammar) token anchor for {entry!r} count "
+                  f"{lines[i].count(qtok)} (want 1)")
+            ungram.append(entry)
+            continue
+        mut = "\n".join(lines[:i] + [lines[i].replace(qtok, '""', 1)] + lines[i + 1:])
+        flips = _run_mutant_selftest(base, mut)
+        print(f"census: AXIS4(grammar) blank {entry!r} -> {flips} pin-case flip(s)")
+        if flips == 0:
+            ungram.append(entry)
+    if ungram:
+        rc = 1
+        print(f"census: AXIS4(grammar) UNPINNED ENTRIES: {ungram!r} — every accepted option "
+              f"shape needs a positive carrier that dies when the entry dies")
+    elif axis4_countfail:
+        print("census: AXIS4(grammar) per-member flip scan incomplete — count FAIL above is the verdict")
+    else:
+        print(f"census: AXIS4(grammar) ALL {len(_EXPECTED_GRAMMAR)} grammar entries pinned "
+              f"via positive carriers")
     return rc
 
 
@@ -1859,6 +2355,120 @@ def _mainline_selftest() -> int:
     return bad
 
 
+def _env_selftest() -> int:
+    """v2.5 (F1/F5/F6/F7) — the faces RERUN_CASES cannot express, because
+    they are STRUCTURAL: an invariant over two data sources, and the exact
+    argv the executor builds. Each check prints its own selftest line, so a
+    census mutation that breaks one of them is counted like any pin flip.
+
+    Why these four are not prose: the v2.4 round SHIPPED a dead argv edit
+    (argv[2] is always '-c' after a 5-element insert, so the ext-diff flag
+    never appeared — M2: deleting it flipped 0 pins) and shipped a whitelist
+    layer with no table check (F1: add a member, forget the table ⇒ 0 FAIL,
+    unconstrained execution). A sentence about either would have been the
+    next 81 §九 fidelity finding; an assert cannot drift that way."""
+    import os
+    bad = 0
+
+    def line(ok, want, got, cid, detail):
+        nonlocal bad
+        bad += 0 if ok else 1
+        print(f"selftest {'ok ' if ok else 'FAIL'} want_env={want!r} got={got!r} "
+              f":: {cid} :: {detail}")
+
+    # ENV-grammar-invariant (F1): every execution-whitelist member must have
+    # a grammar table — the fail-closed refuse makes an unmemored member SAFE
+    # but this pin makes it LOUD, so nobody can extend the whitelist and
+    # silently run the new tool unconstrained until some doc hits the refuse.
+    noftable = [f"{t} {m}" for t, m in RERUN_READONLY
+                if not ((m in _GIT_GRAMMAR) if t == "git" else (t in _GRAMMAR))]
+    line(not noftable, "every RERUN_READONLY member has a grammar table",
+         "ALL-HAVE" if not noftable else "MISSING", "ENV-grammar-invariant",
+         f"{len(RERUN_READONLY)} members checked against _GRAMMAR/_GIT_GRAMMAR, "
+         f"offenders={noftable!r}")
+
+    # ENV-harden-argv-log (F5 + F7): the prefix, the showSignature pair and
+    # the --no-ext-diff insert POSITION, in one byte-exact expectation. The
+    # v2.4 bug class was "edited the argv and never looked at the argv".
+    want_log = ["git", "--no-pager", "-c", "diff.external=", "-c", "core.pager=cat",
+                "-c", "log.showSignature=false", "-c", "color.ui=never",
+                "log", "--no-ext-diff", "--oneline"]
+    got_log = _git_harden(["git", "log", "--oneline"])
+    line(got_log == want_log, str(want_log), str(got_log), "ENV-harden-argv-log",
+         "sub at index 7, --no-ext-diff immediately after it, showSignature off")
+
+    # ENV-harden-argv-revparse: a NON-diff sub must not receive the flag (it
+    # would be an unknown option for rev-parse ⇒ cmd-failed on every paste),
+    # while the rest of the prefix still applies.
+    want_rp = ["git", "--no-pager", "-c", "diff.external=", "-c", "core.pager=cat",
+               "-c", "log.showSignature=false", "-c", "color.ui=never",
+               "rev-parse", "--short", "HEAD"]
+    got_rp = _git_harden(["git", "rev-parse", "--short", "HEAD"])
+    line(got_rp == want_rp and "--no-ext-diff" not in got_rp, str(want_rp),
+         str(got_rp), "ENV-harden-argv-revparse", "prefix yes, ext-diff flag no")
+
+    # ENV-path-clean (F6 unit half): empty and relative components dropped,
+    # order preserved, absolute kept. (RR71 is the EXEC half.)
+    probe = os.pathsep.join([".", "/usr/bin", "", "rel/dir", "/bin"])
+    clean = _path_clean(probe)
+    line(clean == ["/usr/bin", "/bin"] and _path_clean("") == [],
+         "['/usr/bin', '/bin'] and []", str(clean), "ENV-path-clean",
+         "cwd-search components cannot reach the executor")
+    return bad
+
+
+def _probes_selftest() -> int:
+    """v2.5 F8 — the marker/leak sentinels are no longer /tmp-only evidence.
+
+    review_guard_probes.py is the mainline's own verbatim consumer file (邢's
+    PR#22 review code, 逐字 taken from review 5874479780); the outer round
+    showed it HAS teeth — at v2.3 the external-diff case really wrote the
+    marker — yet neither --selftest nor --census ever called it, so the whole
+    env-sanitisation layer was being vouched for by a script in /tmp
+    (conservation-law violation: a permanent claim resting on an ephemeral
+    probe). This tier runs it and asserts the two JSON lines say
+    accepted=False with no marker and no outside read.
+
+    A copy that is NOT in the repo layout (census mutant copies live in /tmp,
+    so they never see the file) prints a VISIBLE ABSENT line — skipped loudly,
+    never silently — so the tier's absence is itself auditable in the output
+    rather than a missing line someone must notice. The in-tree run is the
+    consumer that matters (OPEN faces v2.5 (5))."""
+    import json
+    import subprocess
+    root = Path(__file__).resolve().parents[2]
+    probes = root / "review_guard_probes.py"
+    if not probes.exists():
+        print(f"selftest ok  want_probe='(absent file is LOUD, not silent)' "
+              f"got=ABSENT :: PRB-file-absent :: {probes} not in this layout — tier skipped")
+        return 0
+    want = {"indirect-file-escape": ("read_outside_synthetic_file", "accepted"),
+            "external-diff-execution": ("synthetic_marker_written", "accepted")}
+    bad = 0
+    try:
+        r = subprocess.run([sys.executable, "-I", str(probes)], capture_output=True,
+                           text=True, timeout=120)
+        rows = {}
+        for l in r.stdout.splitlines():
+            try:
+                j = json.loads(l)
+            except ValueError:
+                continue
+            if isinstance(j, dict) and "case" in j:
+                rows[j["case"]] = j
+        for case, (leak_field, acc_field) in want.items():
+            j = rows.get(case)
+            ok = (j is not None and r.returncode == 0
+                  and j.get(acc_field) is False and j.get(leak_field) is False)
+            bad += 0 if ok else 1
+            print(f"selftest {'ok ' if ok else 'FAIL'} want_probe='accepted=False ∧ "
+                  f"{leak_field}=False' got={j!r} :: PRB-{case} :: rc={r.returncode}")
+    except Exception as e:
+        print(f"selftest FAIL want_probe='…' got=EXC :: PRB-harness :: {e!r}")
+        bad += 1
+    return bad
+
+
 def _selftest() -> int:
     import tempfile
     bad = []
@@ -1874,10 +2484,12 @@ def _selftest() -> int:
         import os
         os.unlink(path)
     n_rerun_bad = _rerun_selftest()
+    n_env_bad = _env_selftest()
+    n_prb_bad = _probes_selftest()
     n_cli_bad = _mainline_selftest()
-    if bad or n_rerun_bad or n_cli_bad:
-        print(f"selftest: {len(bad)} boundary + {n_rerun_bad} rerun + {n_cli_bad} cli "
-              f"case(s) drifted from the boundary spec")
+    if bad or n_rerun_bad or n_env_bad or n_prb_bad or n_cli_bad:
+        print(f"selftest: {len(bad)} boundary + {n_rerun_bad} rerun + {n_env_bad} env + "
+              f"{n_prb_bad} probes + {n_cli_bad} cli case(s) drifted from the boundary spec")
         return 1
     print("selftest: all boundary cases hold")
     return 0

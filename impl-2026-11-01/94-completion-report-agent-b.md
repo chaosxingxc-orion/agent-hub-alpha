@@ -63,3 +63,61 @@ fd9abf0(80) c9b5965(78) 26d9856(77) d1c1943(79) ec2ff2e(闸v2.0) 5f289ac(闸v2.1
 3. **常驻钉 RR37/38/39**（两条原始反例+语法正例防空拒作弊）；AXIS3 冻结常数 13→14；Windows 可移植=显式 utf-8/C.UTF-8（Linux 复验在案，Windows 无环境实测，如实标）。
 验收对邢超四款：①双反例 marker/leak 观察面证实拦截；②正例在带毒 repo 内照常执行且无副作用；③可观察效应断言入探针件；④键位差 v2.3→v2.4=0 默认面零漂移。selftest 123→126 全绿、census 三轴 ALL×3（14 拒因全钉）。
 辖域承认：收卷判词按自家口径本就是"×冻结探针集"——邢超扩了探针集，v2.4 是在新集下重跑的结果，非旧集翻案。
+
+> **[v2.5 就地勘误 2026-11-13，逐条按 outer.md 实测；原文一字不删]**
+> 1. 第 2 条「**双重压制**」只在其半成立：语法表拦 `--ext-diff/-p`（第一层，常驻有效）；`diff.external`
+>    由注入的 `-c diff.external=` 生效。但括号里的 `[--no-ext-diff]` **当时永不注入**——argv spy 实测插
+>    前缀后 `argv[2]` 恒为 `-c`，条件恒假，删该支 selftest 0 FAIL（F7 死支）。v2.5 改为 `_git_harden`
+>    单源构造，flag 落在 sub **之后**第一个位置，并由结构钉 `ENV-harden-argv-log/-revparse` 钉住插位。
+> 2. 四款之②「正例在带毒 repo 内照常执行且无副作用」当时 **FALSE（本战役唯一 B）**：受害者 repo 的
+>    `.git/config` 写 `log.showSignature=true` + `gpg.program=<evil>` 并给提交挂 gpgsig 头，即可让
+>    **验收款2 要保的正例** `git log --oneline` 真起外部程序（q3d A：verdict=OK ∧ marker=True）。
+>    v2.5：前缀补 `-c log.showSignature=false` + **可观察效果常驻钉 RR69**（同构投毒 + marker sentinel，
+>    删补丁当场翻红）+ 仓根探针件接入 `--selftest`（PRB 两条，不再靠 /tmp 易失背书）；q3d 对 v2.5 复跑
+>    A 段 marker True→**False**、B 段六面（pager/alias/diff.external×2/fsmonitor/gpg）marker 全 **False**，
+>    正例 verdict 仍 OK。诚实残余照写：repo config 的 exec-capable 键是**开口集**（fsmonitor/hooks/
+>    textconv/credential…），本闸只宣称「已构造的一面被拦且被钉」。
+> 3. 第 3 条「常驻钉 RR37/38/39」简写与 v2.3 既有 arrow-twin/unclosed-fence/block-stop-hash 三条重号
+>    （完整 cid 一直唯一）→ v2.5 改号 **RR50/51/52**；本文其余旧简写按此映射读。**AXIS3 冻结常数
+>    13→14→v2.5=15**（新增 `no-grammar-table`，F1 无表 fail-closed：v2.4 加白名单成员却忘配语法表＝
+>    0 FAIL 且该工具完全不设语法约束；今由 RR70 持 want_reason + `ENV-grammar-invariant` 钉「每成员必有表」）。
+> 4. 「census 三轴 ALL×3」→ v2.5 起为**四轴**：语法表成为受审封闭集（AXIS4(grammar) 22 表项，双向 diff +
+>    逐项 blanking 变异），因覆盖率电池实测 **15/22 表项「有真实接受面效果却零钉」**——删项/打错字全绿通过，
+>    而真实文档的正例会无声翻成拒绝；现每项各有 RR53–RR68 的 OK 正例钉。selftest **126→151** 全绿。
+> 5. PATH 面（F6，环境相关 M）：v2.4 原样继承 PATH，空/相对成分＝「搜文档目录」，文档目录里种下的可执行
+>    `git` 即被执行（q3d F6：value-drift 输出来自攻击者）；v2.5 过滤为非绝对成分不入搜索、以 execvp 语义
+>    自解析（`_exe_search`）后以绝对路径执行，行为钉 RR71 + 结构钉 ENV-path-clean；两形复跑 marker False。
+> 6. 本批**不**改动的宣称：`--`（end-of-options）仍拒（32 形过拒、语料零载体，评估后登记不放宽——OPEN face 3）；
+>    (i) 键表拒 / (ii) git 执行面下线（B-lite）**均未在本轮实施**，登记待主线 105 回收审计裁决。
+> 7. mergeable 句现跑取证：GET `api.gitcode.com/api/v5/repos/xingchao_ml/agent-hub-alpha/pulls/5`
+>    现跑＝head `9ae1bd3b6d35` ∧ `mergeable=True` ∧ state=open ∧ updated_at 2026-11-12T23:16:43+08:00
+>    （本地 22:31 快照 d2de3c84/False 只是早于 force-push 落点，非反证）。
+
+## 十、收卷轮与 v2.5a（本批自审闭环，2026-11-13）
+
+§九 修复后我方按 104 号裁决开了小 review-loop（外环全强度空白轮 → 修复 → 内环空白轮 → 收卷轮），
+全程只动本仓 tools 与本文书，发现与处置如实列：
+
+- **外环九件（F1–F9）→ v2.5**：无语法表 fail-closed（第 15 枚拒因 `no-grammar-table`）、
+  `--no-ext-diff` 死支改单源插位、语法表入 census 第四轴（22 项双向 diff+逐项 blanking，
+  实测 15/22 项原本「有效果零钉」）、PATH 空/相对成分过滤 + execvp 语义自解析（拒文档目录搜索）、
+  拒因/编号整理（RR50/51/52 改号消歧）、策略 (i)/(ii) 评估后**不实施**移交主线。
+- **收卷轮 0B/1M**：空白终审位独立攻击 B=0（alias/include.path/语法缩写形/PATH 符号链接形全落空），
+  抓出一发新 **M-ANSI**：受害者 repo `color.ui=always` 给白名单正例形 `git log --oneline` 的
+  piped 输出注入 ANSI，忠实纯文本粘贴被虚判 value-drift（有界假拒，非放行执行；非 exec-capable，
+  不在 105 移交集）。
+- **v2.5a 最小修（commit 见本分支尾笔）**：红探针 RR72-color-ui-poison（先落红：
+  `want='OK' got='RERUN-MISMATCH'`）→ `_GIT_HARDEN_PREFIX` 补 `-c color.ui=never`（命令行 -c
+  压过 repo-local 与 include.path，precedence 活测）→ ENV 两枚字节钉期望同步。变异实证：
+  删补丁站点恰 RR72 翻红（红在 observable drift，非字符串）。修后原判位复核四项全过，**终判 0B/0M 收卷**。
+- **v2.5a 指标（全部现跑，复算命令同 §九 体例）**：selftest **152 ok / 0 FAIL / rc=0**
+  （含 PRB 两条=你的逐字探针已接常驻层，件缺席时打印可见 ABSENT 不静默）；census **四轴 rc=0**
+  （21/5/15/22，AXIS4 无 zero-flip）；键位差 v2.4→v2.5→v2.5a 默认面两次 **0**（逐字节）；
+  `--rerun` 全 94 件语料 v2.4/v2.5 判定行逐字节相同；探针件现跑**双拦**。终件 sha256
+  7139d2b161d91b932f277fdd8936f7a6411a8ad09bd18e5b0b15e92b50f57eea。
+- **m 台账 14 条登记不阻塞**（收卷 9+内环 4+复核新登 1）：值得评审人知悉的一条——PRB 层信路径+
+  返回值，「功能正常的说谎 stub」替换探针件可骗过该层（崩溃/搬移形会响）；拟加 sha 锚/结构断言，
+  归下批。其余（裸 --pretty 无界面、leak 断言 BSD 空转、缩写形拒因标签、非 UTF-8 traceback 等）
+  见私仓线 81 §十同族账。
+- 辖域承认沿用 §九：以上为**本 changeset** 的收敛判据；exec-capable config 键的完整封闭是开放集，
+  本闸只宣称「已构造面被拦且被钉」。

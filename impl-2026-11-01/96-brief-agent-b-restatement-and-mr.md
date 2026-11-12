@@ -97,3 +97,10 @@
 邢超 !5=GitHub PR#22 Request changes（两条 P1 围栏绕过，独立复现）+add/add 冲突+Windows 编码单列。
 本线处置：分支重建基于 main 89317d9（!3 已合入，闸血统 v1.8 纯 vendored 确认）→ v2.4 = 参数语法白名单+执行环境消毒+RR37/38/39+utf-8 显式；
 marker/leak 双观察探针全拦全绿（guard24_probe.py）；force-push 同分支更新 !5；回评一条含验收四款对照。
+
+## 修复轮记录（v2.5/v2.5a 收卷，2026-11-13）
+
+小 review-loop 全链（外环九件→v2.5｜内环 0B/0M｜收卷 0B/1M→M-ANSI 修→终判 0B/0M）。
+本笔：v2.5a 终件 sha 7139d2b161d9…、邢超逐字探针 review_guard_probes.py 入仓根并接 --selftest、
+94 §十收卷账。head 移动一次到底（9ae1bd3→本笔，force-with-lease）。回评草稿存私仓线 88
+（发送待用户口令）。
