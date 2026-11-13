@@ -1,3 +1,5 @@
+> **接收范围：研究参考组件，非生产运行闭环。** 当前权威状态见 [R1—R6 接收与开放项](../achitecture%20design/08-r1-r6-acceptance-and-open-items.md)。历史测试数和完成声明不替代该状态表。
+
 # agent-festival（Go 机器基座——统一架构的第一个合规适配器）
 
 > 来源：[yaojun01/agent-festival](https://github.com/yaojun01/agent-festival)（设计仓，决策台账

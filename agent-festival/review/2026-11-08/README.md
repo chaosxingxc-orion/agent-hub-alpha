@@ -5,7 +5,10 @@ Go 1.24.13. The original `go test ./... -count=1 -race` passes on exact LF blobs
 Export from Windows with `git -c core.autocrlf=false archive`, since the scan
 fixture is compared byte-for-byte. No real model or external business API ran.
 
-Run `python3 agent-festival/review/2026-11-08/run_probes.py /path/to/go`.
+Run `python3 agent-festival/review/2026-11-08/run_probes.py [/path/to/go-binary]`.
+The optional argument is the Go executable file, not the project directory.
+Omit it to use `go` from `PATH`; for example, pass `/usr/local/go/bin/go` when
+Go is installed there. Brackets denote an optional argument, not literal text.
 The runner uses a temporary Go overlay. It returns the actual test exit code;
 **nonzero currently means known system acceptance gaps remain**, not a successful
 production acceptance. Future fixes must update this evidence table.
