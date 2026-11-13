@@ -940,25 +940,23 @@ RERUN_TIMEOUT_DEFAULT = 10  # seconds per executed command; env RERUN_TIMEOUT ov
 # line, and it must occur exactly ONCE in this file (P-Ⅱ anchor semantics), so
 # nothing above this block may quote the pair form verbatim.
 RERUN_READONLY = (
-    ("git", "rev-parse"),
-    ("git", "log"),
-    ("git", "ls-tree"),
+    # v2.6: the three git members are RETIRED (moved to _RETIRED_GIT_MEMBERS
+    # below) — the git replay face refuses wholesale in _guard before this
+    # table is consulted; a dead whitelist member has no behaviour face to
+    # pin (census AXIS2 flagged all three unpinned), so retirement removes
+    # them here and registers them explicitly.
     ("grep", "-c"),
     ("wc", "-l"),
 )
+_RETIRED_GIT_MEMBERS = (("git", "rev-parse"), ("git", "log"), ("git", "ls-tree"))
+# census AXIS2 keeps watching the RETIRED trio: re-adding any of them to
+# RERUN_READONLY without removing the _guard retirement is a no-op (still
+# refused); removing the retirement revives RR74/RR74b red. Both directions
+# stay covered.
 
 _LONG_FLAG = {"c": "--count", "l": "--lines"}
 _ANN = re.compile(r"(?:#\s*)?→\s*(.*)$")   # the inline paste annotation: "cmd → out" / "cmd # → out"
 
-
-def _bounded_log(argv):
-    """`git log` is executable evidence only in its PASTE-COMPARABLE shapes:
-    --oneline / --pretty… / -<N> / a rev..rev range. A bare `git log` is a
-    prose mention (real-doc carrier: 35号:3) whose unbounded output is not a
-    paste face, so it refuses as log-unbounded-shape (RR20 pins it; deleting
-    this gate makes RR20 execute a full log and flip to MISMATCH)."""
-    return any(a == "--oneline" or a.startswith("--pretty") or re.fullmatch(r"-\d+", a)
-               or ".." in a for a in argv[2:])
 
 
 def _has_flag(argv, short):
@@ -981,11 +979,11 @@ _GRAMMAR = {
     "wc":   ({"-l", "--lines"}, ()),
     "grep": ({"--count", "--extended-regexp"}, ("-[cE]+",)),
 }
-_GIT_GRAMMAR = {
-    "rev-parse": ({"--short", "--verify", "--abbrev-ref", "--sq"}, ()),
-    "ls-tree":   ({"-r", "--name-only", "-l", "--long", "-t", "--full-name"}, ()),
-    "log":       ({"--oneline", "--no-color", "--decorate", "--no-ext-diff"}, ("--pretty.*", "--format=.*", "-[0-9]+")),
-}
+_GIT_GRAMMAR = {}
+# v2.6: the git grammar table is RETIRED EMPTY — every git subcommand refuses
+# at the _guard entry (git-replay-disabled) before any grammar lookup; the 17
+# git entries census flagged unpinned had no behaviour face left. The wc/grep
+# tables survive unchanged (AXIS4 pins them).
 
 def _flag_grammar(tool, sub, argv):
     """v2.4 (outer request-changes): the whitelist must constrain the FULL
@@ -1003,14 +1001,15 @@ def _flag_grammar(tool, sub, argv):
     special case double-wrote the same rule (deleting either half flipped
     nothing, so the entry was unmutable-proof); bare `--pretty` still matches
     via "--pretty.*" (.* over the empty string)."""
-    if tool == "git":
-        table = _GIT_GRAMMAR.get(sub)
-        rest = argv[2:]
-    else:
-        table = _GRAMMAR.get(tool)
-        rest = argv[1:]
+    table = _GRAMMAR.get(tool)   # v2.6: git branch retired with the face
+    rest = argv[1:]
     if table is None:
-        return "no-grammar-table"
+        # v2.6: the labelled refuse died with its only holder (RR70 flipped
+        # to git-replay-disabled). The defence itself stays, as fail-loud:
+        # every live whitelist member carries a table (ENV-grammar-invariant
+        # pins that), so reaching here is an invariant break — crash red,
+        # never silently accept.
+        raise AssertionError(f"grammar table missing for whitelisted {tool!r}")
     exact, regexes = table
     for t in rest:
         if not t.startswith("-"):
@@ -1230,23 +1229,21 @@ def _guard(text: str, docdir=None):
     tool = argv[0]
     if "/" in tool:
         return None, "path-disguise"
+    if tool == "git":
+        # v2.6 (2026-11-13, reviewer round-3 P1): the git replay face is
+        # RETIRED wholesale — before the whitelist is even consulted (the
+        # three git members left RERUN_READONLY with the face; see
+        # _RETIRED_GIT_MEMBERS). Four grammar holes in a row (--files0-from
+        # indirect input → --ext-diff/-p config spawn → log.showSignature
+        # injection → --format=%G? explicit gpg.program invocation) showed
+        # the git syntax-execution surface cannot be converged by
+        # enumeration. Per the reviewer's own preferred option, every git
+        # invocation refuses as git-replay-disabled BEFORE execution. Pure
+        # scanning and the wc/grep replay tiers are untouched.
+        return None, "git-replay-disabled"
     for t, m in RERUN_READONLY:
         if t != tool:
             continue
-        if tool == "git":
-            if len(argv) < 2 or argv[1] != m:
-                continue
-            if any(a == "--output" or a.startswith("--output=") for a in argv[1:]):
-                return None, "write-flag"
-            if m == "log" and not _bounded_log(argv):
-                return None, "log-unbounded-shape"
-            bad = _operands_in_scope(argv, docdir)          # v2.2 F-1: reason-carrying
-            if bad:
-                return None, bad
-            g = _flag_grammar("git", m, argv)               # v2.4 P1-fix, LAST:
-            if g:
-                return None, g                              # path-bearing flags keep flag-path-form (RR28-31 pins stable)
-            return argv, None
         if not _has_flag(argv, m):
             return None, "missing-required-flag"
         if not any(not a.startswith("-") for a in argv[1:]):
@@ -1261,46 +1258,11 @@ def _guard(text: str, docdir=None):
     return None, "not-whitelisted"
 
 
-_GIT_HARDEN_PREFIX = ["--no-pager", "-c", "diff.external=", "-c",
-                      "core.pager=cat", "-c", "log.showSignature=false",
-                      "-c", "color.ui=never"]
-_GIT_DIFF_SUBS = ("log", "show", "diff")
+# v2.6 retired-with-the-face: _GIT_HARDEN_PREFIX, _GIT_DIFF_SUBS and
+# _git_harden/_bounded_log are DELETED (git replay refuses at _guard entry;
+# the harden prefix would only have guarded an execution that can no longer
+# happen). RR74/RR74b + the 26 flipped pins guard the retirement.
 
-
-def _git_harden(argv):
-    """v2.5 (F5 B + F7 M) — the ONE place the git execution prefix is built.
-
-    What is neutralised, and what that claim is worth:
-    GIT_CONFIG_GLOBAL/SYSTEM=/dev/null + GIT_CONFIG_NOSYSTEM=1 kill the USER
-    and SYSTEM config layers; the injected -c pairs override the REPO-LOCAL
-    layer for exactly the keys measured reachable: diff.external (blanked),
-    core.pager (blanked to cat), log.showSignature (OFF — the v2.4 hole:
-    a victim repo with showSignature=true + gpg.program=<evil> + a crafted
-    gpgsig commit made the whitelisted POSITIVE shape `git log --oneline`
-    re-spawn the attacker's program, outer q3d A: verdict OK, marker=True)
-    and color.ui (never — the exit25 M-ANSI hole: repo-local color.ui=always
-    coloured the same POSITIVE shape's piped output and false-refused a
-    faithful plain paste as value-drift; RR72 pins it, non-exec-capable so
-    outside the 105 strategy handoff set).
-    HONEST RESIDUAL (OPEN faces v2.5 (4)): repo-local config is an OPEN SET of
-    exec-capable keys (fsmonitor, hooks, textconv, credential helpers, …);
-    argv-level neutralisation cannot enumerate it, so this file does NOT claim
-    "no external execution" — it claims the one constructible face is blocked
-    AND pinned (RR69's marker sentinel, the PRB probes tier, the q3d battery
-    re-run). The strategic routes — (i) refuse on any exec-capable config key,
-    (ii) retire the git execution face (B-lite) — belong to 主线 105 and are
-    NOT taken in-loop.
-    F7 (the dead branch): v2.4 tested argv[2] AFTER inserting its own prefix,
-    where argv[2] is always '-c', so --no-ext-diff was NEVER injected (M2:
-    deleting it flipped zero pins — while 81 §九 listed the flag as shipped).
-    The sub token now sits at index 1+len(prefix) and the flag rides
-    IMMEDIATELY after it, the position git parses; the insert position is
-    pinned structurally by the ENV-harden-argv cases."""
-    out = [argv[0]] + _GIT_HARDEN_PREFIX + list(argv[1:])
-    si = 1 + len(_GIT_HARDEN_PREFIX)
-    if len(out) > si and out[si] in _GIT_DIFF_SUBS:
-        out.insert(si + 1, "--no-ext-diff")
-    return out
 
 
 def _path_clean(raw):
@@ -1368,13 +1330,12 @@ def _run_cmd(argv, cwd, timeout):
     is_git = argv[0] == "git"
     argv[0] = exe
     if is_git:
-        # no user/system config, no external diff/textconv, no pager, no
-        # signature-spawned gpg, no prompts, no locks — _git_harden states
-        # what this does and does NOT claim (v2.5 F5/F7).
+        # v2.6: UNREACHABLE for whitelisted git replay (retired at _guard
+        # entry) — kept as defence-in-depth for any future re-admission:
+        # config-layer isolation without the deleted _git_harden prefix.
         env.update({"GIT_CONFIG_GLOBAL": "/dev/null", "GIT_CONFIG_SYSTEM":
                     "/dev/null", "GIT_CONFIG_NOSYSTEM": "1",
                     "GIT_OPTIONAL_LOCKS": "0", "GIT_TERMINAL_PROMPT": "0"})
-        argv = _git_harden(argv)
     try:
         p = subprocess.run(argv, cwd=cwd, capture_output=True, text=True,
                            encoding="utf-8", errors="replace",
@@ -1598,7 +1559,7 @@ RERUN_CASES = [
      {"data.txt": _D10}, {}),                                          # the pair of RR01: paste drifted (过期贴值)
     ("RR03-no-block", "RERUN-MISMATCH", None, ["```", "wc -l data.txt", "```", "本批共 10 行。"],
      {"data.txt": _D10}, {}),                                          # 窗内有命令、无粘贴输出块 = 忘贴块形
-    ("RR04a-write-flag", "SKIPPED-UNSAFE", "write-flag", ["```", "git log --output=SENTINEL -1", "1 x", "```", "本批共 10 行。"],
+    ("RR04a-write-flag", "SKIPPED-UNSAFE", "git-replay-disabled", ["```", "git log --output=SENTINEL -1", "1 x", "```", "本批共 10 行。"],
      {"data.txt": _D10}, {"repo": True, "git": {}, "sentinel": "SENTINEL"}),
     ("RR04b-network", "SKIPPED-UNSAFE", "not-whitelisted", ["```", "curl https://example.invalid/x", "200", "```", "本批共 10 行。"],
      {"data.txt": _D10}, {}),                                          # detectable ≠ executable
@@ -1614,22 +1575,35 @@ RERUN_CASES = [
      {"data.txt": _D10}, {"timeout": 1}),                               # the pair: same switch, wall clock must not inflate
     ("RR06a-cd-tail", "OK", None, ["```", "cd . && wc -l data.txt", "10 data.txt", "```", "本批共 10 行。"],
      {"data.txt": _D10}, {}),                                           # cd 后只读段执行
-    ("RR07-revparse", "OK", None, ["```", "git rev-parse --short HEAD", "{V1}", "```", "本批共 10 行。"],
+    ("RR07-revparse", "SKIPPED-UNSAFE", "git-replay-disabled", ["```", "git rev-parse --short HEAD", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git rev-parse --short HEAD"}}),  # whitelist member: rev-parse
-    ("RR08-revparse-stale", "RERUN-MISMATCH", None, ["```", "git rev-parse --short HEAD", "deadbee", "```", "本批共 10 行。"],
+    ("RR08-revparse-stale", "SKIPPED-UNSAFE", "git-replay-disabled", ["```", "git rev-parse --short HEAD", "deadbee", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {}}),                                    # the 68号/bb85222 stale-short-sha disease form
-    ("RR09-log", "OK", None, ["```", "git log --oneline -1", "{V1}", "```", "本批共 10 行。"],
-     {}, {"repo": True, "git": {"V1": "git log --oneline -1"}}),        # member: log
-    ("RR10-lstree", "OK", None, ["```", "git ls-tree HEAD", "{V1}", "```", "本批共 10 行。"],
+    # RR09-log: RETIRED at v2.6 — superseded by RR74b (same shape, expected
+    # flipped OK→SKIPPED-UNSAFE/git-replay-disabled when the git face retired)
+    ("RR10-lstree", "SKIPPED-UNSAFE", "git-replay-disabled", ["```", "git ls-tree HEAD", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git ls-tree HEAD"}}),            # member: ls-tree (tab-bearing output exercises the token comparison)
     ("RR11-grepc", "OK", None, ["```", "grep -c x data.txt", "2", "```", "本批共 10 行。"],
      {"data.txt": _GREP2}, {}),                                         # member: grep -c (RR04c pins the pipe-refusal side of the same tool)
-    ("RR12-git-commit-refused", "SKIPPED-UNSAFE", "not-whitelisted", ["```", "git commit -m second", "1 file changed", "```", "本批共 10 行。"],
+    ("RR12-git-commit-refused", "SKIPPED-UNSAFE", "git-replay-disabled", ["```", "git commit -m second", "1 file changed", "```", "本批共 10 行。"],
      {"f.txt": "a\n"}, {"repo": True, "git": {}, "commits": 1}),        # WRITE subcommand: must not run (HEAD must still have 1 commit)
     ("RR13-first-in-window", "SKIPPED-UNSAFE", "path-disguise", ["```", "cd . && /usr/bin/wc -l data.txt", "wc -l data.txt", "10 data.txt", "```", "本批共 10 行。"],
      {"data.txt": _D10}, {}),                                           # determinism pin: top-down FIRST is used, never "the runnable one"
     ("RR14-skip-precedence", "SKIPPED-UNSAFE", "multi-segment", ["```", "wc -l data.txt | sh", "```", "本批共 10 行。"],
      {"data.txt": _D10}, {}),                                           # guard BEFORE the block check: UNSAFE ≠ no-pasted-block
+    ("RR74-git-replay-retired", "SKIPPED-UNSAFE", "git-replay-disabled",
+     ["```", "git log -1 --format=%G?", "N", "```", "本批共 1 行。"],
+     {}, {}),  # v2.6: the reviewer round-3 P1 shape itself (%G? requests
+     # signature verification → repo-local gpg.program executes). With the
+     # git face retired the attack class is unreachable: EVERY git command
+     # refuses as git-replay-disabled before execution — this pin guards the
+     # retirement against silent revival (delete the retirement branch and
+     # this case must flip to a red executed verdict).
+    ("RR74b-git-retired-legacy-log", "SKIPPED-UNSAFE", "git-replay-disabled",
+     ["```", "git log --oneline -1", "abc1234 fix", "```", "本批共 10 行。"],
+     {}, {}),
+     # the once-legal positive (RR09) now also refuses — the tier's honest
+     # cost, pinned so the retirement cannot selectively leak old shapes
     ("RR73-dangling-arrow", "RERUN-MISMATCH", None,
      ["```", "wc -l data.txt →", "本批共 10 行。"],
      {"data.txt": _D10}, {}),  # R2 F1 / inner-loop IN-2 pin: the TRUE crash
@@ -1676,7 +1650,7 @@ RERUN_CASES = [
      {"本节": "**真裁（3 项）**：a\n**知悉（不需回复）**：b\nplain\n"}, {}),  # the 68号:136 command verbatim: `\*` inside SINGLE QUOTES survives normalization (regex, not markdown), the quoted | stays one token, operand 本节 is in-tree — executes and matches 2 (quote-aware split deleted: unbalanced-quote SKIP; in-quote unescape mutant: grep dies on '^**' → MISMATCH)
     ("RR26-quoted-semi", "OK", None, ["复核：`grep -c 'a;b' data.txt` → 1 —— 引号内分号", "本批共 2 行。"],
      {"data.txt": "a;b\nx\ny\n"}, {}),                                  # the ; twin of RR18: quoted semicolon no longer forges an empty segment
-    ("RR27-no-actual-echo", "RERUN-MISMATCH", None, ["```", "git rev-parse --short HEAD", "deadbeef", "```", "本批共 10 行。"],
+    ("RR27-no-actual-echo", "SKIPPED-UNSAFE", "git-replay-disabled", ["```", "git rev-parse --short HEAD", "deadbeef", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {}, "no-echo-head": True}),              # v2.1 M3 echo ban: the drift line must carry actual-sha256=…, NEVER the executed short-sha itself (RR08 pins the verdict, this pins the silence)
     # ---- RR28–RR29: v2.2 F-1 flag-value pins (the inner-audit oob_doc
     # probes, promoted to permanent). v2.1's fence SKIPPED every '-'-leading
@@ -1693,7 +1667,7 @@ RERUN_CASES = [
      {"data.txt": _GREP2}, {}),                                         # --file=PATH equals form → same refusal (RR24/RR09 prove pure path-free flags stay executable — regression self-proof)
     ("RR50-files0-from", "SKIPPED-UNSAFE", "non-allowlist-flag", ["```", "wc -l --files0-from targets", "1", "```", "本批共 1 行。"],
      {"data.txt": _GREP2, "targets": "/etc/passwd\0data.txt\0"}, {}),  # v2.4 P1-1 (review 4550440277), RENUMBERED from RR37-files0-from in v2.5 F9 (the shorthand collided with RR37-rerun-arrow-twin): operand IN docdir whose CONTENT points outside — argv scope checks cannot see through it; grammar refuses before execution
-    ("RR51-ext-diff-p", "SKIPPED-UNSAFE", "non-allowlist-flag", ["```", "git log -1 --oneline --ext-diff -p", "x", "```", "本批共 1 行。"],
+    ("RR51-ext-diff-p", "SKIPPED-UNSAFE", "git-replay-disabled", ["```", "git log -1 --oneline --ext-diff -p", "x", "```", "本批共 1 行。"],
      {"data.txt": _GREP2}, {}),                                          # v2.4 P1-2 (review 4550440291), was RR38-ext-diff-p (v2.5 F9): execution-extending git options refused by grammar; _git_harden env hygiene is the second layer (marker never created — RR69 and the PRB tier are its holders)
     ("RR52-cluster-positive", "OK", None, ["```", "grep -cE foo data.txt", "2", "```", "共 2 处。"],
      {"data.txt": "foo foo\nbar\nfoo\n"}, {}),                          # was RR39-cluster-positive (v2.5 F9): positive control — a legitimate -cE cluster STILL executes and verifies, the grammar must not become refuse-everything (acceptance rule 2)
@@ -1711,7 +1685,7 @@ RERUN_CASES = [
     # (bare "wc -l", bare "git log") reaching the executor. ----
     ("RR19-no-operand", "SKIPPED-UNSAFE", "no-operand", ["```", "wc -l", "10", "```", "本批共 10 行。"],
      {"data.txt": _D10}, {}),                                           # count tool without a target reads stdin — a mention, not evidence (delete the operand gate: it executes and mismatches)
-    ("RR20-log-unbounded", "SKIPPED-UNSAFE", "log-unbounded-shape", ["```", "git log", "…", "```", "本批共 10 行。"],
+    ("RR20-log-unbounded", "SKIPPED-UNSAFE", "git-replay-disabled", ["```", "git log", "…", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {}}),                                    # bare `git log` mention (35号:3 carrier) — bounded-shape gate (RR09 pins the accepted shape)
     # ---- v2.3 收编 pins (outer-r2 镜二② 13-face list, face # → case; the
     # fixR-A brief's core four are RR32/RR37-rerun-arrow-twin/
@@ -1761,7 +1735,7 @@ RERUN_CASES = [
     ("RR44-paren-suffix-cut", "OK", None,
      ["```", "wc -l data.txt", "10 data.txt（含文件名）", "```", "本批共 10 行。"],
      {"data.txt": _D10}, {}),                                            # face#13: 「（…）」 annotation suffix is cut before token comparison; deleting the cut mismatches → flips
-    ("RR45-ellipsis-stem", "OK", None,
+    ("RR45-ellipsis-stem", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["git rev-parse --short HEAD → {V1}…", "", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git rev-parse --short HEAD"}}),   # face#13: 「…」 truncated stem must PREFIX the actual token (64号 sha form); deleting the stem branch mismatches → flips (this is the rule P19's flip-to-MISMATCH depends on)
     ("RR46-exec-unavailable", "SKIPPED-UNSAFE", "exec-unavailable",
@@ -1788,49 +1762,49 @@ RERUN_CASES = [
     ("RR54-grep-ere-long", "OK", None,
      ["```", "grep --extended-regexp -c x data.txt", "2", "```", "本批共 2 行。"],
      {"data.txt": _GREP2}, {}),                                          # F2 grep/--extended-regexp long twin executes (GNU/ugrep/BSD all spell it)
-    ("RR55-revparse-abbrev-ref", "OK", None,
+    ("RR55-revparse-abbrev-ref", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git rev-parse --abbrev-ref HEAD", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git rev-parse --abbrev-ref HEAD"}}),
-    ("RR56-revparse-sq", "OK", None,
+    ("RR56-revparse-sq", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git rev-parse --sq HEAD", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git rev-parse --sq HEAD"}}),
-    ("RR57-revparse-verify", "OK", None,
+    ("RR57-revparse-verify", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git rev-parse --verify HEAD", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git rev-parse --verify HEAD"}}),
-    ("RR58-lstree-r", "OK", None,
+    ("RR58-lstree-r", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git ls-tree -r HEAD", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git ls-tree -r HEAD"}}),
-    ("RR59-lstree-l", "OK", None,
+    ("RR59-lstree-l", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git ls-tree -l HEAD", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git ls-tree -l HEAD"}}),
-    ("RR60-lstree-t", "OK", None,
+    ("RR60-lstree-t", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git ls-tree -t HEAD", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git ls-tree -t HEAD"}}),
-    ("RR61-lstree-name-only", "OK", None,
+    ("RR61-lstree-name-only", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git ls-tree --name-only HEAD", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git ls-tree --name-only HEAD"}}),
-    ("RR62-lstree-long", "OK", None,
+    ("RR62-lstree-long", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git ls-tree --long HEAD", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git ls-tree --long HEAD"}}),
-    ("RR63-lstree-full-name", "OK", None,
+    ("RR63-lstree-full-name", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git ls-tree --full-name HEAD", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git ls-tree --full-name HEAD"}}),
-    ("RR64-log-decorate", "OK", None,
+    ("RR64-log-decorate", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git log --decorate --oneline -1", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git log --decorate --oneline -1"}}),
-    ("RR65-log-nocolor", "OK", None,
+    ("RR65-log-nocolor", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git log --no-color --oneline -1", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git log --no-color --oneline -1"}}),
-    ("RR66-log-noextdiff", "OK", None,
+    ("RR66-log-noextdiff", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git log --no-ext-diff --oneline -1", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git log --no-ext-diff --oneline -1"}}),
-    ("RR67-log-format-h", "OK", None,
+    ("RR67-log-format-h", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git log --format=%h -1", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git log --format=%h -1"}}),      # F2 log regex --format=.*
-    ("RR68-log-pretty-eq", "OK", None,
+    ("RR68-log-pretty-eq", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git log --pretty=format:%h -1", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "git": {"V1": "git log --pretty=format:%h -1"}}),  # F2/F3: the ONLY holder of the --pretty regex now that the code special case is gone — the battery had called the entry "NO EFFECT (dead)" because the double write shadowed it; blanking "--pretty.*" flips THIS
-    ("RR69-showsig-poison", "OK", None,
+    ("RR69-showsig-poison", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git log --oneline", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "gpg-poison": True, "sentinel": "MARKER",
           "git": {"V1": "git -c log.showSignature=false log --oneline"}}),
@@ -1843,10 +1817,10 @@ RERUN_CASES = [
     # verdict must be OK AND the marker must not exist. Delete the
     # log.showSignature=false -c pair and gpg runs — RR69 flips red on the
     # sentinel, not on a string.
-    ("RR70-no-grammar-table", "SKIPPED-UNSAFE", "no-grammar-table",
+    ("RR70-no-grammar-table", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git show --stat HEAD", "1", "```", "本批共 1 行。"],
      {}, {"no-table-member": True}),                                     # F1: the outer's fail-open experiment (whitelist member without a grammar table) as a permanent want_reason holder — refuses WITHOUT executing; renaming the label flips this, and the ENV-grammar-invariant pin makes the member itself impossible to add silently.
-    ("RR72-color-ui-poison", "OK", None,
+    ("RR72-color-ui-poison", "SKIPPED-UNSAFE", "git-replay-disabled",
      ["```", "git log --oneline", "{V1}", "```", "本批共 10 行。"],
      {}, {"repo": True, "color-poison": True,
           "git": {"V1": "git -c color.ui=never log --oneline"}}),
@@ -2045,7 +2019,10 @@ def _rerun_selftest() -> int:
 # indented `("wc", "-l"),` line).
 _EXPECTED_UNITS = ("处", "件", "条", "项", "次", "类", "组", "波", "枚", "篇", "包",
                    "个", "轮", "行", "测试", "函数", "删除", "新增", "新提交", "提交", "PASS")
-_EXPECTED_CMD = ("git rev-parse", "git log", "git ls-tree", "grep -c", "wc -l")
+_EXPECTED_CMD = ("grep -c", "wc -l")
+# v2.6: the three git members retired with the face (see RERUN_READONLY);
+# the retired trio is registered in _RETIRED_GIT_MEMBERS — revival flows
+# through re-adding to RERUN_READONLY, which the census diff catches here.
 # v2.3 AXIS3 (outer-r2 singularity prescription, executed in this round —
 # the "钉要钉到 reason" lesson): the refusal-reason strings emitted by the
 # rerun guard are a CLOSED SET of literals too, so they get the same
@@ -2057,12 +2034,19 @@ _EXPECTED_CMD = ("git rev-parse", "git log", "git ls-tree", "grep -c", "wc -l")
 # directions, member count included (the AXIS2 lesson: an axis may never
 # iterate itself smaller into a green; a removal is NAMED as AXIS3 missing).
 _EXPECTED_REASONS = ("empty-segment", "exec-unavailable", "flag-path-form",
-                     "log-unbounded-shape", "missing-required-flag", "multi-segment",
-                     "no-grammar-table", "no-operand", "non-allowlist-flag",
+                     "git-replay-disabled",
+                     "missing-required-flag", "multi-segment",
+                     "no-operand", "non-allowlist-flag",
                      "not-whitelisted",
                      "outside-docdir",
-                     "path-disguise", "shell-metachar", "unbalanced-quote",
-                     "write-flag")
+                     "path-disguise", "shell-metachar", "unbalanced-quote")
+# v2.6: "git-replay-disabled" (13th member) retires the git replay face —
+# RR74/RR74b + the 26 flipped legacy pins hold its want_reason. The three
+# git-only special-case reasons (log-unbounded-shape, no-grammar-table,
+# write-flag) died WITH the face: their generation sites sat behind the
+# retirement branch, census AXIS3 flagged all three unpinned, and dead
+# labels are removed (retired-with-the-face, same doctrine as the whitelist
+# trio). wc/grep still hit write-flag-shaped inputs via non-allowlist-flag.
 # v2.5 F1: "no-grammar-table" is the 15th member (the fail-closed refuse —
 # RR70 holds its want_reason, ENV-grammar-invariant makes it unreachable by
 # accident). F2: the grammar TABLES are now a closed set too, axis four: the
@@ -2071,16 +2055,10 @@ _EXPECTED_REASONS = ("empty-segment", "exec-unavailable", "flag-path-form",
 # mutated blank-on-its-own-line — an entry may be deleted or typo-fixed only
 # over the flip of its RR53–RR68 positive carrier.
 _EXPECTED_GRAMMAR = ("grep/exact/--count", "grep/exact/--extended-regexp",
-                     "grep/regex/-[cE]+", "log/exact/--decorate",
-                     "log/exact/--no-color", "log/exact/--no-ext-diff",
-                     "log/exact/--oneline", "log/regex/--format=.*",
-                     "log/regex/--pretty.*", "log/regex/-[0-9]+",
-                     "ls-tree/exact/--full-name", "ls-tree/exact/--long",
-                     "ls-tree/exact/--name-only", "ls-tree/exact/-l",
-                     "ls-tree/exact/-r", "ls-tree/exact/-t",
-                     "rev-parse/exact/--abbrev-ref", "rev-parse/exact/--short",
-                     "rev-parse/exact/--sq", "rev-parse/exact/--verify",
-                     "wc/exact/--lines", "wc/exact/-l")
+                     "grep/regex/-[cE]+", "wc/exact/--lines", "wc/exact/-l")
+# v2.6: the 17 git grammar entries retired with the face (unreachable past
+# the _guard retirement; census flagged every one unpinned). The five
+# wc/grep entries survive with their carriers.
 
 
 def _derive_grammar():
@@ -2200,7 +2178,7 @@ def _census() -> int:
     if missing2 or extra2:
         rc = 1
         print(f"census: AXIS2(whitelist) FAIL derived {len(names)} != pinned {len(_EXPECTED_CMD)}; "
-              f"missing={missing2!r} unexpected={extra2!r} — member count 5 is a hard pin "
+              f"missing={missing2!r} unexpected={extra2!r} — member count is a hard pin (v2.6: 2 live + 3 retired) "
               f"(N4-B: deleting a member may not report a shortened axis green)")
     for t, m in RERUN_READONLY:
         token = f'    ("{t}", "{m}"),\n'
@@ -2405,24 +2383,8 @@ def _env_selftest() -> int:
          f"offenders={noftable!r}")
 
     # ENV-harden-argv-log (F5 + F7): the prefix, the showSignature pair and
-    # the --no-ext-diff insert POSITION, in one byte-exact expectation. The
-    # v2.4 bug class was "edited the argv and never looked at the argv".
-    want_log = ["git", "--no-pager", "-c", "diff.external=", "-c", "core.pager=cat",
-                "-c", "log.showSignature=false", "-c", "color.ui=never",
-                "log", "--no-ext-diff", "--oneline"]
-    got_log = _git_harden(["git", "log", "--oneline"])
-    line(got_log == want_log, str(want_log), str(got_log), "ENV-harden-argv-log",
-         "sub at index 7, --no-ext-diff immediately after it, showSignature off")
-
-    # ENV-harden-argv-revparse: a NON-diff sub must not receive the flag (it
-    # would be an unknown option for rev-parse ⇒ cmd-failed on every paste),
-    # while the rest of the prefix still applies.
-    want_rp = ["git", "--no-pager", "-c", "diff.external=", "-c", "core.pager=cat",
-               "-c", "log.showSignature=false", "-c", "color.ui=never",
-               "rev-parse", "--short", "HEAD"]
-    got_rp = _git_harden(["git", "rev-parse", "--short", "HEAD"])
-    line(got_rp == want_rp and "--no-ext-diff" not in got_rp, str(want_rp),
-         str(got_rp), "ENV-harden-argv-revparse", "prefix yes, ext-diff flag no")
+    # v2.6: the two ENV-harden-argv pins are RETIRED with _git_harden
+    # (their subject no longer exists; RR74/RR74b hold the retirement).
 
     # ENV-path-clean (F6 unit half): empty and relative components dropped,
     # order preserved, absolute kept. (RR71 is the EXEC half.)
