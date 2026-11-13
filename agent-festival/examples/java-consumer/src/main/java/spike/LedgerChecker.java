@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +33,11 @@ public final class LedgerChecker {
     private static final Set<String> ADOPT_STATUSES = Set.of("adopted", "reused", "conflict");
     private static final Set<String> EFFECT_STATUSES =
             Set.of("dispatched", "unresolved", "completed", "failed");
+    // E3, 2026-11-03 (Go ControlStatuses / Python CONTROL_STATUSES lockstep): a control
+    // event records a machine REFUSAL on an adopted operation (14-A4 revocation
+    // rejection, illegal-transition rejection) — an audit fact that never
+    // transitions state and never enters the idempotency registry.
+    private static final Set<String> CONTROL_STATUSES = Set.of("rejected");
     private static final BigInteger INT64_MAX =
             BigInteger.valueOf(9_223_203_685_477_5807L);
 
@@ -59,6 +65,7 @@ public final class LedgerChecker {
             events.add((ObjectNode) e);
         }
         ruleMonotonicSeq(events, errs);
+        ruleControlIdemForbidden(events, errs);
         ruleDigestPerOperation(events, errs);
         ruleFloatSyntax(events, errs);
         ruleStatusFamilies(events, errs);
@@ -90,6 +97,23 @@ public final class LedgerChecker {
                 errs.add("[LEDGER.SEQ_INT64_OVERFLOW] events: arbitration_seq exceeds the int64 domain — the machine's "
                         + "counter domain; such a document is not machine-writable");
                 break;
+            }
+        }
+    }
+
+    // -- rule 2b: control events never carry idempotency --------------------
+    // E3 (Go ledger.go CONTROL_IDEM_FORBIDDEN lockstep): a control event (a
+    // refusal record) carrying idempotency would register the ATTEMPTED
+    // operation's digest without any adoption authority behind it — the same
+    // laundering the conflict rule forbids (the refusal is an audit fact,
+    // never a registry entry).
+    private void ruleControlIdemForbidden(List<ObjectNode> events, List<String> errs) {
+        for (int i = 0; i < events.size(); i++) {
+            ObjectNode e = events.get(i);
+            if ("control".equals(e.path("event_type").asText()) && e.has("idempotency")) {
+                errs.add("[LEDGER.CONTROL_IDEM_FORBIDDEN] events/" + i + ": control event carries idempotency "
+                        + "— a refusal record never enters the registry; carrying it is a bypass write, "
+                        + "not a machine transition");
             }
         }
     }
@@ -145,11 +169,19 @@ public final class LedgerChecker {
             ObjectNode e = events.get(i);
             String type = e.path("event_type").asText();
             String status = e.path("outcome").path("status").asText("");
-            boolean ok = "effect".equals(type)
-                    ? EFFECT_STATUSES.contains(status)
-                    : ADOPT_STATUSES.contains(status);
+            boolean ok = ADOPT_STATUSES.contains(status);
+            switch (type) {
+                case "effect" -> ok = EFFECT_STATUSES.contains(status);
+                case "control" -> ok = CONTROL_STATUSES.contains(status);
+                default -> { /* adoption keeps the adopt-family check */ }
+            }
             if (!ok) {
-                String family = ADOPT_STATUSES.contains(status) ? "adoption" : "effect";
+                String family = "effect";
+                if (CONTROL_STATUSES.contains(status)) {
+                    family = "control";
+                } else if (ADOPT_STATUSES.contains(status)) {
+                    family = "adoption";
+                }
                 errs.add("[LEDGER.STATUS_FAMILY] events/" + i + ": " + type + " event carries the " + family
                         + "-family status '" + status + "' — the status vocabulary never "
                         + "crosses the event-type boundary");
@@ -180,7 +212,17 @@ public final class LedgerChecker {
         for (int i = 0; i < events.size(); i++) {
             ObjectNode e = events.get(i);
             String op = e.path("identity").path("operation_id").asText();
-            if (!"adoption".equals(e.path("event_type").asText())) {
+            if (!"effect".equals(e.path("event_type").asText())) {
+                // Go lockstep: only effect events transition state; adoption
+                // records the adopted pin; control/conflict are record facts
+                // that never transition (Go ledger.go: "reused / conflict
+                // record facts, they do not transition").
+                if ("adopted".equals(e.path("outcome").path("status").asText())) {
+                    state.put(op, "adopted");
+                }
+                continue;
+            }
+            {
                 String status = e.path("outcome").path("status").asText();
                 String from = state.getOrDefault(op, "");
                 switch (status) {
@@ -204,10 +246,6 @@ public final class LedgerChecker {
                     }
                     default -> { /* unreachable: schema constrained */ }
                 }
-                continue;
-            }
-            if ("adopted".equals(e.path("outcome").path("status").asText())) {
-                state.put(op, "adopted");
             }
         }
     }
@@ -270,7 +308,11 @@ public final class LedgerChecker {
             if ("adoption".equals(type) && "adopted".equals(
                     e.path("outcome").path("status").asText())) {
                 pins.put(op, attributionKey(e));
-            } else if ("effect".equals(type) && pins.containsKey(op)) {
+            } else if (("effect".equals(type) || "control".equals(type)) && pins.containsKey(op)) {
+                // E3 propagation (R6 M-1, Go lockstep): control events carry the pin
+                // too (refuse() stamps the operation's full identity/versions/
+                // accountability) — a forged attribution would launder a fake
+                // principal through the very channel the effect rule guards.
                 if (!attributionKey(e).equals(pins.get(op))) {
                     errs.add("[LEDGER.ATTRIBUTION_DIVERGENCE] events/" + i + ": effect event's attribution (identity/versions/"
                             + "accountability) differs from the adopted pin for operation '"
@@ -282,8 +324,29 @@ public final class LedgerChecker {
     }
 
     private static String attributionKey(ObjectNode e) {
-        return e.path("identity").toString() + "\u0000" + e.path("versions").toString()
-                + "\u0000" + e.path("accountability").toString();
+        // R2 F2: key-order canonical form — Go compares structs and Python
+        // compares dicts (both order-insensitive); Jackson's toString()
+        // preserves insertion order, making Java the ONLY order-sensitive
+        // twin. A key-order-only variant of a valid fixture used to be
+        // falsely rejected as ATTRIBUTION_DIVERGENCE. Canonicalize by
+        // recursively sorting field names before stringifying.
+        return sorted(e.path("identity")) + "\u0000" + sorted(e.path("versions"))
+                + "\u0000" + sorted(e.path("accountability"));
+    }
+
+    private static String sorted(JsonNode n) {
+        return (n instanceof ObjectNode ? sortedNode((ObjectNode) n) : n).toString();
+    }
+
+    private static ObjectNode sortedNode(ObjectNode o) {
+        ObjectNode out = new ObjectNode(JsonNodeFactory.instance);
+        java.util.TreeSet<String> names = new java.util.TreeSet<>();
+        o.fieldNames().forEachRemaining(names::add);
+        for (String name : names) {
+            JsonNode v = o.get(name);
+            out.set(name, v instanceof ObjectNode ? sortedNode((ObjectNode) v) : v);
+        }
+        return out;
     }
 
     // -- rule 11: single-writer event-sequence grammar ---------------------
