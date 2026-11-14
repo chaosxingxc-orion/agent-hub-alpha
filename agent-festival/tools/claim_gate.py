@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Claim gate v2.6: counting-closure claims must carry command evidence nearby.
+"""Claim gate v2.5: counting-closure claims must carry command evidence nearby.
 
 The write-path discipline (runbook §五 rule 1: 数字先跑后写) in mechanical
 form. Historical incidents this gate family exists for (all real, all in
@@ -7,11 +7,6 @@ this campaign): 56号「17 个新提交」(actual 18), 「12 测试全绿」(act
 61号 command missing `^` (number right, command rebuilt from memory), 64号
 「11 处+1 删除」(actual 151 deletions) — every one a count written from
 memory with no command run at write time.
-
-Current execution scope (v2.6): only constrained wc/grep commands may be
-replayed. All git commands are reported as SKIPPED-UNSAFE
-(git-replay-disabled), never executed. Historical version notes below
-describe older behavior, not the current execution surface.
 
 Usage:
     python3 tools/claim_gate.py FILE...           # list violations, rc=1 if any
@@ -42,9 +37,9 @@ Usage:
         because nothing ever ran" is machine-visible without touching rc.
     python3 tools/claim_gate.py --selftest        # boundary spec, exit 1 on drift
     python3 tools/claim_gate.py --census          # four axes: units (21) × pin,
-                                                  # execution whitelist (2 live; git retired) × pin,
-                                                  # refusal reasons (13) × pin,
-                                                  # grammar table entries (5) ×
+                                                  # execution whitelist (5) × pin,
+                                                  # refusal reasons (15) × pin,
+                                                  # grammar table entries (22) ×
                                                   # pin (v2.3 added the reasons
                                                   # axis, v2.5 the grammar axis;
                                                   # member counts are frozen
