@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Claim gate v2.6.1: counting-closure claims must carry command evidence nearby.
+"""Claim gate v2.7: counting-closure claims must carry command evidence nearby.
 
 The write-path discipline (runbook §五 rule 1: 数字先跑后写) in mechanical
 form. Historical incidents this gate family exists for (all real, all in
@@ -8,11 +8,14 @@ this campaign): 56号「17 个新提交」(actual 18), 「12 测试全绿」(act
 「11 处+1 删除」(actual 151 deletions) — every one a count written from
 memory with no command run at write time.
 
-Current execution scope (v2.6.1, unchanged from v2.6): only constrained
+Current execution scope (v2.7, unchanged from v2.6): only constrained
 wc/grep commands may be replayed. All git commands are reported as
-SKIPPED-UNSAFE (git-replay-disabled), never executed. v2.6.1 is a
-detection-set BUGFIX only (CMD branch single-source). Historical version
-notes below describe older behavior, not the current execution surface.
+SKIPPED-UNSAFE (git-replay-disabled), never executed. v2.7 changes the
+DETECTION set only (+样本/用例 units, PROGRESS completion claims, 零样本
+guard — adjudication chamber; the CMD branch single-source landed as the
+v2.6.1 engineering chamber) — the execution surface is identical to v2.6.
+Historical version notes below describe older behavior, not the current
+execution surface.
 
 Usage:
     python3 tools/claim_gate.py FILE...           # list violations, rc=1 if any
@@ -42,7 +45,7 @@ Usage:
         with an explicit "executed=K/SKIPPED=J" count so "0 OK + 0 MISMATCH
         because nothing ever ran" is machine-visible without touching rc.
     python3 tools/claim_gate.py --selftest        # boundary spec, exit 1 on drift
-    python3 tools/claim_gate.py --census          # four axes: units (21) × pin,
+    python3 tools/claim_gate.py --census          # four axes: units (23) × pin,
                                                   # execution whitelist (2 live; git retired) × pin,
                                                   # refusal reasons (13) × pin,
                                                   # grammar table entries (5) ×
@@ -499,6 +502,33 @@ reopen a CLOSED form):
     `find tools -name` backticks ARE evidence; the real-doc carrier
     form 「（`ls gate-attack-samples/`＝12 个 s*.md…）」 passes. Execution
     surface unchanged from v2.6.
+  CLOSED in v2.7 (external-campaign detection-set MR — adjudication
+    chamber, submitted as FIELDING asks with alternatives and an
+    accept-any-override clause; execution surface UNCHANGED):
+    (1) unit family +2 (样本/用例 — corpus vocabulary of the contributing
+        campaign's own ledgers; its flagship escape was an arrow-tail
+        backfill claim 「9→12 样本＋1 合法」 whose count slot never matched).
+        Census expectation rolled 21→23; both new members carry their own
+        flip pins; the pre-existing 「百分之三十的样本」 calibration case
+        keeps guarding the 的-separated FP face. A measured FP guard ships
+        WITH the unit: 「零样本」 (the ML zero-shot term; carriers measured
+        on the upstream experiments reference docs) is skipped code-level
+        — 零+样本 collocation only, skip-then-continue, pinned both ways —
+        every other 样本 match returns.
+    (2) the completion-state progress family (「3/5 已改」「已清偿 3/7 项」 —
+        recorded escaping since v1.8's header: the numerator dies on unit
+        adjacency, the denominator on the lookbehind, so neither fraction
+        slot ever reached COUNTING) — closed by the PROGRESS regex, where
+        已<verb> adjacent to the fraction is the discriminator against
+        slash-list noise. Both orders pinned; ≤3-digit slots plus the
+        shared lookbehind keep date forms out (pinned: 「2026/11 已改」);
+        已<verb> without a fraction stays clean (pinned). Real carriers: a
+        campaign's false progress claim 「3/5 已改」 (actual: fewer) and
+        the v1.8-recorded 「已清偿 3/7 项」.
+        OPEN faces created (recorded, not hidden): noun-first count forms
+        (「恰红 4」「探针合计 23」) remain outside the digit+unit grammar by
+        design — extending them is a separate adjudication; the severity
+        idiom (「0B+2M」) stays OUT per the recorded exemption.
 
   STILL OPEN (advisory, documented — the closed-set boundary record, both
     faces: killed FPs and newly-opened escapes) — the severity-count idiom
@@ -732,7 +762,7 @@ COUNTING = re.compile(
     # (recorded escaping face, 1 measured carrier).
     r"(?<!初)(?<!初 )(?<![零〇一二两三四五六七八九十百千])"
     r"(?:\d+|[零〇一二两三四五六七八九十百千两]+)"
-    r"\s*(处|件|条|项|次|类|组|波|枚|篇|包|个|轮|行|测试|函数|删除|新增|新提交|提交|PASS)"
+    r"\s*(处|件|条|项|次|类|组|波|枚|篇|包|个|轮|行|测试|函数|删除|新增|新提交|提交|PASS|样本|用例)"
     # v2.1 M2: the duration guard — a 个-unit DIRECTLY followed by a
     # time noun (三个月/3个月/两个日…) is a duration reading, not a closure
     # count. Implemented as a trailing zero-width assertion so the units
@@ -750,6 +780,21 @@ COUNTING = re.compile(
    # inexpressible) — the gate's own motivating disease form "12 测试全绿" (56号, actual 11)
    # now matches; v2.0: digit slot only — the units group text is byte-unchanged.
 TRIPLE = re.compile(r"\b[MDA]\s*=\s*\d+")
+# v2.7 (adjudication-chamber MR item 2): completion-state progress claims —
+# 「3/5 已改」「已清偿 3/7 项」— were an escaping family recorded OPEN
+# since v1.8: the numerator dies on unit adjacency (digit followed by /),
+# the denominator on the lookbehind, so neither slot of the fraction ever
+# reaches COUNTING. 已<verb> is the discriminator that separates these from
+# slash-list noise (「检查 3/7 项」 has no completion verb adjacent): the
+# fraction asserts a DONE/TODO state whose evidence is the act — the same
+# ±8 command window applies. Both orders pinned (fraction-then-verb,
+# verb-then-fraction). Digits capped at 3 per slot with the shared
+# lookbehind so date forms (「2026/11 已改」) cannot enter — pinned by its
+# own case.
+PROGRESS = re.compile(
+    r"(?<![A-Za-z0-9-/.])\d{1,3}\s*/\s*\d{1,3}\s*已(?:改|修|回填|清偿|处置|完成|落地)"
+    r"|已(?:改|修|回填|清偿|处置|完成|落地)[^0-9\n]{0,4}\d{1,3}\s*/\s*\d{1,3}(?![\d/])"
+)
 # v2.6.1 (engineering-chamber bugfix): the two CMD branches below were
 # hand-maintained mirrors that silently diverged — the backtick branch lacked
 # ls/find while the line-start branch had them (family-wide since v1.8;
@@ -776,12 +821,21 @@ def find_claim(line: str):
     while True:
         m = COUNTING.search(line, pos)
         if not m:
-            return TRIPLE.search(line)
+            return TRIPLE.search(line) or PROGRESS.search(line)
         # unit-scoped: ONLY a 类 unit directly followed by 比 (「0600 类比」);
         # any OTHER unit + 比 (「3 组比较」「7 条比值」) is a REAL count and
         # must NOT be skipped (R77 iter-2 M-1 — the unscoped skip was an
         # over-broad exemption; pinned by the 组比较 selftest case)
         if line[m.end():m.end() + 1] == "比" and line[m.end() - 1] == "类":
+            pos = m.end()
+            continue
+        # v2.7 (adjudication-chamber MR item 1, FP guard): 「零样本」 is the
+        # ML zero-shot TERM (measured carriers on the upstream corpus's
+        # experiments reference docs), not a zero-count claim — skip ONLY
+        # the 零+样本 collocation and keep scanning (skip-then-continue,
+        # the 类比-skip pattern); every other 样本 match still returns.
+        # Pinned both ways below.
+        if m.group(0).endswith("零样本"):
             pos = m.end()
             continue
         return m
@@ -853,6 +907,14 @@ SELFTEST = [
     ("复核产物见下，`ls samples/` 共 12 个文件。", False),   # v2.6.1: backtick `ls` with args IS evidence — two-branch whitelist split (line-start had ls/find, backtick lacked them since v1.8) killed by the _CMD_TOOLS derivation; deleting the derivation flips this and the find twin
     ("清单经 `find tools -name` 复核，本批共 3 处新增。", False),   # v2.6.1: backtick `find` twin
     ("（`ls gate-attack-samples/`＝12 个 s*.md＋coresha.txt 数据文件）", False),   # v2.6.1: the real-doc carrier form — same-line `ls` backtick was wrongly judged evidence-less (measured on a live campaign ledger)
+    ("更正稿 9→12 样本＋1 合法。", True),                      # v2.7: 样本 unit — the arrow-tail 「12 样本」 form; real carrier = a live campaign's backfill claim that escaped (修复声明与实态差 family, POST-time caught by human); deleting 样本 flips this
+    ("全量 1826 用例全绿。", True),                            # v2.7: 用例 unit — real carrier form (test-count claims written as N 用例); deleting 用例 flips this
+    ("完整零样本与微调数据如下。", False),                     # v2.7 零样本 guard: the ML zero-shot TERM (measured carriers on the upstream experiments docs), not a zero-count claim — code-level skip, both-way pinned with the next case
+    ("零样本术语已界定；本批共 3 样本。", True),               # v2.7 零样本 guard skip-THEN-CONTINUE: the skip must not swallow the line's remaining real 样本 counts (the continue→return-None mutant kills this)
+    ("进度：3/5 已改。", True),                                # v2.7 PROGRESS: fraction-then-verb order — real carrier (a campaign's false progress claim "3/5 已改", actual fewer); neither fraction slot ever reaches COUNTING
+    ("已清偿 3/7 项。", True),                                 # v2.7 PROGRESS: verb-then-fraction order — the form recorded OPEN since v1.8's header (no-space variant escaped; the denominator never matched)
+    ("2026/11 已改。", False),                                 # v2.7 PROGRESS date-guard: 4-digit year slots cannot enter (≤3-digit cap + shared lookbehind) — pinned so a future widening flips red
+    ("清单已清偿完毕，零差异。", False),                        # v2.7 PROGRESS overreach-guard: 已<verb> WITHOUT a fraction is not a progress claim (no ASCII digits in scope)
     ("git status\n本批共 9 项新增。", False),            # OPEN: presence-form (unrelated cmd satisfies)
     ("汇总 M = 11、D = 151。", True),                    # CLOSED v1.2: spaced triple
     ("the batch adds 21 items.", False),                 # OPEN: English counts
@@ -2051,7 +2113,8 @@ def _rerun_selftest() -> int:
 # they must never match a live anchor token of their own (no `|处|`, no
 # indented `("wc", "-l"),` line).
 _EXPECTED_UNITS = ("处", "件", "条", "项", "次", "类", "组", "波", "枚", "篇", "包",
-                   "个", "轮", "行", "测试", "函数", "删除", "新增", "新提交", "提交", "PASS")
+                   "个", "轮", "行", "测试", "函数", "删除", "新增", "新提交", "提交", "PASS",
+                   "样本", "用例")  # v2.7 (adjudication-chamber MR item 1): +样本/用例 — corpus vocabulary from a second campaign
 _EXPECTED_CMD = ("grep -c", "wc -l")
 # v2.6: the three git members retired with the face (see RERUN_READONLY);
 # the retired trio is registered in _RETIRED_GIT_MEMBERS — revival flows
