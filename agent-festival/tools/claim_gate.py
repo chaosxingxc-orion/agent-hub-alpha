@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Claim gate v2.7: counting-closure claims must carry command evidence nearby.
+"""Claim gate v2.7.1: counting-closure claims must carry command evidence nearby.
 
 The write-path discipline (runbook §五 rule 1: 数字先跑后写) in mechanical
 form. Historical incidents this gate family exists for (all real, all in
@@ -8,14 +8,15 @@ this campaign): 56号「17 个新提交」(actual 18), 「12 测试全绿」(act
 「11 处+1 删除」(actual 151 deletions) — every one a count written from
 memory with no command run at write time.
 
-Current execution scope (v2.7, unchanged from v2.6): only constrained
+Current execution scope (v2.7.1, unchanged from v2.6): only constrained
 wc/grep commands may be replayed. All git commands are reported as
-SKIPPED-UNSAFE (git-replay-disabled), never executed. v2.7 changes the
-DETECTION set only (+样本/用例 units, PROGRESS completion claims, 零样本
-guard — adjudication chamber; the CMD branch single-source landed as the
-v2.6.1 engineering chamber) — the execution surface is identical to v2.6.
-Historical version notes below describe older behavior, not the current
-execution surface.
+SKIPPED-UNSAFE (git-replay-disabled), never executed. v2.6.1–v2.6.2
+(detection-set bugfixes: CMD branch single-source, scoped rerun-selection
+fix) land via the engineering chamber; v2.7/v2.7.1 add the detection-set
+extensions (+样本/用例 units, PROGRESS completion claims, 零样本 guard —
+the adjudication chamber, with inner-loop remediation). The execution
+surface is identical to v2.6. Historical version notes below describe
+older behavior, not the current execution surface.
 
 Usage:
     python3 tools/claim_gate.py FILE...           # list violations, rc=1 if any
@@ -502,6 +503,23 @@ reopen a CLOSED form):
     `find tools -name` backticks ARE evidence; the real-doc carrier
     form 「（`ls gate-attack-samples/`＝12 个 s*.md…）」 passes. Execution
     surface unchanged from v2.6.
+  CLOSED in v2.6.2 (inner-loop remediation — redteam-0 of the two-chamber
+    inner review): the rerun-tier evidence-command SELECTION was hijacked
+    by v2.6.1's own fix — newly admitted ls/find backtick spans became
+    top-down-FIRST picks, _guard refused them (not-whitelisted), and
+    executed verdicts silently degraded to SKIPPED-UNSAFE (rc untouched) —
+    a later whitelisted command that WOULD have been replayed (catching the
+    pasted value drift) was never evaluated (three-version repro: v2.6
+    RERUN-MISMATCH rc=1 → v2.6.1 SKIPPED rc=0). The fix is SCOPED to
+    respect RR13's pinned determinism law (top-down FIRST over the
+    v2.6-era match set, "never the runnable one"): exactly the
+    newly-admitted backtick members (ls/find — frozen historical set
+    _V26_BACKTICK_TOOLS) do not participate in selection priority; they
+    remain as fallback, so ls-only windows keep an informative
+    SKIPPED-UNSAFE verdict. Pins: RR75 (leading ls + drifted wc paste →
+    RERUN-MISMATCH, executed), RR76 (ls-only window → SKIPPED-UNSAFE
+    not-whitelisted), RR13 unchanged (determinism preserved). Execution
+    surface unchanged (whitelist still grep -c / wc -l only).
   CLOSED in v2.7 (external-campaign detection-set MR — adjudication
     chamber, submitted as FIELDING asks with alternatives and an
     accept-any-override clause; execution surface UNCHANGED):
@@ -512,23 +530,50 @@ reopen a CLOSED form):
         flip pins; the pre-existing 「百分之三十的样本」 calibration case
         keeps guarding the 的-separated FP face. A measured FP guard ships
         WITH the unit: 「零样本」 (the ML zero-shot term; carriers measured
-        on the upstream experiments reference docs) is skipped code-level
-        — 零+样本 collocation only, skip-then-continue, pinned both ways —
-        every other 样本 match returns.
+        in the NGA campaign repo's experiments reference doc — not present
+        in this public repo) is skipped code-level — 零+样本 collocation
+        only, skip-then-continue, pinned both ways — every other 样本 match
+        returns.
     (2) the completion-state progress family (「3/5 已改」「已清偿 3/7 项」 —
         recorded escaping since v1.8's header: the numerator dies on unit
         adjacency, the denominator on the lookbehind, so neither fraction
         slot ever reached COUNTING) — closed by the PROGRESS regex, where
         已<verb> adjacent to the fraction is the discriminator against
-        slash-list noise. Both orders pinned; ≤3-digit slots plus the
-        shared lookbehind keep date forms out (pinned: 「2026/11 已改」);
-        已<verb> without a fraction stays clean (pinned). Real carriers: a
-        campaign's false progress claim 「3/5 已改」 (actual: fewer) and
-        the v1.8-recorded 「已清偿 3/7 项」.
+        slash-list noise. Both ADJACENT orders pinned; ≤3-digit slots plus
+        the shared lookbehind keep YEAR-LEADING date forms out (pinned:
+        「2026/11 已改」); M/D short forms (「11/26 已改」) DO enter as
+        legitimate progress readings (pinned, v2.7.1); 已<verb> without a
+        fraction stays clean (pinned). Real carriers: a campaign's false
+        progress claim 「3/5 已改」 (actual: fewer) and the v1.8-recorded
+        「已清偿 3/7 项」.
         OPEN faces created (recorded, not hidden): noun-first count forms
         (「恰红 4」「探针合计 23」) remain outside the digit+unit grammar by
         design — extending them is a separate adjudication; the severity
         idiom (「0B+2M」) stays OUT per the recorded exemption.
+  CLOSED in v2.7.1 (inner-loop remediation of the two-chamber review —
+    consistency-0 + simplicity-pareto-0 + doc-to-code-0):
+    ① the unit-intervening progress order 「5/8 项已完成」/「3/7 项已清偿」
+      (the direct re-ordering of the v1.8 carrier) escaped the v2.7 regex —
+      the first alternative's \s* could not cross the unit noun; an
+      optional unit slot (项|件|处|条|个) now sits between the fraction and
+      已<verb> (two new pins, pre-v2.7.1 unflagged).
+    ② the verb list was hand-written in BOTH PROGRESS alternatives (the
+      P-Ⅰ mirror disease this same change-set's _CMD_TOOLS comment declares
+      inexpressible) and the second alternative was a pin blind zone —
+      both now DERIVE from one _PROGRESS_VERBS tuple, and every verb plus
+      both orders carry per-member pins.
+    ③ the date-guard claim narrowed to what the cap actually delivers
+      (year-leading 4-digit forms); the M/D short form (「11/26 已改」) is
+      registered-and-pinned as a legitimate progress reading rather than
+      an excluded date.
+    ④ the 零样本 guard's boundary faces are registered and pinned (true
+      zero-count reading swallowed — recorded adjudication; spaced variant
+      still flags); the STILL OPEN progress clause and the stale 21-member
+      arithmetics rolled to the 23-member current state.
+      OPEN faces created (recorded, not hidden): no-已 verb forms
+      (「3/7 清偿」) and inserted-clause forms (「3/7 已于本周清偿」) remain
+      outside the two adjacent orders; fractions with ≥4-digit members
+      escape the 3-digit cap by design.
 
   STILL OPEN (advisory, documented — the closed-set boundary record, both
     faces: killed FPs and newly-opened escapes) — the severity-count idiom
@@ -547,9 +592,10 @@ reopen a CLOSED form):
     68号「21 行」 precedent this form inherits, and 「21 行」-style quote
     carriers are explicitly NOT a fix target); closure words without
     digits (「零差异/全部一致/无差异」), English counts ("21 items"),
-    N/M progress forms (no-space "已清偿 3/7 项" escapes — the numerator dies on unit adjacency (digit followed
-    by /), the denominator on the lookbehind; the spaced "3 / 7 项" HAS
-    its denominator caught), ordinal
+    N/M progress forms — CLOSED in v2.7/v2.7.1 (both adjacent orders plus
+    the unit-intervening order, every verb per-member pinned; the
+    remaining members are recorded in the CLOSED v2.7.1 entry: no-已 verb
+    forms, inserted-clause forms, ≥4-digit fractions), ordinal
     residuals with double/full-width spaces ("第  3 项" and the CN twin
     "第  三条" — the (?<!第 ) pair is single-space only), colon triples
     ("M:11"), command-prefix paste forms ("$ git …" / "- git …" not
@@ -560,7 +606,7 @@ reopen a CLOSED form):
     table itself is a closed set — units outside it (e.g. 「N 批」「N 步」,
     and the v2.0 example 「三档」) escape by definition; extending it requires a selftest case per new unit
     (P-Ⅲ: a unit-set change would flip census 21 → 22 and break the pinned
-    21-member acceptance, so 档/批/步 stay out and CN-C3 pins 三档 as False);
+    23-member acceptance, so 档/批/步 stay out and CN-C3 pins 三档 as False);
     the 万/千 numeral residuals (v2.0 digit class = 零〇一二三四五六七八九十百千两):
     「三万条」 and the mixed form 「20万条」 escape by design (1 real carrier
     measured in the domain: 67号:92 「五万」); 廿/卅/□ and full-width digits
@@ -780,20 +826,26 @@ COUNTING = re.compile(
    # inexpressible) — the gate's own motivating disease form "12 测试全绿" (56号, actual 11)
    # now matches; v2.0: digit slot only — the units group text is byte-unchanged.
 TRIPLE = re.compile(r"\b[MDA]\s*=\s*\d+")
-# v2.7 (adjudication-chamber MR item 2): completion-state progress claims —
-# 「3/5 已改」「已清偿 3/7 项」— were an escaping family recorded OPEN
-# since v1.8: the numerator dies on unit adjacency (digit followed by /),
-# the denominator on the lookbehind, so neither slot of the fraction ever
-# reaches COUNTING. 已<verb> is the discriminator that separates these from
-# slash-list noise (「检查 3/7 项」 has no completion verb adjacent): the
-# fraction asserts a DONE/TODO state whose evidence is the act — the same
-# ±8 command window applies. Both orders pinned (fraction-then-verb,
-# verb-then-fraction). Digits capped at 3 per slot with the shared
-# lookbehind so date forms (「2026/11 已改」) cannot enter — pinned by its
-# own case.
+# v2.7 (adjudication-chamber item 2; v2.7.1 remediation): completion-state
+# progress claims — 「3/5 已改」「已清偿 3/7 项」「5/8 项已完成」— were an
+# escaping family recorded OPEN since v1.8: the numerator dies on unit
+# adjacency (digit followed by /), the denominator on the lookbehind, so
+# neither slot of the fraction ever reaches COUNTING. 已<verb> adjacent to
+# the fraction is the discriminator against slash-list noise (「检查 3/7 项」
+# has no completion verb). v2.7.1 (inner-loop consistency-0 +
+# simplicity-pareto-0): ① the verb list is DERIVED from one tuple (P-Ⅰ —
+# it was hand-written in BOTH alternatives, the second being a pin blind
+# zone); ② an optional unit noun is allowed between the fraction and
+# 已<verb> (「3/7 项已清偿」 — the direct re-ordering of the v1.8 carrier,
+# unflagged pre-v2.7.1). Digits capped at 3 per slot, which keeps
+# YEAR-LEADING date forms (「2026/11 已改」, 4-digit slots) out — pinned;
+# M/D short forms (「11/26 已改」) DO enter as legitimate progress readings
+# — pinned as current behaviour. 已<verb> without a fraction stays clean
+# (pinned).
+_PROGRESS_VERBS = ("改", "修", "回填", "清偿", "处置", "完成", "落地")
 PROGRESS = re.compile(
-    r"(?<![A-Za-z0-9-/.])\d{1,3}\s*/\s*\d{1,3}\s*已(?:改|修|回填|清偿|处置|完成|落地)"
-    r"|已(?:改|修|回填|清偿|处置|完成|落地)[^0-9\n]{0,4}\d{1,3}\s*/\s*\d{1,3}(?![\d/])"
+    r"(?<![A-Za-z0-9-/.])\d{1,3}\s*/\s*\d{1,3}\s*(?:[项件处条个]\s*)?已(?:" + "|".join(_PROGRESS_VERBS) + r")"
+    r"|已(?:" + "|".join(_PROGRESS_VERBS) + r")[^0-9\n]{0,4}\d{1,3}\s*/\s*\d{1,3}(?![\d/])"
 )
 # v2.6.1 (engineering-chamber bugfix): the two CMD branches below were
 # hand-maintained mirrors that silently diverged — the backtick branch lacked
@@ -813,10 +865,13 @@ WINDOW = 8  # evidence-command window, ±WINDOW lines BOTH directions
 
 
 def find_claim(line: str):
-    """COUNTING with the analogy-compound skip: a 类 unit directly followed
-    by 比 (「0600 类比」 chmod-mode analogies) is not a count — the match is
-    skipped and the scan continues (v1.8 structural fix; kept code-level so
-    the alternation stays parenthesis-free and UNITS derivation holds)."""
+    """COUNTING with the two code-level skips, else TRIPLE/PROGRESS:
+    ① a 类 unit directly followed by 比 (「0600 类比」 chmod-mode analogies)
+    is not a count — skipped, scan continues (v1.8 structural fix; kept
+    code-level so the alternation stays parenthesis-free and UNITS
+    derivation holds); ② v2.7: 「零样本」 (the ML zero-shot term) is not a
+    zero-count — the 零+样本 collocation only is skipped, scan continues;
+    no COUNTING match falls through to TRIPLE, then PROGRESS (v2.7)."""
     pos = 0
     while True:
         m = COUNTING.search(line, pos)
@@ -830,11 +885,14 @@ def find_claim(line: str):
             pos = m.end()
             continue
         # v2.7 (adjudication-chamber MR item 1, FP guard): 「零样本」 is the
-        # ML zero-shot TERM (measured carriers on the upstream corpus's
-        # experiments reference docs), not a zero-count claim — skip ONLY
-        # the 零+样本 collocation and keep scanning (skip-then-continue,
-        # the 类比-skip pattern); every other 样本 match still returns.
-        # Pinned both ways below.
+        # ML zero-shot TERM (measured carriers: the NGA campaign repo's
+        # experiments reference doc — not present in this public repo), not
+        # a zero-count claim — skip ONLY the 零+样本 collocation and keep
+        # scanning (skip-then-continue, the 类比-skip pattern); every other
+        # 样本 match still returns. Boundary faces REGISTERED (v2.7.1,
+        # pinned): a true zero-count reading 「本批新增零样本。」 is swallowed
+        # with the term (recorded adjudication), and the spaced variant
+        # 「零 样本」 is not the collocation and still flags.
         if m.group(0).endswith("零样本"):
             pos = m.end()
             continue
@@ -909,12 +967,23 @@ SELFTEST = [
     ("（`ls gate-attack-samples/`＝12 个 s*.md＋coresha.txt 数据文件）", False),   # v2.6.1: the real-doc carrier form — same-line `ls` backtick was wrongly judged evidence-less (measured on a live campaign ledger)
     ("更正稿 9→12 样本＋1 合法。", True),                      # v2.7: 样本 unit — the arrow-tail 「12 样本」 form; real carrier = a live campaign's backfill claim that escaped (修复声明与实态差 family, POST-time caught by human); deleting 样本 flips this
     ("全量 1826 用例全绿。", True),                            # v2.7: 用例 unit — real carrier form (test-count claims written as N 用例); deleting 用例 flips this
-    ("完整零样本与微调数据如下。", False),                     # v2.7 零样本 guard: the ML zero-shot TERM (measured carriers on the upstream experiments docs), not a zero-count claim — code-level skip, both-way pinned with the next case
+    ("完整零样本与微调数据如下。", False),                     # v2.7 零样本 guard: the ML zero-shot TERM (measured carriers, see the skip comment), not a zero-count claim — code-level skip, both-way pinned with the next case
     ("零样本术语已界定；本批共 3 样本。", True),               # v2.7 零样本 guard skip-THEN-CONTINUE: the skip must not swallow the line's remaining real 样本 counts (the continue→return-None mutant kills this)
     ("进度：3/5 已改。", True),                                # v2.7 PROGRESS: fraction-then-verb order — real carrier (a campaign's false progress claim "3/5 已改", actual fewer); neither fraction slot ever reaches COUNTING
     ("已清偿 3/7 项。", True),                                 # v2.7 PROGRESS: verb-then-fraction order — the form recorded OPEN since v1.8's header (no-space variant escaped; the denominator never matched)
-    ("2026/11 已改。", False),                                 # v2.7 PROGRESS date-guard: 4-digit year slots cannot enter (≤3-digit cap + shared lookbehind) — pinned so a future widening flips red
+    ("2026/11 已改。", False),                                 # v2.7 PROGRESS date-guard: year-leading (4-digit) slots cannot enter (≤3-digit cap + shared lookbehind) — pinned so a future widening flips red
     ("清单已清偿完毕，零差异。", False),                        # v2.7 PROGRESS overreach-guard: 已<verb> WITHOUT a fraction is not a progress claim (no ASCII digits in scope)
+    ("5/8 项已完成。", True),                                  # v2.7.1: unit-intervening order (inner-loop consistency-0) — unflagged pre-v2.7.1; deleting the unit-slot alternative flips this and the next case
+    ("3/7 项已清偿。", True),                                  # v2.7.1: the v1.8 carrier's direct re-ordering — same fix's second victim
+    ("2/5 已修。", True),                                      # v2.7.1 per-verb pin: 修 (the verb list was 5-member pin-blind pre-v2.7.1)
+    ("3/8 已回填。", True),                                    # v2.7.1 per-verb pin: 回填
+    ("4/9 已处置。", True),                                    # v2.7.1 per-verb pin: 处置
+    ("2/6 已完成。", True),                                    # v2.7.1 per-verb pin: 完成
+    ("1/4 已落地。", True),                                    # v2.7.1 per-verb pin: 落地
+    ("已改 3/5。", True),                                      # v2.7.1 verb-then-fraction order per-verb pin: 改 — the second alternative was a pin blind zone (deleting 改 from it ALONE stayed green pre-v2.7.1)
+    ("11/26 已改。", True),                                    # v2.7.1 date-face registration: M/D short forms DO enter as legitimate progress readings; the guard's claim is narrowed to year-leading forms — pinned as current behaviour so a future narrowing/widening flips
+    ("本批新增零样本。", False),                               # v2.7.1 零样本 boundary, REGISTERED: the term guard swallows the true zero-count reading (「新增零项。」 flags — recorded adjudication, not hidden)
+    ("零 样本（空格变体）。", True),                            # v2.7.1 零样本 boundary, REGISTERED: the spaced variant is not the collocation and still flags as a claim — current behaviour, pinned
     ("git status\n本批共 9 项新增。", False),            # OPEN: presence-form (unrelated cmd satisfies)
     ("汇总 M = 11、D = 151。", True),                    # CLOSED v1.2: spaced triple
     ("the batch adds 21 items.", False),                 # OPEN: English counts
@@ -1008,7 +1077,7 @@ SELFTEST = [
 # the pattern end, because the duration guard may trail the units group as
 # a zero-width assertion. P-Ⅰ still holds in the strengthened form: the
 # units alternation is the last PLAIN group; if a future edit appends a
-# second plain alternation group, the census count pin (21) goes red on
+# second plain alternation group, the census count pin (23) goes red on
 # drift instead of silently iterating the wrong group.
 _plain_groups = re.findall(r"\(([^()?][^()]*)\)", COUNTING.pattern)
 UNITS = _plain_groups[-1].split("|")
@@ -1043,6 +1112,15 @@ RERUN_READONLY = (
     ("grep", "-c"),
     ("wc", "-l"),
 )
+# v2.6.2 (inner-loop redteam-0): the v1.8–v2.6 backtick-branch tool set —
+# frozen HISTORICAL fact. v2.6.1's single-source unified the two CMD
+# branches and thereby admitted ls/find into the BACKTICK form for the
+# first time (the line-start branch had them since v1.8). The rerun-tier
+# SELECTION passes over exactly those newly-admitted backtick members: RR13
+# pins top-down-FIRST over the v2.6-era match set ("never the runnable
+# one"), and the admission must not silently change WHICH command a doc's
+# verdict hangs on.
+_V26_BACKTICK_TOOLS = ("git", "go", "grep", "python3", "curl", "wc", "diff", "cd")
 _RETIRED_GIT_MEMBERS = (("git", "rev-parse"), ("git", "log"), ("git", "ls-tree"))
 # census AXIS2 keeps watching the RETIRED trio: re-adding any of them to
 # RERUN_READONLY without removing the _guard retirement is a no-op (still
@@ -1564,12 +1642,34 @@ def rerun_verdicts(path: str, timeout=None):
         lo = max(0, i - WINDOW)
         hi = min(len(lines), i + WINDOW + 1)
         ci = None
-        for j in range(lo, hi):                      # deterministic: top-down FIRST
+        fallback = None
+        # v2.6.2 (inner-loop redteam-0): v2.6.1's CMD single-source newly
+        # admitted ls/find into the BACKTICK form of the detection set, and
+        # the top-down FIRST pick then selected a leading `ls …` carrier
+        # line as THE evidence command — _guard refused it (not-whitelisted)
+        # and the verdict silently degraded to SKIPPED-UNSAFE (rc untouched):
+        # a later whitelisted command that v2.6 WOULD have replayed (catching
+        # the pasted value drift) was never evaluated. RR13 pins top-down
+        # FIRST over the v2.6-era match set ("never the runnable one"), so
+        # the fix is SCOPED: exactly the newly-admitted backtick members do
+        # not participate in selection priority (they stay as fallback, so
+        # an ls-only window keeps an informative SKIPPED verdict). Pins:
+        # RR75 (restoration), RR76 (fallback), RR13 (unchanged).
+        for j in range(lo, hi):
             if lines[j].strip().startswith("```"):
                 continue
-            if CMD.search(lines[j]):
-                ci = j
-                break
+            m = CMD.search(lines[j])
+            if not m:
+                continue
+            tool = (m.group(1) or m.group(2) or "").strip()
+            if m.group(2) is not None and tool not in _V26_BACKTICK_TOOLS:
+                if fallback is None:
+                    fallback = j
+                continue
+            ci = j
+            break
+        if ci is None:
+            ci = fallback
         if ci is None:
             continue
         cmd, expected = _evidence_command(lines, ci, fences)
@@ -1662,6 +1762,12 @@ RERUN_CASES = [
      {"data.txt": _GREP2}, {}),                                        # matrix RR04/RR06 dual shape
     ("RR04d-path-disguise", "SKIPPED-UNSAFE", "path-disguise", ["```", "cd . && /usr/bin/wc -l data.txt", "10 data.txt", "```", "本批共 10 行。"],
      {"data.txt": _D10}, {}),
+    ("RR75-selection-preference", "RERUN-MISMATCH", None,
+     ["（`ls samples/` 产物清单见下）", "```", "wc -l data.txt", "11 data.txt", "```", "本批共 10 行。"],
+     {"data.txt": _D10}, {}),   # v2.6.2 redteam-0: the leading `ls` backtick (a v2.6.1-admitted detection member, NOT rerunnable) must not displace the whitelisted wc — the drift paste (11 vs actual 10) is executed and caught. Pre-v2.6.2 this case degraded to SKIPPED-UNSAFE/not-whitelisted (executed=0, drift never evaluated).
+    ("RR76-ls-fallback", "SKIPPED-UNSAFE", "not-whitelisted",
+     ["（`ls samples/` 产物清单）", "本批共 10 行。"],
+     {"data.txt": _D10}, {}),   # v2.6.2 fallback semantics: an ls-only window keeps the FIRST hit → refused not-whitelisted (informative skip; v2.6-era this doc had no CMD hit at all)
     ("RR04e-subst", "SKIPPED-UNSAFE", "shell-metachar", ["```", "wc -l $(echo data.txt)", "10 data.txt", "```", "本批共 10 行。"],
      {"data.txt": _D10}, {}),
     ("RR05a-slow", "SKIPPED-TIMEOUT", None, ["```", "grep -c x fifo", "2", "```", "本批共 10 行。"],
