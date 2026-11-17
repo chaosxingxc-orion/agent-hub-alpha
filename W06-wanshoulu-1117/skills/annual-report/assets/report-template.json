@@ -1,0 +1,36 @@
+{
+  "$comment": "AnnualReportArtifacts 骨架模板 —— writer 角色直接填充。字段语义见 references/metric-dictionary.md 与 references/citation-style.md。禁止增删顶层字段；metrics 恰好 8 条；每条论断恰好一条引用。",
+  "task_id": "<任务 ID>",
+  "company": "招商银行",
+  "report_period": "2025年度",
+  "metrics": [
+    {
+      "key": "OPERATING_REVENUE",
+      "value": "<原文口径字符串，含千分位逗号>",
+      "unit": "亿元",
+      "period": "2025年度",
+      "source_document_digest": "<快照页 sha256>",
+      "page": 12,
+      "evidence_excerpt_digest": "<摘录 sha256>"
+    }
+  ],
+  "$comment_metrics": "其余七项：NET_PROFIT_ATTRIBUTABLE / NET_INTEREST_MARGIN / COST_INCOME_RATIO / NPL_BALANCE / NPL_RATIO / PROVISION_COVERAGE / CET1_RATIO，单位与口径见 assets/metric-registry.json",
+  "citations": [
+    {
+      "claim_id": "C-1",
+      "claim_text": "<论断原文，含期间>",
+      "source_document_digest": "<快照页 sha256>",
+      "page": 12,
+      "evidence_excerpt": "<快照页原文连续子串，8-60 字，含千分位>",
+      "evidence_excerpt_digest": "<摘录 sha256>"
+    }
+  ],
+  "sections": [
+    {
+      "section_id": "s1",
+      "title": "一、经营概况",
+      "body": "<正文，论断后紧跟 [C-n]；派生值标注：基于 [C-k] 计算：<算式>>",
+      "claim_ids": ["C-1", "C-2"]
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+ "evals": [
+  {
+   "id": 1,
+   "prompt": "为招商银行生成 2025 年度完整年报任务图（集团合并口径）",
+   "expected_output": "9 节点标准拓扑 + 完整四步选择记录（无排除项）",
+   "files": [
+    "case-full-report.json"
+   ]
+  },
+  {
+   "id": 2,
+   "prompt": "只分析招行 2025 年报的资产质量",
+   "expected_output": "7 节点裁剪拓扑：finance/capital 被裁剪且依据写入记录（有依据差异）",
+   "files": [
+    "case-quality-focus.json"
+   ]
+  },
+  {
+   "id": 3,
+   "prompt": "按母公司口径生成年报任务图",
+   "expected_output": "三个分析能力按 constraints 排除（高分不适用），显式拒绝并说明口径选项",
+   "files": [
+    "case-rejected.json"
+   ]
+  }
+ ]
+}

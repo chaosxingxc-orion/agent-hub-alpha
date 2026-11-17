@@ -1,0 +1,2372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>W06 年报工作台 · 年度经营简报（多银行）</title>
+<style>
+/* ———— SkillHub 设计 token（与 skill hub 站点同源）———— */
+:root {
+  --shell: 1440px;
+  --bg: #ffffff;
+  --fg: #202020;
+  --fg-hover: #111111;
+  --muted: #737373;
+  --border: rgba(0, 0, 0, .08);
+  --card-border: rgba(0, 0, 0, .06);
+  --surface: #f6f7f9;
+  --surface-2: #eff1f4;
+  --hover: hsl(214 70% 96%);
+  --radius: 10px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0, 0, 0, .04);
+  --success: hsl(160 60% 28%);
+  --success-bg: hsl(160 60% 96%);
+  --warning: hsl(38 90% 32%);
+  --warning-bg: hsl(38 90% 95%);
+  --destructive: hsl(0 55% 48%);
+  --destructive-bg: hsl(0 55% 97%);
+  --info: hsl(217 75% 45%);
+  --info-bg: hsl(217 75% 96%);
+  --sans: Inter, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
+  --serif: "Noto Serif SC", "Source Han Serif SC", "Songti SC", SimSun, Georgia, serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", "Cascadia Code", Consolas, "Courier New", monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  font-family: var(--sans);
+  background: var(--surface);
+  color: var(--fg);
+  font-size: 14px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ———— 顶栏 ———— */
+.topbar {
+  background: var(--bg);
+  border-bottom: 1px solid var(--card-border);
+  padding: 0 max(28px, calc((100% - var(--shell)) / 2 + 28px));
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.brand { display: flex; align-items: baseline; gap: 10px; font-size: 15px; font-weight: 600; letter-spacing: .2px; }
+.brand-mark {
+  background: var(--fg); color: #fff; font-family: var(--mono); font-size: 11px; font-weight: 600;
+  padding: 2px 7px; border-radius: 5px; letter-spacing: .5px; align-self: center;
+}
+.brand-en { color: var(--muted); font-size: 12px; font-weight: 400; }
+.top-status { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+
+/* ———— 选项卡 ———— */
+.tabs {
+  background: var(--bg); border-bottom: 1px solid var(--card-border);
+  padding: 0 max(28px, calc((100% - var(--shell)) / 2 + 28px)); display: flex; gap: 4px; position: sticky; top: 56px; z-index: 40;
+}
+.tab {
+  appearance: none; border: none; background: none; cursor: pointer;
+  font: inherit; font-size: 13.5px; color: var(--muted);
+  padding: 11px 14px; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  transition: color .15s;
+}
+.tab:hover { color: var(--fg); }
+.tab.active { color: var(--fg); font-weight: 600; border-bottom-color: var(--fg); }
+
+/* ———— 布局 ———— */
+main { max-width: var(--shell); margin: 0 auto; padding: 26px 28px 80px; }
+.view { display: none; animation: fadein .2s ease; }
+.view.active { display: block; }
+@keyframes fadein { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+/* ———— 卡片 ———— */
+.card {
+  background: var(--bg); border: 1px solid var(--card-border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 20px 22px;
+}
+.card + .card { margin-top: 16px; }
+.card h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card h3 .hint { font-size: 12px; font-weight: 400; color: var(--muted); }
+.grid { display: grid; gap: 12px; }
+.grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.kv { display: flex; gap: 10px; font-size: 13px; padding: 4px 0; }
+.kv b { color: var(--muted); font-weight: 500; min-width: 84px; }
+
+/* ———— 徽章 / chip ———— */
+.badge {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600;
+  padding: 2px 9px; border-radius: 999px; letter-spacing: .2px; white-space: nowrap;
+}
+.badge.success { color: var(--success); background: var(--success-bg); }
+.badge.warning { color: var(--warning); background: var(--warning-bg); }
+.badge.destructive { color: var(--destructive); background: var(--destructive-bg); }
+.badge.info { color: var(--info); background: var(--info-bg); }
+.badge.neutral { color: var(--fg); background: var(--surface); border: 1px solid var(--border); font-weight: 500; }
+.chip {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 12px;
+  padding: 1px 8px; border-radius: 5px; background: var(--surface); color: var(--muted);
+  border: 1px solid transparent; font-family: var(--mono);
+}
+a.chip, button.chip { cursor: pointer; transition: all .15s; }
+a.chip:hover, button.chip:hover { background: var(--hover); color: var(--info); border-color: hsl(214 70% 88%); }
+.chip.on { background: var(--fg); color: #fff; }
+
+/* ———— 按钮 ———— */
+.btn {
+  appearance: none; font: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+  border-radius: var(--radius-sm); padding: 7px 16px; transition: all .15s;
+  border: 1px solid var(--border); background: var(--bg); color: var(--fg);
+}
+.btn:hover { background: var(--hover); border-color: hsl(214 70% 85%); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn.primary { background: var(--fg); color: #fff; border-color: var(--fg); }
+.btn.primary:hover:not(:disabled) { background: var(--fg-hover); border-color: var(--fg-hover); }
+.btn.danger { color: var(--destructive); border-color: hsl(0 55% 80%); }
+.btn.danger:hover:not(:disabled) { background: var(--destructive-bg); }
+.btn.sm { padding: 4px 11px; font-size: 12px; }
+
+/* ———— 等宽 / digest ———— */
+.mono { font-family: var(--mono); font-size: 12px; }
+.digest { font-family: var(--mono); font-size: 11.5px; color: var(--muted); word-break: break-all; line-height: 1.5; }
+
+/* ———— 对话视图（页签 1）———— */
+.chat-card { display: flex; flex-direction: column; height: calc(100vh - 236px); min-height: 520px; padding: 0; overflow: hidden; }
+
+/* ———— Agent 运行实时面板（对照 Dify Tracing / Langfuse Timeline 设计）———— */
+.chat-split { display: grid; grid-template-columns: minmax(0, 1fr) clamp(380px, 30%, 460px); gap: 14px; align-items: stretch; }
+.run-panel { display: flex; flex-direction: column; background: var(--bg, #fff); border: 1px solid var(--border, #e4e6eb); border-radius: 12px; overflow: hidden; min-height: 520px; height: calc(100vh - 236px); }
+.run-panel.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 12.5px; border-style: dashed; }
+.rp-head { padding: 14px 16px 10px; border-bottom: 1px solid var(--border, #e4e6eb); }
+.rp-head h3 { font-size: 13px; margin: 0 0 8px; display: flex; justify-content: space-between; align-items: center; }
+.rp-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.rp-stat { background: #f6f7f9; border-radius: 8px; padding: 7px 8px; text-align: center; }
+.rp-stat .v { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.rp-stat .k { font-size: 10px; color: var(--muted); margin-top: 2px; letter-spacing: .3px; }
+.rp-toolbar { display: flex; gap: 8px; padding: 8px 16px; border-bottom: 1px solid var(--border, #e4e6eb); align-items: center; }
+.rp-view-tabs { display: flex; gap: 2px; background: #f0f1f4; border-radius: 8px; padding: 2px; }
+.rp-vtab { font-size: 11.5px; padding: 4px 10px; border-radius: 6px; cursor: pointer; border: none; background: none; color: var(--muted); }
+.rp-vtab.on { background: #fff; color: var(--fg); font-weight: 650; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.rp-body { flex: 1; overflow-y: auto; padding: 12px 14px; }
+/* 时间线节点（Langfuse Timeline 风格）*/
+.rp-tl { position: relative; padding-left: 18px; }
+.rp-tl::before { content: ""; position: absolute; left: 5px; top: 6px; bottom: 6px; width: 2px; background: #e8eaef; }
+.rp-node { position: relative; margin-bottom: 10px; border: 1px solid var(--border, #e4e6eb); border-radius: 10px; background: #fff; overflow: hidden; }
+.rp-node::before { content: ""; position: absolute; left: -17px; top: 14px; width: 8px; height: 8px; border-radius: 50%; background: var(--success, #1f9d61); box-shadow: 0 0 0 3px rgba(31,157,97,.15); }
+.rp-node.running::before { background: #3b7bf5; animation: rpPulse 1.1s ease-in-out infinite; }
+.rp-node.failed::before { background: #d64545; box-shadow: 0 0 0 3px rgba(214,69,69,.15); }
+@keyframes rpPulse { 0%,100% { box-shadow: 0 0 0 2px rgba(59,123,245,.3);} 50% { box-shadow: 0 0 0 5px rgba(59,123,245,.12);} }
+.rp-node-h { display: flex; align-items: center; gap: 8px; padding: 9px 11px; cursor: pointer; }
+.rp-node-h:hover { background: #f7f8fa; }
+.rp-ntype { font-size: 9.5px; font-weight: 700; letter-spacing: .5px; padding: 2px 6px; border-radius: 4px; background: #eceef2; color: #5b6470; }
+.rp-ntype.ORCHESTRATOR { background: #e8e2fb; color: #6a3fc0; }
+.rp-ntype.AGENT { background: #e0ecfb; color: #1d5fbf; }
+.rp-ntype.CHECKER { background: #fdeede; color: #b25e09; }
+.rp-ntype.GATEKEEP { background: #e2f3e9; color: #1f7a45; }
+.rp-ntitle { flex: 1; font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-nmeta { font-size: 10.5px; color: var(--muted); font-variant-numeric: tabular-nums; display: flex; gap: 8px; flex: 0 0 auto; }
+.rp-nstatus { font-size: 10.5px; font-weight: 700; }
+.rp-node.running .rp-nstatus { color: #3b7bf5; }
+.rp-node-b { display: none; padding: 4px 11px 10px; border-top: 1px dashed #e8eaef; background: #fbfcfd; }
+.rp-node.open .rp-node-b { display: block; }
+.rp-field { margin-top: 7px; }
+.rp-field .fl { font-size: 10px; color: var(--muted); letter-spacing: .5px; margin-bottom: 3px; font-weight: 650; }
+.rp-field .fv { font-size: 11.5px; line-height: 1.65; color: #333; word-break: break-all; }
+.rp-thinking { font-size: 11.5px; color: #6b5bd6; background: #f4f2fd; border-left: 3px solid #a99df0; padding: 7px 10px; border-radius: 0 6px 6px 0; font-style: italic; }
+.rp-tools .tc { display: flex; align-items: center; gap: 6px; font-size: 11px; padding: 4px 8px; background: #f0f4f9; border-radius: 6px; margin-bottom: 4px; }
+.rp-tools .tc .tn { font-family: ui-monospace, Consolas, monospace; color: #1d5fbf; }
+.rp-tools .tc .tp { margin-left: auto; font-size: 9.5px; color: var(--muted); }
+/* 图视图（Langfuse Graph 聚合模式简化版）*/
+.rp-graph { display: flex; flex-direction: column; align-items: center; padding: 8px 0; }
+.rp-gnode { width: 200px; text-align: center; padding: 8px 10px; border: 1.5px solid var(--border, #e4e6eb); border-radius: 10px; font-size: 11.5px; background: #fff; margin: 4px 0; }
+.rp-gnode .gtitle { font-weight: 650; font-size: 11.5px; }
+.rp-gnode .gmeta { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.rp-gnode.ok { border-color: #bfe5cf; background: #f4fbf7; }
+.rp-par { display: flex; gap: 6px; }
+.rp-garrow { color: #b8bec8; font-size: 13px; line-height: 1; margin: 1px 0; }
+/* 运行中头部条 */
+.rp-live-bar { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: #3b7bf5; padding: 6px 16px; background: #f0f5ff; border-bottom: 1px solid #dbe7ff; }
+.rp-dot { width: 7px; height: 7px; border-radius: 50%; background: #3b7bf5; animation: rpPulse 1.1s infinite; }
+.chat-log { flex: 1; overflow-y: auto; padding: 18px 20px; display: flex; flex-direction: column; gap: 16px; }
+.chat-msg { display: flex; gap: 10px; max-width: 94%; }
+.chat-msg.user { flex-direction: row-reverse; margin-left: auto; max-width: 80%; }
+.m-avatar {
+  width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 650; background: var(--surface-2); color: var(--muted);
+}
+.m-avatar.k-ORCHESTRATOR { background: var(--info-bg); color: var(--info); }
+.m-avatar.k-CHECKER { background: var(--warning-bg); color: var(--warning); }
+.m-avatar.k-APPROVER { background: var(--success-bg); color: var(--success); }
+.m-avatar.k-USER { background: var(--fg); color: #fff; }
+.m-main { min-width: 0; }
+.m-head { display: flex; align-items: center; gap: 8px; margin-bottom: 3px; font-size: 12px; flex-wrap: wrap; }
+.m-name { font-weight: 600; font-size: 12.5px; }
+.m-time { color: var(--muted); font-size: 11px; font-family: var(--mono); }
+.m-text { font-size: 13.5px; line-height: 1.85; color: var(--fg); }
+.m-text .quote { margin-top: 6px; margin-bottom: 2px; }
+.chat-msg.user .m-text {
+  background: var(--surface); border: 1px solid var(--card-border);
+  border-radius: 10px 10px 2px 10px; padding: 8px 13px;
+}
+.quick-row {
+  display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 20px;
+  border-top: 1px solid var(--card-border); background: var(--bg); min-height: 52px; align-items: center;
+}
+.quick-row:empty { display: none; }
+.quick-hint { font-size: 12px; color: var(--muted); margin-right: 2px; white-space: nowrap; }
+.chat-input { display: flex; gap: 10px; padding: 12px 20px 16px; border-top: 1px solid var(--card-border); }
+.chat-input input {
+  flex: 1; font: inherit; font-size: 13.5px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 9px 13px; outline: none; background: var(--bg);
+  transition: border-color .15s;
+}
+.chat-input input:focus { border-color: hsl(214 70% 75%); }
+
+/* ———— 资产库（页签 2）———— */
+.group-h { font-size: 13px; font-weight: 650; margin: 20px 0 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.group-h:first-child { margin-top: 0; }
+.group-h .g-tag { font-size: 11px; font-family: var(--mono); color: var(--muted); font-weight: 500; }
+.asset-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.asset-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+.asset-tile { border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 12px 14px; background: var(--bg); }
+.asset-tile .t-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.asset-tile .t-name { font-size: 13px; font-weight: 600; }
+.asset-tile .t-ver { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.asset-tile .t-desc { font-size: 12px; color: var(--muted); line-height: 1.7; margin-top: 6px; }
+.asset-tile .t-foot { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 9px; }
+.asset-tile .t-meta { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 9px; line-height: 1.8; }
+.page-text {
+  font-family: var(--serif); font-size: 14.5px; line-height: 2.1; white-space: pre-wrap;
+  color: var(--fg); padding: 4px 2px; max-height: 380px; overflow-y: auto;
+}
+.page-text mark {
+  background: hsl(160 60% 90%); color: inherit; padding: 0 2px; border-radius: 3px;
+  box-shadow: inset 0 -1.5px 0 hsl(160 60% 55%);
+}
+.mi-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.mi-table th { text-align: left; font-size: 11.5px; color: var(--muted); border-bottom: 1.5px solid var(--fg); padding: 6px 8px; }
+.mi-table td { border-bottom: 1px solid var(--card-border); padding: 6px 8px; }
+.mi-table .cell-mono { font-family: var(--mono); font-size: 11.5px; }
+
+/* ———— 报告库（页签 3）———— */
+.reports-layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+.reports-list { display: flex; flex-direction: column; gap: 8px; max-height: calc(100vh - 220px); overflow-y: auto; }
+.task-item {
+  text-align: left; font: inherit; cursor: pointer; background: var(--bg);
+  border: 1px solid var(--card-border); border-radius: var(--radius-sm);
+  padding: 12px 14px; transition: all .15s;
+}
+.task-item:hover { background: var(--hover); }
+.task-item.active { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
+.task-item .ti-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; }
+.task-item .ti-id { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+.task-item .ti-sub { font-size: 12.5px; }
+.task-item .ti-sum {
+  font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.6;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.task-item .ti-time { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 6px; }
+.reports-detail { min-width: 0; }
+
+/* ———— 报告（年报级排版，可 A4 打印）———— */
+.report-shell { display: flex; justify-content: center; }
+.paper {
+  background: #fff; width: 100%; max-width: 830px; border: 1px solid var(--card-border);
+  border-radius: 4px; box-shadow: var(--shadow); padding: 60px 68px 56px;
+}
+.paper-header {
+  display: flex; justify-content: space-between; align-items: baseline;
+  border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 44px;
+  font-size: 11.5px; color: var(--muted); letter-spacing: 1px;
+}
+.rp-cover { text-align: center; padding: 30px 0 10px; }
+.rp-cover .c-company { font-size: 30px; font-weight: 700; letter-spacing: 6px; margin-bottom: 14px; }
+.rp-cover .c-title { font-size: 21px; font-weight: 600; letter-spacing: 2px; margin-bottom: 26px; }
+.rp-cover .c-meta { font-size: 12.5px; color: var(--muted); line-height: 2; }
+.rp-notice {
+  text-align: left; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); padding: 18px 22px; margin: 34px 0 8px;
+}
+.rp-notice h4 { font-size: 13px; font-weight: 650; margin-bottom: 10px; letter-spacing: 1px; }
+.rp-notice ol { padding-left: 19px; }
+.rp-notice li { font-size: 12.5px; line-height: 1.9; color: #3d3d3d; }
+.rp-h2 {
+  font-size: 16.5px; font-weight: 650; margin: 38px 0 16px; padding-left: 11px;
+  border-left: 3px solid var(--fg); letter-spacing: 1px;
+}
+.rp-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.rp-table th {
+  font-size: 12px; font-weight: 600; color: var(--muted); text-align: right;
+  padding: 8px 10px; border-bottom: 1.5px solid var(--fg); letter-spacing: .5px;
+}
+.rp-table th:first-child { text-align: left; }
+.rp-table td {
+  font-size: 13.5px; text-align: right; padding: 8.5px 10px;
+  border-bottom: 1px solid var(--card-border); font-variant-numeric: tabular-nums;
+}
+.rp-table td:first-child { text-align: left; font-family: var(--serif); }
+.rp-table .num { font-family: var(--mono); font-size: 12.5px; }
+.rp-table .delta { font-weight: 600; }
+.rp-table .delta.up { color: var(--success); }
+.rp-table .delta.down { color: var(--destructive); }
+.rp-table-note { font-size: 11.5px; color: var(--muted); margin-top: 8px; line-height: 1.8; }
+/* 图表（工件 charts 内联 SVG）：报告正文与对话流共用 */
+.rp-chart { margin: 14px 0 6px; background: var(--bg); border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 16px 14px 10px; }
+.rp-chart figcaption { font-size: 11.5px; color: var(--muted); text-align: center; margin-top: 8px; line-height: 1.7; }
+.rp-chart figcaption b { color: var(--info); font-weight: 600; }
+.m-chart { background: var(--surface); border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 10px 8px 6px; margin: 8px 0; }
+.m-chart svg { max-width: 100%; }
+.rp-body { font-family: var(--serif); font-size: 14.5px; line-height: 2.15; text-align: justify; color: #262626; text-indent: 2em; }
+.rp-refs { margin-top: 12px; text-indent: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.rp-refs .ref-label { font-family: var(--sans); font-size: 11.5px; color: var(--muted); margin-right: 2px; }
+.ref-chip {
+  font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--info);
+  background: var(--info-bg); border: 1px solid hsl(217 75% 88%);
+  border-radius: 5px; padding: 1px 7px; cursor: pointer; transition: all .15s;
+}
+.ref-chip:hover { background: hsl(217 75% 92%); }
+.rp-glossary { background: var(--surface); border-radius: var(--radius-sm); padding: 16px 20px; }
+.rp-glossary dl { display: grid; grid-template-columns: 150px 1fr; row-gap: 8px; column-gap: 14px; }
+.rp-glossary dt { font-size: 12.5px; font-weight: 600; }
+.rp-glossary dd { font-size: 12.5px; color: var(--muted); }
+.rp-footnote { border-top: 1px solid var(--border); margin-top: 42px; padding-top: 14px; }
+.rp-footnote p { font-size: 11.5px; color: var(--muted); line-height: 1.9; }
+.report-actions { display: flex; gap: 10px; justify-content: center; margin-bottom: 16px; }
+
+/* ———— 核验结果（对话/报告库/演示链共用）———— */
+.vio-row {
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: var(--radius-sm);
+  background: var(--destructive-bg); margin-bottom: 8px; font-size: 12.5px;
+}
+.vio-row.warn { background: var(--warning-bg); }
+.vio-row .v-rule { font-family: var(--mono); font-weight: 700; font-size: 11.5px; color: var(--destructive); white-space: nowrap; }
+.vio-row.warn .v-rule { color: var(--warning); }
+.vio-row .v-target { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.vio-row .v-detail { color: #3d3d3d; line-height: 1.7; }
+.pass-note { font-size: 12.5px; color: var(--success); background: var(--success-bg); border-radius: var(--radius-sm); padding: 10px 12px; }
+/* ———— 演示链（页签 5）———— */
+.step {
+  display: grid; grid-template-columns: 44px 1fr; gap: 16px;
+  background: var(--bg); border: 1px solid var(--card-border); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 18px 20px; margin-bottom: 14px;
+}
+.step .s-no {
+  width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: var(--surface); color: var(--muted); font-family: var(--mono); font-weight: 700; font-size: 14px;
+  border: 1.5px solid transparent; margin-top: 2px;
+}
+.step.done .s-no { background: var(--success-bg); color: var(--success); border-color: hsl(160 60% 80%); }
+.step.blocked .s-no { background: var(--destructive-bg); color: var(--destructive); border-color: hsl(0 55% 82%); }
+.step.refused .s-no { background: var(--warning-bg); color: var(--warning); border-color: hsl(38 90% 75%); }
+.step .s-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.step .s-title { font-size: 14px; font-weight: 650; }
+.step .s-desc { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
+.step .s-body { display: flex; flex-direction: column; gap: 10px; }
+.quote {
+  font-family: var(--serif); font-size: 13.5px; line-height: 1.9; padding: 12px 16px;
+  background: var(--surface); border-left: 3px solid var(--border); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.quote mark { background: hsl(0 55% 92%); color: var(--destructive); font-weight: 650; padding: 0 2px; border-radius: 3px; }
+.quote .fix { background: hsl(160 60% 90%); color: var(--success); font-weight: 650; padding: 0 2px; border-radius: 3px; }
+.diff-banner {
+  display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px;
+  border: 1px solid hsl(0 55% 85%); background: var(--destructive-bg);
+  border-radius: var(--radius-sm); padding: 11px 14px; color: #3d3d3d;
+}
+.approval-card {
+  border: 1px solid hsl(160 60% 80%); background: var(--success-bg); border-radius: var(--radius-sm);
+  padding: 14px 16px; font-size: 12.5px;
+}
+.approval-card .a-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 7px 18px; margin-top: 8px; }
+.approval-card .a-grid b { color: var(--muted); font-weight: 500; }
+.refused-card {
+  border: 1px solid hsl(38 90% 72%); background: var(--warning-bg); border-radius: var(--radius-sm);
+  padding: 14px 16px; font-size: 12.5px;
+}
+
+/* ———— 信源卡片（资产库/规则与释义）———— */
+.src-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.src-card { background: var(--bg); border: 1px solid var(--card-border); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; }
+.src-card .s-title { font-size: 13.5px; font-weight: 650; margin: 8px 0 10px; line-height: 1.5; }
+.src-card .s-rows { font-size: 12.5px; color: var(--muted); line-height: 1.9; }
+.src-card .s-rows b { color: var(--fg); font-weight: 500; }
+.src-card .s-pages { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ———— 抽屉（引用证据）———— */
+.drawer-mask { position: fixed; inset: 0; background: rgba(20,20,20,.32); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 90; }
+.drawer-mask.open { opacity: 1; pointer-events: auto; }
+.drawer {
+  position: fixed; top: 0; right: 0; height: 100vh; width: 560px; max-width: 92vw;
+  background: var(--bg); border-left: 1px solid var(--border); box-shadow: -8px 0 30px rgba(0,0,0,.08);
+  transform: translateX(100%); transition: transform .22s ease, width .25s ease; z-index: 95;
+  padding: 26px 30px; overflow-y: auto;
+}
+/* 大内容模式（skill 详情/长文预览）：抽屉自动加宽 */
+.drawer.wide { width: min(860px, 88vw); }
+.drawer.wide .d-block .d-val, .drawer.wide .skill-doc { font-size: 13.5px; }
+.drawer.wide .skill-doc { max-height: none; padding: 18px 22px; }
+.drawer.wide .skill-doc pre { font-size: 12.5px; }
+.drawer.wide .skill-doc table { font-size: 12.5px; }
+.drawer.wide .d-bind-row { max-width: 100%; }
+.drawer.open { transform: none; }
+.drawer h3 { font-size: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+.drawer .d-close { appearance: none; border: none; background: none; font-size: 17px; cursor: pointer; color: var(--muted); line-height: 1; }
+.drawer .d-close:hover { color: var(--fg); }
+.d-block { margin-bottom: 16px; }
+.d-block .d-label { font-size: 11.5px; font-weight: 650; color: var(--muted); letter-spacing: 1px; margin-bottom: 5px; }
+.skill-tree { border:1px solid var(--line); border-radius:8px; padding:8px; max-height:240px; overflow:auto; background:#fafbf8; }
+.st-group { font-size:11px; font-weight:650; color:var(--muted); letter-spacing:.5px; margin:8px 4px 4px; }
+.st-file { display:flex; align-items:center; gap:8px; padding:5px 8px; border-radius:6px; cursor:pointer; font-size:12.5px; }
+.st-file:hover { background:rgba(43,95,217,.08); }
+.st-file.sel { background:rgba(43,95,217,.14); outline:1px solid rgba(43,95,217,.35); }
+.st-ico { flex:0 0 auto; }
+.st-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--fg); }
+.st-size { flex:0 0 auto; font-size:10.5px; color:var(--muted); }
+.skill-code { background:#f6f7f4; border:1px solid var(--line); border-radius:8px; padding:14px 16px; max-height:460px; overflow:auto; font-size:12px; line-height:1.65; font-family:ui-monospace,Consolas,monospace; }
+.skill-doc { background:#fafbf8; border:1px solid var(--line); border-radius:8px; padding:14px 16px; max-height:420px; overflow:auto; font-size:12.5px; line-height:1.75; }
+.skill-doc h2 { font-size:14.5px; margin:12px 0 6px; }
+.skill-doc h3 { font-size:13.5px; margin:10px 0 5px; }
+.skill-doc h4 { font-size:12.5px; margin:8px 0 4px; }
+.skill-doc pre { background:#f0f2ec; padding:10px; border-radius:6px; overflow:auto; font-size:11.5px; }
+.skill-doc table { border-collapse:collapse; margin:8px 0; font-size:11.5px; }
+.skill-doc th, .skill-doc td { border:1px solid var(--line); padding:4px 8px; text-align:left; }
+.skill-doc th { background:#f0f2ec; }
+.skill-doc code { background:#f0f2ec; padding:1px 5px; border-radius:3px; font-size:11.5px; }
+.d-block .d-val { font-size: 13px; line-height: 1.7; }
+.d-block .d-quote {
+  font-family: var(--serif); font-size: 13.5px; line-height: 2; background: var(--surface);
+  border-left: 3px solid var(--success); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; padding: 10px 14px;
+}
+.d-verify { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--success); }
+/* ———— 资产卡片可点击 + 详情抽屉绑定行 ———— */
+.asset-tile.clickable { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.asset-tile.clickable:hover { border-color: hsl(214 70% 78%); box-shadow: 0 2px 12px rgba(0,0,0,.07); }
+.asset-tile .t-summary {
+  font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 8px;
+  padding-top: 7px; border-top: 1px dashed var(--border);
+}
+.d-bind-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 7px 10px; border: 1px solid var(--card-border); border-radius: var(--radius-sm);
+  margin-bottom: 6px; background: var(--bg);
+}
+.d-bind-row .b-name { font-size: 12.5px; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.d-bind-row .b-sub { font-size: 11px; color: var(--muted); font-family: var(--mono); flex-shrink: 0; }
+.d-bind-row .b-ops { display: flex; gap: 6px; flex-shrink: 0; }
+/* ———— 报告目录（年报级）———— */
+.rp-toc { margin: 32px 0 8px; padding: 18px 26px; background: var(--surface); border-radius: var(--radius-sm); }
+.rp-toc h4 { font-family: var(--serif); font-size: 15px; font-weight: 650; letter-spacing: 8px; text-align: center; margin-bottom: 10px; }
+.rp-toc ol { list-style: none; columns: 2; column-gap: 34px; }
+.rp-toc li { font-family: var(--serif); font-size: 13px; line-height: 2.05; cursor: pointer; color: #333; border-bottom: 1px dotted var(--border); }
+.rp-toc li:hover { color: var(--info); }
+.rp-h2 { scroll-margin-top: 84px; }
+/* ———— 资产库·注册自定义 Agent 表单 ———— */
+.reg-form { display: grid; grid-template-columns: 1.3fr .7fr; gap: 10px; margin-top: 12px; }
+.reg-form input, .reg-form select, .reg-form textarea {
+  font: inherit; font-size: 13px; border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 7px 10px; outline: none; background: var(--bg);
+}
+.reg-form input:focus, .reg-form select:focus, .reg-form textarea:focus { border-color: hsl(214 70% 75%); }
+.reg-form .full { grid-column: 1 / -1; }
+details summary::marker { color: var(--muted); }
+.reg-form textarea { resize: vertical; min-height: 52px; }
+
+/* ———— 打印（A4，仅打印报告库当前展开的年报）———— */
+@media print {
+  body { background: #fff; }
+  .topbar, .tabs, .report-actions, .drawer, .drawer-mask, .no-print,
+  .reports-list, .task-meta-card { display: none !important; }
+  .view { display: none !important; }
+  #view-reports { display: block !important; }
+  .reports-layout { display: block; }
+  main { max-width: none; padding: 0; }
+  .paper { border: none; box-shadow: none; max-width: none; padding: 0; border-radius: 0; }
+  .paper-header { position: fixed; top: 0; left: 0; right: 0; margin-bottom: 26px; }
+  .paper { padding-top: 40px; }
+  @page { size: A4; margin: 15mm 13mm; }
+}
+@media (max-width: 1020px) {
+  .grid.cols-3, .asset-grid, .asset-grid.cols-2, .src-grid { grid-template-columns: 1fr; }
+  .reports-layout { grid-template-columns: 1fr; }
+  .reports-list { max-height: none; }
+  .chat-split { grid-template-columns: 1fr; }
+  .run-panel { min-height: 380px; height: auto; max-height: 60vh; }
+  .chat-card { height: 70vh; min-height: 420px; }
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-mark">W06</span>年报工作台<span class="brand-en">Annual Report Workbench</span></div>
+  <div class="top-status">
+    <span id="health-badge" class="badge neutral">连接中…</span>
+    <span class="mono" id="health-ver"></span>
+  </div>
+</header>
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-view="chat">对话</button>
+  <button class="tab" data-view="assets">资产库</button>
+  <button class="tab" data-view="reports">报告库</button>
+</nav>
+<main>
+  <section class="view active" id="view-chat">
+    <div class="chat-split">
+      <div class="card chat-card">
+        <div class="chat-log" id="chat-log"></div>
+      <div class="quick-row" id="quick-row"></div>
+      <form class="chat-input" id="chat-form" autocomplete="off">
+        <input id="chat-input" placeholder="自由输入：确认主体 / 粘贴补充资料 / 口径问答 / 重新生成 / 跳转页签……">
+        <label class="btn" style="white-space:nowrap;cursor:pointer;flex:none">导入资料<input type="file" id="doc-file" multiple
+          accept=".pdf,.txt,.md,.markdown,.json" hidden></label>
+        <button class="btn primary" type="submit">发送</button>
+      </form>
+      </div>
+      <aside class="run-panel" id="run-panel"></aside>
+    </div>
+  </section>
+  <section class="view" id="view-assets"></section>
+  <section class="view" id="view-reports"></section>
+  <section class="view" id="view-demo"></section>
+</main>
+<div class="drawer-mask" id="drawer-mask"></div>
+<aside class="drawer" id="drawer"></aside>
+<script>
+"use strict";
+/* ———————————————————— 基础工具 ———————————————————— */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g,
+  c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+async function jget(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(r.status + " " + url);
+  return r.json();
+}
+async function jpost(url, body) {
+  const r = await fetch(url, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  return { ok: r.ok, status: r.status, data: await r.json().catch(() => null) };
+}
+const short = (d, n = 10) => d ? d.slice(0, n) + "…" : "—";
+const DELTA_LABEL = { PERCENTAGE_POINT: "个百分点", BASIS_POINT: "基点", PERCENT: "%", YUAN: "亿元" };
+const deltaText = m => (m.yoy_delta ?? "") + (DELTA_LABEL[m.delta_unit] ?? "");
+const deltaDir = m => { const d = parseFloat(m.yoy_delta); return d > 0 ? "up" : d < 0 ? "down" : ""; };
+const clone = o => JSON.parse(JSON.stringify(o));
+const nowTime = () => new Date().toLocaleTimeString("zh-CN", { hour12: false });
+
+const STATUS_LABEL = {
+  PASSED: ["success", "通过"], FAILED: ["destructive", "未通过"],
+  WAITING_HUMAN: ["warning", "待人工复核"], NONE: ["neutral", "无批准"],
+  APPROVED: ["success", "已批准"], REFUSED: ["destructive", "已拒绝"],
+  GENERATING: ["warning", "生成中"], GENERATED: ["info", "草稿就绪"],
+  RUNNING: ["success", "运行中"], AVAILABLE: ["neutral", "待安装"]
+};
+const statusBadge = s => {
+  const [cls, label] = STATUS_LABEL[s] || ["neutral", s || "—"];
+  return '<span class="badge ' + cls + '">' + esc(label) + "</span>";
+};
+
+const KIND_LABEL = {
+  ORCHESTRATOR: ["info", "编排"], ANALYST: ["neutral", "分析"],
+  CHECKER: ["warning", "核验"], APPROVER: ["success", "批准"]
+};
+const kindBadge = k => {
+  const [cls, label] = KIND_LABEL[k] || ["neutral", k || "—"];
+  return '<span class="badge ' + cls + '">' + esc(label) + "</span>";
+};
+
+/* 核验违规行（对话 / 报告库 / 演示链共用渲染） */
+const vioRows = vs => (vs || []).map(v =>
+  '<div class="vio-row' + (v.severity === "WARNING" ? " warn" : "") + '">'
+  + '<span class="v-rule">' + esc(v.rule) + "</span>"
+  + "<div><div class=\"v-detail\">" + esc(v.detail) + "</div>"
+  + '<div class="v-target">target: ' + esc(v.target) + " · " + esc(v.severity) + "</div></div></div>").join("");
+
+/* 2024 对比值：从快照 P46 文本提取（口径与 P46 原文逐字对应） */
+function extract2024(text) {
+  const m = (re) => { const x = text.match(re); return x ? x[1] : null; };
+  return {
+    OPERATING_REVENUE: m(/营业收入([\d,\.]+)亿元/),
+    NET_PROFIT_ATTRIBUTABLE: m(/净利润([\d,\.]+)亿元/),
+    NET_INTEREST_MARGIN: m(/净息差([\d\.]+)%/),
+    COST_INCOME_RATIO: m(/成本收入比([\d\.]+)%/),
+    NPL_BALANCE: m(/不良贷款余额([\d,\.]+)亿元/),
+    NPL_RATIO: m(/不良贷款率([\d\.]+)%/),
+    PROVISION_COVERAGE: m(/拨备覆盖率([\d\.]+)%/),
+    CET1_RATIO: m(/核心一级资本充足率([\d\.]+)%/)
+  };
+}
+
+/* ———————————————————— 全局状态 ———————————————————— */
+const state = {
+  manifest: null, manifests: {},  // 各银行快照 manifest（key=银行目录名）；manifest 为默认（cmb）
+  banks: [],               // 银行清单（/v1/banks）
+  sources: [], health: null,
+  positive: null,          // 正例工件（只读底稿，招行演示链用）
+  artifact: null,          // 当前工作工件（演示链会修改它）
+  citeArtifact: null,      // 引用抽屉/快照高亮当前指向的工件
+  y2024: {}, y2024s: {},   // 2024 对比值（快照 P46 提取，按银行缓存；y2024 兼容指向招行）
+  pages: {},               // 快照页缓存
+  approval: null,
+  tasks: [], selectedTask: null,
+  demo: { done: {} }
+};
+
+/* ———————————————————— 本地文档导入（live 快照集 + sha256 注册纪律门）———————————————————— */
+let DOC_PENDING = [];
+$("#doc-file").addEventListener("change", e => {
+  const files = Array.from(e.target.files || []);
+  if (!files.length) return;
+  DOC_PENDING = files;
+  e.target.value = "";
+  openImportDrawer();
+});
+async function b64Of(file) {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+async function openImportDrawer() {
+  const rows = DOC_PENDING.map((f, i) =>
+    '<div class="d-block"><div class="d-label">文件 ' + (i + 1) + '</div><div class="d-val">'
+    + esc(f.name) + " · " + (f.size / 1024).toFixed(1) + " KB</div></div>").join("");
+  $("#drawer").innerHTML =
+    "<h3>导入本地资料<button class=\"d-close\" onclick=\"closeDrawer()\">×</button></h3>"
+    + '<div class="d-block"><div class="d-label">纪律门</div><div class="d-val">资料将落盘 live 快照集并经 sha256 '
+    + "注册进信源注册表（与 MCP 联网抓取同一纪律门），注册后引用核验（C1/C2）与数值核验即刻接受；"
+    + "生成报告时自动挂载为可引用论断，writer-agent 可直接引用。冻结演示快照（cmb/icbc/ccb）零改动，无需重启。</div></div>"
+    + rows
+    + '<div class="d-block"><div class="d-label">信源标题（可改）</div>'
+    + '<input id="doc-title" style="width:100%" value="'
+    + esc(DOC_PENDING[0] ? DOC_PENDING[0].name.replace(/\.[^.]+$/, "") : "本地资料") + '"></div>'
+    + '<div class="d-block"><div class="d-label">权威等级</div>'
+    + '<select id="doc-authority" style="width:100%">'
+    + '<option value="PRIMARY_OFFICIAL">PRIMARY_OFFICIAL（官方一手，可支撑指标值）</option>'
+    + '<option value="SECONDARY_INSTITUTIONAL">SECONDARY_INSTITUTIONAL（机构二手）</option>'
+    + '<option value="TERTIARY_AGGREGATED">TERTIARY_AGGREGATED（聚合三手）</option>'
+    + "</select></div>"
+    + '<div class="d-block"><button class="btn primary" id="doc-submit">确认导入</button> '
+    + '<span id="doc-status" class="digest"></span></div>';
+  $("#drawer").classList.add("open");
+  $("#drawer-mask").classList.add("open");
+  $("#doc-submit").addEventListener("click", submitImport);
+}
+async function submitImport() {
+  const st = $("#doc-status");
+  st.textContent = "解析与落盘中……";
+  try {
+    const files = [];
+    for (const f of DOC_PENDING) files.push({ filename: f.name, content_base64: await b64Of(f) });
+    const r = await jpost("/v1/documents/import", {
+      title: ($("#doc-title") || {}).value || "",
+      authority: ($("#doc-authority") || {}).value || "PRIMARY_OFFICIAL",
+      files
+    });
+    closeDrawer();
+    if (!r.ok || !(r.data || {}).ok) {
+      addMsg("editor-in-chief", "资料导入失败：" + esc((r.data || {}).error || "HTTP " + r.status));
+      return;
+    }
+    addDocResultMsg(r.data);
+  } catch (e) {
+    closeDrawer();
+    addMsg("editor-in-chief", "资料导入异常：" + esc(String(e)));
+  }
+}
+async function importPasted(text) {
+  try {
+    const r = await jpost("/v1/documents/import", { title: "对话粘贴补充资料", text });
+    if (!r.ok || !(r.data || {}).ok) {
+      addMsg("material-agent", "补充资料注册失败：" + esc((r.data || {}).error || "HTTP " + r.status)
+        + "。可继续粘贴，或点击「资料齐备，开始编制」。");
+      return;
+    }
+    addDocResultMsg(r.data, "补充资料已落盘 live 快照集并注册进信源注册表：");
+    setQuick([{ label: "资料齐备，开始编制", cls: "primary", fn: startClarify }], "确认无误后开始，也可在下方补充资料：");
+  } catch (e) {
+    addMsg("material-agent", "补充资料注册异常：" + esc(String(e)));
+  }
+}
+function addDocResultMsg(data, head) {
+  const rows = (data.imported || []).map(x =>
+    "<li>「" + esc(x.commit.title) + "」→ " + esc(x.commit.source_id)
+    + " · 快照 P" + (x.commit.snapshot_pages || []).map(p => p.snapshot_page).join("、P")
+    + " · 指纹 " + esc(short(x.commit.content_sha256, 16)) + "</li>").join("");
+  const errs = (data.errors || []).map(x => "<li>" + esc(x.filename) + "：" + esc(x.error) + "</li>").join("");
+  addMsg("material-agent", (head || "本地资料导入完成，已落盘 live 快照集并注册进信源注册表：")
+    + "<ul>" + rows + "</ul>" + (errs ? "部分文件未成功：<ul>" + errs + "</ul>" : "")
+    + "生成报告时将自动挂载为可引用论断（[C-n]），writer-agent 可直接引用。");
+}
+
+/* ———————————————————— 选项卡切换 ———————————————————— */
+let ASSETS_RENDER = Promise.resolve(); /* 资产库渲染 promise：viewPage 跳页需等它完成，避免竞态覆盖 */
+function showView(name) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("active", t.dataset.view === name));
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === "view-" + name));
+  if (name === "reports") refreshTasks();
+  if (name === "assets") ASSETS_RENDER = renderAssets();
+  if (name === "demo") renderDemoShell();
+}
+$("#tabs").addEventListener("click", e => {
+  const btn = e.target.closest(".tab");
+  if (btn) showView(btn.dataset.view);
+});
+function switchTab(name) { showView(name); }
+
+/* ———————————————————— 对话视图（页签 1）：受控多 agent 对话流 ———————————————————— */
+/* agent 徽标元数据（与服务端 seedAgents 一一对应；av = 头像单字） */
+const AGENT_META = {
+  "editor-in-chief":     { name: "主编编排 Agent", kind: "ORCHESTRATOR", av: "编" },
+  "material-agent":      { name: "资料管理 Agent", kind: "ANALYST", av: "资" },
+  "finance-analyst":     { name: "财务分析 Agent", kind: "ANALYST", av: "财" },
+  "risk-analyst":        { name: "风险与拨备 Agent", kind: "ANALYST", av: "风" },
+  "capital-analyst":     { name: "资本管理 Agent", kind: "ANALYST", av: "本" },
+  "disclosure-officer":  { name: "披露合规 Agent", kind: "ANALYST", av: "披" },
+  "chart-agent":         { name: "图表绘制 Agent", kind: "ANALYST", av: "图" },
+  "numeric-checker":     { name: "数值核验器", kind: "CHECKER", av: "数" },
+  "citation-checker":    { name: "引用核验器", kind: "CHECKER", av: "引" },
+  "approver":            { name: "交付批准官", kind: "APPROVER", av: "批" }
+};
+
+const chat = { stage: "greet", bank: "cmb", artifact: null, taskId: null, busy: false };
+
+function addMsg(agentId, html) {
+  const log = $("#chat-log");
+  const isUser = agentId === "user";
+  const meta = isUser ? { name: "我", kind: "USER", av: "我" } : (AGENT_META[agentId] || { name: agentId, kind: "ANALYST", av: "·" });
+  const div = document.createElement("div");
+  div.className = "chat-msg" + (isUser ? " user" : "");
+  div.innerHTML =
+    '<div class="m-avatar k-' + meta.kind + '">' + esc(meta.av) + "</div>"
+    + '<div class="m-main"><div class="m-head">'
+    + '<span class="m-name">' + esc(meta.name) + "</span>"
+    + (isUser ? "" : kindBadge(meta.kind))
+    + '<span class="m-time">' + nowTime() + "</span></div>"
+    + '<div class="m-text">' + html + "</div></div>";
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+}
+
+let QUICK_FNS = [];
+function setQuick(btns, hint) {
+  QUICK_FNS = btns.map(b => b.fn);
+  $("#quick-row").innerHTML = (hint ? '<span class="quick-hint">' + esc(hint) + "</span>" : "")
+    + btns.map((b, i) =>
+    '<button class="btn sm ' + (b.cls || "") + '" data-q="' + i + '">' + esc(b.label) + "</button>").join("");
+}
+$("#quick-row").addEventListener("click", e => {
+  const b = e.target.closest("[data-q]");
+  if (!b) return;
+  const fn = QUICK_FNS[Number(b.dataset.q)];
+  if (fn) { setQuick([]); fn(); }
+});
+
+/* 对话状态机：greet → bank → material → clarify → generating → (fix) → wait_approval → done */
+function greet() {
+  chat.stage = "greet";
+  addMsg("editor-in-chief",
+    "您好，我是主编编排 Agent（editor-in-chief）。这里由多专业 agent 协同完成年度经营简报的编制：<br>"
+    + "资料装载 → 口径澄清 → 分节成稿 → 确定性核验 → 具名批准交付。<br>"
+    + "首先请选择编制主体（支持多家银行的年报快照）。");
+  const opts = (state.banks.length ? state.banks.filter(b => b.bank !== "live") : [{ bank: "cmb", company: "招商银行" }])
+    .map(b => ({ label: b.company + " · 2025 年度", cls: b.bank === "cmb" ? "primary" : "", fn: () => pickBank(b) }));
+  setQuick(opts, "点击选择编制主体：");
+}
+
+async function pickBank(b) {
+  setQuick([]);
+  chat.bank = b.bank;
+  addMsg("user", "选择编制主体：" + b.company + "，报告期 2025 年度。");
+  addMsg("editor-in-chief", "已受理：" + b.company + " 2025 年度经营简报。转交资料管理 Agent 装载信源快照。");
+  chat.stage = "material";
+  addMsg("material-agent", "正在装载信源快照……");
+  try {
+    if (!state.y2024s[b.bank]) {
+      const p46 = await jget("/v1/snapshot/pages/46?bank=" + b.bank);
+      state.y2024s[b.bank] = extract2024(p46.text);
+    }
+    const [sources] = await Promise.all([jget("/v1/sources")]);
+    state.sources = sources;
+    const m = state.manifests[b.bank];
+    const pages = Object.keys((m && m.page_digests) || {}).join(" / ");
+    addMsg("material-agent",
+      "信源装载完成：<br>"
+      + "· 信源 <b>" + m.sources.length + "</b> 份（" + esc(b.company) + "公开披露年报落盘快照，content_sha256 已登记）<br>"
+      + "· 快照页 P" + pages + " · 指标索引 " + Object.keys(m.metric_index).length + " 项 · 释义 " + (m.entities || []).length + " 条<br>"
+      + "如需补充资料可直接粘贴文本（将登记为编制依据），或点击下方按钮开始编制。");
+    setQuick([{ label: "资料齐备，开始编制", cls: "primary", fn: startClarify }], "确认无误后开始，也可在下方补充资料：");
+  } catch (e) {
+    addMsg("material-agent", '<span style="color:var(--destructive)">信源装载失败：' + esc(e.message) + "</span>");
+    setQuick([{ label: "重试装载", cls: "primary", fn: () => pickBank(b) }]);
+  }
+}
+
+function escRe(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
+
+async function startClarify() {
+  setQuick([]);
+  chat.stage = "clarify";
+  // 口径澄清对象数据驱动：delta_unit=PERCENTAGE_POINT 即「比率类 + 百分点表述」（N7 口径铁律的领域判据），
+  // 按变动幅度取最大者（无指标名硬编码；value 是否带 % 不作为判据——模板工件与 demo 工件格式可不同）
+  let art = null;
+  try {
+    art = chat.bank === "cmb" ? state.positive : await jget("/v1/artifacts/template?bank=" + encodeURIComponent(chat.bank));
+  } catch (e) { art = null; }
+  const cands = art && art.metrics
+    ? art.metrics.filter(x => x.delta_unit === "PERCENTAGE_POINT")
+    : [];
+  const cand = cands.sort((a, b) => Math.abs(Number(b.yoy_delta || 0)) - Math.abs(Number(a.yoy_delta || 0)))[0] || null;
+  if (!cand) {
+    addMsg("editor-in-chief", "编制前口径检查完成：工件中无需澄清项。");
+    addMsg("risk-analyst", "未发现需要口径澄清的比率类变动，按披露惯例直接进入编制。");
+    startGeneration(true);
+    return;
+  }
+  addMsg("editor-in-chief", "进入编制前有一处口径需要澄清。");
+  const midx = (state.manifests[chat.bank] || {}).metric_index || {};
+  const label = (midx[cand.key] || {}).label || cand.key;
+  const dd = Number(cand.yoy_delta);
+  const dirTxt = dd < 0 ? "下降 " : "上升 ";
+  chat.clarify = { key: cand.key, label: label, delta: Math.abs(dd) };
+  addMsg("risk-analyst",
+    "编制「资产质量」章节时需要确认变动口径：<b>" + esc(label) + " " + esc(cand.value) + "</b>，较上年末" + dirTxt + "<b>" + Math.abs(dd) + "</b>。<br>"
+    + "按监管披露惯例，比率类指标的变动应以什么口径表述？");
+  setQuick([
+    { label: "个百分点（披露惯例）", cls: "primary", fn: () => answerClarify(true) },
+    { label: "百分比 %（演示拦截路径）", fn: () => answerClarify(false) }
+  ], "选择变动表述口径：");
+}
+
+function answerClarify(correct) {
+  setQuick([]);
+  addMsg("user", correct ? "以「个百分点」表述。" : "以「%」表述。");
+  addMsg("risk-analyst", correct
+    ? "收到：比率类变动以「个百分点」表述，与 N7 变动口径铁律一致。"
+    : "收到：按「%」口径表述。（注：该口径与披露惯例不符，数值核验器将执行拦截）");
+  startGeneration(correct);
+}
+
+async function startGeneration(correct) {
+  chat.stage = "generating";
+  const bank = state.banks.find(x => x.bank === chat.bank) || { bank: "cmb", company: "招商银行" };
+  addMsg("editor-in-chief", "开始编制（" + esc(bank.company) + "）。先向服务端登记任务（获取任务编号，报告库可实时查看进度）……");
+  let base;
+  try {
+    base = chat.bank === "cmb" ? clone(state.positive)
+      : await jget("/v1/artifacts/template?bank=" + encodeURIComponent(chat.bank));
+  } catch (e) {
+    addMsg("editor-in-chief", '<span style="color:var(--destructive)">模板工件加载失败：' + esc(e.message) + "</span>");
+    setQuick([{ label: "重试", cls: "primary", fn: () => startGeneration(correct) }]);
+    return;
+  }
+  if (!correct) {
+    // 演示腐化：澄清指标的比率变动句「个百分点」→「%」——按「指标名 + 上升/下降变动表述」联合定位目标句（无节号/指标名硬编码），
+    // 跳过仅含上年基数的对比句（如摘要节的「2024年……成本收入比26.96%。」）
+    const lbl = (chat.clarify && chat.clarify.label) || "拨备覆盖率";
+    const corruptOf = s => (s.body || "").match(new RegExp(escRe(lbl) + "[^。]*?(?:上升|下降)\\d+(?:\\.\\d+)?个百分点")) ? s : null;
+    const sec = base.sections.map(corruptOf).find(Boolean);
+    if (sec) sec.body = sec.body.replace(new RegExp("(" + escRe(lbl) + "[^。]*?(?:上升|下降))(\\d+(?:\\.\\d+)?)个百分点", "g"), "$1$2%");
+  }
+  const r = await jpost("/v1/tasks", {
+    task: { status: "GENERATING", summary: bank.company + " 2025 年度经营简报（对话式编制）" },
+    artifact: base
+  });
+  if (!r.ok) {
+    addMsg("editor-in-chief", '<span style="color:var(--destructive)">任务登记失败：HTTP ' + r.status + "</span>");
+    setQuick([{ label: "重试", cls: "primary", fn: () => startGeneration(correct) }]);
+    return;
+  }
+  chat.taskId = r.data.task_id;
+  base.task_id = chat.taskId;
+  chat.artifact = base;
+  addMsg("editor-in-chief",
+    "任务已登记：<span class=\"mono\">" + esc(chat.taskId) + "</span>。启动六工位流水线（查数 → 分析 → 图表 → 写作 → 核验 → 主编），各工位按骨架配置分派……");
+  // 六工位流水线：播报内容全部来自服务端 stages[]（headline/details），前端只渲染不编造
+  const p = await jpost("/v1/pipeline/run", { bank: chat.bank, task_id: chat.taskId });
+  if (!p.ok || !p.data || !p.data.stages) {
+    addMsg("editor-in-chief", '<span style="color:var(--destructive)">流水线执行失败：HTTP ' + (p.status || "—") + " " + esc((p.data && p.data.error) || "") + "</span>");
+    setQuick([{ label: "重试", cls: "primary", fn: () => startGeneration(correct) }]);
+    return;
+  }
+  for (const st of p.data.stages) {
+    if (st.stage_id === "writing") continue; // 写作工位在下方逐节播报
+    const agentOf = { material: "material-agent", chart: "chart-agent", checking: "numeric-checker", consolidation: "editor-in-chief" };
+    const aid = agentOf[st.stage_id] || String(st.agent || "").split(",")[0].trim() || "editor-in-chief";
+    await jpost("/v1/agents/load", { agent_id: aid, task_id: chat.taskId });
+    const det = (st.details || []);
+    const head = det.slice(0, st.stage_id === "analysis" ? 4 : 2).map(d => '<div class="quote">' + esc(d) + "</div>").join("");
+    const more = det.length > (st.stage_id === "analysis" ? 4 : 2) ? '<span style="font-size:12px;color:var(--muted)">…共 ' + det.length + " 条</span>" : "";
+    addMsg(aid, "【" + esc(st.name) + "工位】" + esc(st.headline) + head + more);
+  }
+  // 写作工位：按服务端 details（节序/标题/责任 agent 来自骨架配置）逐节播报
+  const wr = p.data.stages.find(s => s.stage_id === "writing");
+  for (const line of (wr && wr.details) || []) {
+    const m = line.match(/^(S-\d+)\s+(.*)$/);
+    if (!m) continue;
+    const parts = m[2].split(" · 责任 ");
+    const sec = chat.artifact.sections.find(s => s.section_id === m[1]);
+    if (!sec) continue;
+    const aid = ((parts[1] || "").match(/^\S+/) || ["editor-in-chief"])[0];
+    await jpost("/v1/agents/load", { agent_id: aid, task_id: chat.taskId });
+    const fs = (sec.body.match(/^[^。]{0,120}。/) || [sec.body.slice(0, 90) + "……"])[0];
+    const ch = (chat.artifact.charts || []).find(c => c.section_id === m[1]);
+    addMsg(aid, esc(sec.title) + " 成稿："
+      + '<div class="quote">' + esc(fs) + "</div>"
+      + (ch ? '<div class="m-chart">' + chartSvg(ch, false) + "</div>" : "")
+      + "指标与引用已绑定快照页码与摘录指纹"
+      + (ch ? "，图表（" + esc(ch.id) + "）已随稿生成" : "") + "。");
+  }
+  const nCharts = (chat.artifact.charts || []).length;
+  addMsg("editor-in-chief",
+    "草稿完成（" + chat.artifact.metrics.length + " 项指标 · " + chat.artifact.citations.length
+    + " 条引用 · " + chat.artifact.sections.length + " 节正文"
+    + (nCharts ? " · " + nCharts + " 幅图表" : "") + "）。提交确定性核验，先数值后引用。");
+  runNumericCheck();
+}
+
+async function runNumericCheck() {
+  await jpost("/v1/agents/load", { agent_id: "numeric-checker", task_id: chat.taskId });
+  const n = await jpost("/v1/checks/numeric", chat.artifact);
+  if (!n.ok || !n.data) {
+    addMsg("numeric-checker", '<span style="color:var(--destructive)">核验请求失败：HTTP ' + n.status + "</span>");
+    return;
+  }
+  if (n.data.status !== "PASSED") {
+    chat.stage = "fix";
+    addMsg("numeric-checker",
+      "数值核验 <b style=\"color:var(--destructive)\">FAILED</b> —— 以下违规项 BLOCKING，草稿被当场拦截："
+      + vioRows(n.data.violations)
+      + '<span style="font-size:12px;color:var(--muted)">N7「变动口径铁律」：比率类指标变动必须以「个百分点」表述，「%」口径不放行。</span>');
+    setQuick([{ label: "采纳修订：改为「个百分点」", cls: "primary", fn: applyFix }]);
+    return;
+  }
+  addMsg("numeric-checker",
+    "数值核验 PASSED（v" + esc(n.data.checker_version) + "）：N1–N7 全部通过，无违规项。");
+  runCitationCheck();
+}
+
+async function applyFix() {
+  setQuick([]);
+  addMsg("user", "采纳修订：改为「个百分点」。");
+  // 修订目标句按「指标名 + 上升/下降变动表述（% 口径）」联合定位（无节号/指标名硬编码）
+  const lbl = (chat.clarify && chat.clarify.label) || "拨备覆盖率";
+  const sec = chat.artifact.sections.find(s =>
+    new RegExp(escRe(lbl) + "[^。]*?(?:上升|下降)\\d+(?:\\.\\d+)?%").test(s.body || ""));
+  if (!sec) {
+    addMsg("risk-analyst", '<span style="color:var(--destructive)">未在草稿中找到待修订句。</span>');
+    return;
+  }
+  sec.body = sec.body.replace(new RegExp("(" + escRe(lbl) + "[^。]*?(?:上升|下降))(\\d+(?:\\.\\d+)?)%", "g"), "$1$2个百分点");
+  const sent = sec.body.match(new RegExp(escRe(lbl) + "[^。]*。"))?.[0] || "";
+  addMsg("risk-analyst", "已修订（仅改该句口径，其余内容零改动）："
+    + '<div class="quote">' + esc(sent).replace(/(?:上升|下降)(\d+(?:\.\d+)?)个百分点/,
+      '<span class="fix">$&</span>') + "</div>");
+  addMsg("editor-in-chief", "重新提交数值核验。");
+  runNumericCheck();
+}
+
+async function runCitationCheck() {
+  await jpost("/v1/agents/load", { agent_id: "citation-checker", task_id: chat.taskId });
+  const c = await jpost("/v1/checks/citation", chat.artifact);
+  if (!c.ok || !c.data) {
+    addMsg("citation-checker", '<span style="color:var(--destructive)">核验请求失败：HTTP ' + c.status + "</span>");
+    return;
+  }
+  if (c.data.status !== "PASSED") {
+    addMsg("citation-checker", "引用核验 <b style=\"color:var(--destructive)\">FAILED</b>：" + vioRows(c.data.violations));
+    setQuick([{ label: "重新生成一份", cls: "primary", fn: resetChat }]);
+    return;
+  }
+  addMsg("citation-checker",
+    "引用核验 PASSED（v" + esc(c.data.checker_version) + "）：" + chat.artifact.citations.length
+    + " 条引用摘录指纹一致、页内字面存在、信源均在注册表内。");
+  await jpost("/v1/tasks", {
+    task: { task_id: chat.taskId, status: "GENERATED", summary: (chat.artifact.report_period || "2025 年度") + "经营简报：两项核验 PASSED，等待具名批准" },
+    artifact: chat.artifact
+  });
+  chat.stage = "wait_approval";
+  addMsg("approver",
+    "两项核验全部 PASSED。交付批准须<b>具名确认</b>——批准记录将与工件内容指纹（sha256）绑定，内容一改批准即失效。");
+  setQuick([{ label: "Alice 确认交付", cls: "primary", fn: approveDelivery }]);
+}
+
+async function approveDelivery() {
+  setQuick([]);
+  addMsg("user", "Alice 确认交付。");
+  const r = await jpost("/v1/approvals?approver=" + encodeURIComponent("Alice"), chat.artifact);
+  if (!r.ok) {
+    addMsg("approver", '<span style="color:var(--destructive)">批准被拒绝：HTTP ' + r.status
+      + " —— " + esc((r.data || {}).message || "") + "</span>");
+    setQuick([{ label: "重新生成一份", cls: "primary", fn: resetChat }]);
+    return;
+  }
+  state.approval = r.data;
+  chat.stage = "done";
+  addMsg("approver",
+    '<div class="approval-card"><b style="color:var(--success)">交付批准已签发</b><div class="a-grid">'
+    + '<span><b>批准编号</b><span class="mono">' + esc(r.data.approval_id) + "</span></span>"
+    + "<span><b>批准人</b>" + esc(r.data.approver) + "</span>"
+    + '<span><b>批准时间</b><span class="mono">' + esc(r.data.approved_at) + "</span></span>"
+    + "<span><b>任务</b><span class=\"mono\">" + esc(chat.taskId) + "</span></span>"
+    + "<span><b>数值核验</b>PASSED · " + esc(r.data.checks.numeric.checker_version) + "</span>"
+    + "<span><b>引用核验</b>PASSED · " + esc(r.data.checks.citation.checker_version) + "</span></div>"
+    + '<div style="margin-top:8px"><b>绑定的工件指纹</b></div><div class="digest">' + esc(r.data.artifact_digest) + "</div></div>"
+    + '<div style="margin-top:6px;font-size:12.5px;color:var(--muted)">任务已同步至报告库（状态 APPROVED）。</div>');
+  setQuick([
+    { label: "在报告库查看", cls: "primary", fn: () => { switchTab("reports"); openTask(chat.taskId); } },
+    { label: "重新生成一份", fn: resetChat }
+  ]);
+}
+
+function resetChat() {
+  $("#chat-log").innerHTML = "";
+  chat.stage = "greet"; chat.bank = "cmb"; chat.artifact = null; chat.taskId = null;
+  greet();
+}
+
+/* 自由输入：全局意图 + 阶段意图匹配 */
+function handleFreeInput(text) {
+  addMsg("user", text);
+  /* 全局跳转意图 */
+  if (/重新生成|再来一份|重新来/.test(text)) {
+    addMsg("editor-in-chief", "好的，重新开始编制流程。"); resetChat(); return;
+  }
+  if (/报告/.test(text)) { addMsg("editor-in-chief", "已为您切换到报告库。"); switchTab("reports"); return; }
+  if (/资产/.test(text)) { addMsg("editor-in-chief", "已为您切换到资产库。"); switchTab("assets"); return; }
+  if (/agent|hub|智能体/i.test(text)) { addMsg("editor-in-chief", "Agent 管理已整合进资产库，已为您切换。"); switchTab("assets"); return; }
+  if (/演示/.test(text)) { addMsg("editor-in-chief", "已为您打开验收演示（也可在资产库底部展开入口）。"); switchTab("demo"); return; }
+  /* 阶段意图 */
+  if (chat.stage === "greet") {
+    if (/你好|您好|hi|hello/i.test(text)) {
+      addMsg("editor-in-chief", "您好！请选择编制主体（可点击下方快捷按钮）。");
+    } else if (/工商/.test(text)) {
+      pickBank(state.banks.find(x => x.bank === "icbc") || { bank: "icbc", company: "中国工商银行" });
+    } else if (/建设/.test(text)) {
+      pickBank(state.banks.find(x => x.bank === "ccb") || { bank: "ccb", company: "中国建设银行" });
+    } else if (/确认|招商|2025/.test(text)) {
+      pickBank(state.banks.find(x => x.bank === "cmb") || { bank: "cmb", company: "招商银行" });
+    } else {
+      addMsg("editor-in-chief", "请先选择编制主体：招商银行 / 中国工商银行 / 中国建设银行 · 2025 年度（可点击下方快捷按钮）。");
+    }
+  } else if (chat.stage === "material") {
+    if (/齐备|开始|编制/.test(text)) { startClarify(); }
+    else {
+      addMsg("material-agent", "正在将补充资料落盘注册（与联网抓取同一 sha256 纪律门）……");
+      importPasted(text);
+    }
+  } else if (chat.stage === "clarify") {
+    if (/个百分点|百分点/.test(text)) answerClarify(true);
+    else if (/%|百分比/.test(text)) answerClarify(false);
+    else addMsg("risk-analyst", "请明确变动口径：回复「个百分点」或「百分比」，或点击下方快捷按钮。");
+  } else if (chat.stage === "fix") {
+    addMsg("editor-in-chief", "草稿已被核验器拦截，请点击「采纳修订：改为『个百分点』」处理违规项。");
+  } else if (chat.stage === "generating") {
+    addMsg("editor-in-chief", "编制进行中，请稍候……");
+  } else if (chat.stage === "wait_approval") {
+    addMsg("editor-in-chief", "两项核验已通过，等待具名批准。可点击「Alice 确认交付」，或输入「重新生成」。");
+  } else {
+    addMsg("editor-in-chief", "本次任务已完成。可「在报告库查看」，或输入「重新生成」再来一份。");
+  }
+}
+$("#chat-form").addEventListener("submit", e => {
+  e.preventDefault();
+  const input = $("#chat-input");
+  const v = input.value.trim();
+  if (!v) return;
+  input.value = "";
+  handleFreeInput(v);
+});
+/* ———————————————————— 图表内联 SVG（bar/line/pie/flow，工件 charts 数据驱动，无外部库）———————————————————— */
+function fmtNum(v) {
+  const n = Number(v);
+  return Number.isInteger(n) ? String(n)
+    : n.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+const CHART_C1 = "hsl(217, 75%, 45%)";   /* 系列一（蓝） */
+const CHART_C2 = "hsl(160, 55%, 38%)";   /* 系列二（绿） */
+function chartSvg(ch, wide) {
+  if (!ch) return "";
+  const W = wide ? 620 : 300;
+  if (ch.type === "bar") return barSvg(ch, W, wide ? 300 : 220);
+  if (ch.type === "line") return lineSvg(ch, W, wide ? 300 : 220);
+  if (ch.type === "pie") return pieSvg(ch, wide ? 420 : 300, wide ? 260 : 210);
+  if (ch.type === "flow") return flowSvg(ch, W);
+  return "";
+}
+function svgOpen(w, h) {
+  return '<svg viewBox="0 0 ' + w + " " + h + '" width="100%" style="max-width:' + w
+    + 'px;display:block;margin:0 auto" font-family="var(--sans)" role="img">';
+}
+function legend(items, W, y) {
+  let x = W / 2 - items.length * 62;
+  let s = "";
+  for (const [name, color] of items) {
+    s += '<rect x="' + x + '" y="' + (y - 9) + '" width="11" height="11" rx="2.5" fill="' + color + '"/>'
+      + '<text x="' + (x + 16) + '" y="' + y + '" font-size="12" fill="var(--fg)">' + esc(name) + "</text>";
+    x += 24 + esc(name).replace(/[^\x00-\xff]/g, "aa").length * 6 + 34;
+  }
+  return s;
+}
+/* 分组柱形图：本期 vs 上年两系列、等距分组、柱顶数值标注 */
+function barSvg(ch, W, H) {
+  const L = 64, R = 14, T = 18, B = 46;
+  const pw = W - L - R, ph = H - T - B;
+  const max = Math.max(...ch.series.flatMap(s => s.values)) * 1.12;
+  const y = v => T + ph - (v / max) * ph;
+  const groups = ch.labels.length;
+  const gw = pw / groups, bw = Math.min(44, (gw - 34) / ch.series.length);
+  let s = svgOpen(W, H);
+  [0, .5, 1].forEach(f => {
+    const gy = T + ph - f * ph, val = max * f;
+    s += '<line x1="' + L + '" y1="' + gy + '" x2="' + (W - R) + '" y2="' + gy + '" stroke="var(--border)"/>'
+      + '<text x="' + (L - 6) + '" y="' + (gy + 4) + '" font-size="10.5" fill="var(--muted)" text-anchor="end">' + fmtNum(val) + "</text>";
+  });
+  ch.labels.forEach((lab, gi) => {
+    ch.series.forEach((ser, si) => {
+      const v = ser.values[gi];
+      const bx = L + gw * gi + gw / 2 - (ch.series.length * bw + 6 * (ch.series.length - 1)) / 2 + si * (bw + 6);
+      s += '<rect x="' + bx.toFixed(1) + '" y="' + y(v).toFixed(1) + '" width="' + bw + '" height="'
+        + (T + ph - y(v)).toFixed(1) + '" rx="3" fill="' + (si ? CHART_C2 : CHART_C1) + '" opacity=".88"/>'
+        + '<text x="' + (bx + bw / 2).toFixed(1) + '" y="' + (y(v) - 5).toFixed(1)
+        + '" font-size="10.5" fill="var(--fg)" text-anchor="middle">' + fmtNum(v) + "</text>";
+    });
+    s += '<text x="' + (L + gw * gi + gw / 2) + '" y="' + (H - 26) + '" font-size="12" fill="var(--muted)" text-anchor="middle">' + esc(lab) + "</text>";
+  });
+  s += legend(ch.series.map((ser, i) => [ser.name, i ? CHART_C2 : CHART_C1]), W, H - 6) + "</svg>";
+  return s;
+}
+/* 双系列折线：两量纲差异大时各系列按自身量程绘制（数值以标注为准），左轴系列一、右轴系列二 */
+function lineSvg(ch, W, H) {
+  const L = 56, R = 56, T = 18, B = 46;
+  const pw = W - L - R, ph = H - T - B;
+  const n = Math.max(...ch.series.map(s => s.values.length));
+  const px = i => L + (n === 1 ? pw / 2 : (pw * i) / (n - 1));
+  let s = svgOpen(W, H);
+  ch.series.forEach((ser, si) => {
+    const lo = Math.min(...ser.values) * (si ? 0.92 : 0.75), hi = Math.max(...ser.values) * 1.08;
+    const y = v => T + ph - ((v - lo) / (hi - lo)) * ph;
+    const color = si ? CHART_C2 : CHART_C1;
+    const pts = ser.values.map((v, i) => px(i).toFixed(1) + "," + y(v).toFixed(1)).join(" ");
+    s += '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="2.2"/>';
+    ser.values.forEach((v, i) => {
+      const anchor = si ? "start" : "end", dx = si ? 8 : -8;
+      s += '<circle cx="' + px(i).toFixed(1) + '" cy="' + y(v).toFixed(1) + '" r="3.6" fill="' + color + '"/>'
+        + '<text x="' + (px(i) + dx).toFixed(1) + '" y="' + (y(v) + 4).toFixed(1) + '" font-size="10.5" fill="var(--fg)" text-anchor="'
+        + anchor + '">' + fmtNum(v) + (ch.unit || "") + "</text>";
+    });
+    [lo, hi].forEach(v => {
+      const ax = si ? W - R + 6 : L - 6;
+      s += '<text x="' + ax + '" y="' + (y(v) + 4).toFixed(1) + '" font-size="10.5" fill="var(--muted)" text-anchor="'
+        + (si ? "start" : "end") + '">' + fmtNum(v) + "</text>";
+    });
+  });
+  ch.labels.forEach((lab, i) => {
+    s += '<text x="' + px(i).toFixed(1) + '" y="' + (H - 26) + '" font-size="12" fill="var(--muted)" text-anchor="middle">' + esc(lab) + "</text>";
+  });
+  s += legend(ch.series.map((ser, i) => [ser.name, i ? CHART_C2 : CHART_C1]), W, H - 6) + "</svg>";
+  return s;
+}
+/* 饼图（甜甜圈）：扇区占比 + 名称数值标注 + 中心总额 */
+function pieSvg(ch, W, H) {
+  const vals = ch.series.map(s => s.values[0]);
+  const total = vals.reduce((a, b) => a + b, 0);
+  const cx = W / 2, cy = H / 2 - 6, r1 = Math.min(W, H) / 2 - 52, r0 = r1 * 0.58;
+  const colors = [CHART_C1, CHART_C2];
+  let s = svgOpen(W, H), a0 = -Math.PI / 2;
+  ch.series.forEach((ser, i) => {
+    const frac = vals[i] / total, a1 = a0 + frac * Math.PI * 2;
+    const large = frac > .5 ? 1 : 0;
+    const p0x = cx + r1 * Math.cos(a0), p0y = cy + r1 * Math.sin(a0);
+    const p1x = cx + r1 * Math.cos(a1), p1y = cy + r1 * Math.sin(a1);
+    const q1x = cx + r0 * Math.cos(a1), q1y = cy + r0 * Math.sin(a1);
+    const q0x = cx + r0 * Math.cos(a0), q0y = cy + r0 * Math.sin(a0);
+    s += '<path d="M' + p0x.toFixed(1) + " " + p0y.toFixed(1)
+      + " A" + r1 + " " + r1 + " 0 " + large + " 1 " + p1x.toFixed(1) + " " + p1y.toFixed(1)
+      + " L" + q1x.toFixed(1) + " " + q1y.toFixed(1)
+      + " A" + r0 + " " + r0 + " 0 " + large + " 0 " + q0x.toFixed(1) + " " + q0y.toFixed(1) + ' Z" fill="'
+      + colors[i % 2] + '" opacity=".88" stroke="var(--bg)" stroke-width="1.5"/>';
+    const mid = (a0 + a1) / 2, lx = cx + (r1 + 14) * Math.cos(mid), ly = cy + (r1 + 14) * Math.sin(mid);
+    s += '<text x="' + lx.toFixed(1) + '" y="' + ly.toFixed(1) + '" font-size="11.5" fill="var(--fg)" text-anchor="middle">'
+      + esc(ser.name) + "</text>"
+      + '<text x="' + lx.toFixed(1) + '" y="' + (ly + 15).toFixed(1) + '" font-size="11" fill="var(--muted)" text-anchor="middle">'
+      + fmtNum(vals[i]) + (ch.unit ? " " + esc(ch.unit) : "") + " · " + (frac * 100).toFixed(1) + "%</text>";
+    a0 = a1;
+  });
+  s += '<text x="' + cx + '" y="' + (cy - 4) + '" font-size="11" fill="var(--muted)" text-anchor="middle">合计</text>'
+    + '<text x="' + cx + '" y="' + (cy + 14) + '" font-size="13.5" fill="var(--fg)" text-anchor="middle">'
+    + fmtNum(total) + (ch.unit ? " " + esc(ch.unit) : "") + "</text></svg>";
+  return s;
+}
+/* 流程框图：7 节点两行蛇形（核验/交付节点强调色描边） */
+function flowSvg(ch, W) {
+  const H = 128, rows = [ch.nodes.slice(0, 4), ch.nodes.slice(4)];
+  const nw = 128, nh = 34, gap = 24;
+  const rowX = r => (W - (rows[r].length * nw + (rows[r].length - 1) * gap)) / 2;
+  let s = svgOpen(W, H);
+  rows.forEach((row, r) => {
+    const y0 = r ? 78 : 18;
+    row.forEach((name, i) => {
+      const x0 = rowX(r) + i * (nw + gap);
+      const strong = /核验|批准|交付/.test(name);
+      s += '<rect x="' + x0.toFixed(1) + '" y="' + y0 + '" width="' + nw + '" height="' + nh + '" rx="9" fill="'
+        + (strong ? "var(--info-bg)" : "var(--surface-2)") + '" stroke="' + (strong ? "var(--info)" : "var(--border)")
+        + '" stroke-width="' + (strong ? 1.6 : 1) + '"/>'
+        + '<text x="' + (x0 + nw / 2).toFixed(1) + '" y="' + (y0 + nh / 2 + 5) + '" font-size="12.5" fill="var(--fg)" text-anchor="middle">'
+        + (r * 4 + i + 1) + ". " + esc(name) + "</text>";
+      if (i < row.length - 1) {
+        const ax = x0 + nw;
+        s += '<line x1="' + (ax + 3) + '" y1="' + (y0 + nh / 2) + '" x2="' + (ax + gap - 5) + '" y2="' + (y0 + nh / 2)
+          + '" stroke="var(--muted)"/><path d="M' + (ax + gap - 5) + " " + (y0 + nh / 2 - 3.5)
+          + " L" + (ax + gap - 1) + " " + (y0 + nh / 2) + " L" + (ax + gap - 5) + " " + (y0 + nh / 2 + 3.5)
+          + ' Z" fill="var(--muted)"/>';
+      }
+    });
+  });
+  /* 行间衔接：行 1 末节点 → 行 2 首节点（L 形折线） */
+  const xTail = rowX(0) + 3 * nw + gap * 2 + nw / 2, xHead = rowX(1) + nw / 2, yMid = 61;
+  s += '<path d="M' + xTail.toFixed(1) + " 52 L" + xTail.toFixed(1) + " " + yMid
+    + " L" + xHead.toFixed(1) + " " + yMid + " L" + xHead.toFixed(1) + " 74" + '" fill="none" stroke="var(--muted)"/>'
+    + '<path d="M' + (xHead - 3.5) + " 74 L" + xHead.toFixed(1) + " 78 L" + (xHead + 3.5) + ' 74 Z" fill="var(--muted)"/></svg>';
+  return s;
+}
+function chartFigure(ch) {
+  return '<figure class="rp-chart">' + chartSvg(ch, true)
+    + "<figcaption><b>" + esc(ch.id) + "</b> · " + esc(ch.title)
+    + (ch.unit ? "（单位：" + esc(ch.unit) + "）" : "")
+    + (ch.type === "line" ? "　<span style='color:var(--muted)'>注：两系列量纲不同，各按自身量程绘制，数值以标注为准。</span>" : "")
+    + "</figcaption></figure>";
+}
+
+/* ———————————————————— 报告 paper 渲染（报告库/抽屉引用共用）———————————————————— */
+/* 工件所属银行 → 快照目录名（与服务端 bankOf 一致）；未识别回退默认 */
+function bankOfCompany(company) {
+  const c = company || "";
+  if (c.includes("招商")) return "cmb";
+  if (c.includes("工商")) return "icbc";
+  if (c.includes("建设")) return "ccb";
+  return "cmb";
+}
+/* 工件对应的银行快照 manifest（多银行）：默认回退 cmb */
+function manifestOf(a) {
+  return state.manifests[bankOfCompany(a && a.company)] || state.manifest || {};
+}
+function paperHtml(a) {
+  const m = manifestOf(a);
+  const rows = a.metrics.map(mt => {
+    const def = (m.metric_index || {})[mt.key] || {};
+    const uLab = { PERCENT: "%", YUAN: "亿元" }[def.unit] || "";
+    const v24 = (state.y2024s[bankOfCompany(a.company)] || state.y2024 || {})[mt.key];
+    return "<tr>"
+      + "<td>" + esc(def.label || mt.key) + "</td>"
+      + '<td class="num">' + esc(mt.value + (mt.unit || uLab)) + "</td>"
+      + '<td class="num">' + (v24 ? esc(v24 + uLab) : "—") + "</td>"
+      + '<td class="delta ' + deltaDir(mt) + '">' + esc(deltaText(mt)) + "</td></tr>";
+  }).join("");
+  const secCharts = sid => (a.charts || []).filter(c => c.section_id === sid).map(chartFigure).join("");
+  const sectionHtml = a.sections.map(sec =>
+    '<h2 class="rp-h2" id="sec-' + esc(sec.section_id) + '">' + esc(sec.title) + "</h2>"
+    + secCharts(sec.section_id)
+    + String(sec.body).split("\n").filter(p => p.trim())
+      .map(p => '<p class="rp-body">' + esc(p) + "</p>").join("")
+    + '<div class="rp-refs"><span class="ref-label">本节引用：</span>'
+    + ((sec.claim_ids || []).length
+      ? sec.claim_ids.map(id =>
+        '<button class="ref-chip" onclick="openCitation(\'' + esc(id) + '\')">' + esc(id) + "</button>").join("")
+      : '<span style="font-size:11.5px;color:var(--muted)">（本章为口径 / 核验 / 来源说明，不含数据论断引用）</span>')
+    + "</div>").join("");
+  const tocHtml = '<div class="rp-toc"><h4>目　录</h4><ol>'
+    + '<li onclick="scrollToSec(\'sec-metrics\')">关键财务与监管指标</li>'
+    + a.sections.map(sec =>
+      '<li onclick="scrollToSec(\'sec-' + esc(sec.section_id) + '\')">' + esc(sec.title) + "</li>").join("")
+    + '<li onclick="scrollToSec(\'sec-glossary\')">释义</li></ol></div>';
+  const entities = m.entities || [];
+  const glossary = entities.map(en =>
+    "<dt>" + esc((en.short_names || []).join(" / ")) + "</dt><dd>" + esc(en.full_name) + "</dd>").join("")
+    + "<dt>拨备覆盖率</dt><dd>贷款损失准备余额 ÷ 不良贷款余额 × 100%</dd>"
+    + "<dt>成本收入比</dt><dd>业务及管理费 ÷ 营业收入 × 100%</dd>"
+    + "<dt>高级法</dt><dd>巴塞尔协议Ⅲ资本计量的高级计量方法（内部评级法等）</dd>";
+  return '<article class="paper">'
+    + '<div class="paper-header"><span>W06 年度报告 · 受控交付工件</span><span class="mono">' + esc(a.task_id) + "</span></div>"
+    + '<div class="rp-cover">'
+    + '<div class="c-company">' + esc(a.company) + "</div>"
+    + '<div class="c-title">' + esc(a.report_period) + "经营简报</div>"
+    + '<div class="c-meta">数据快照 ' + esc(m.snapshot_id) + "（" + esc(m.snapshot_version) + "）<br>编制于 " + esc((m.generated_at || "").replace("T", " ").replace(/Z$/, " UTC")) + "</div></div>"
+    + '<div class="rp-notice"><h4>重要提示</h4><ol>'
+    + "<li>本简报全部数字与摘录均取自公开披露年报的落盘快照，未做任何外推或估算；</li>"
+    + "<li>所有指标已通过确定性数值核验（N1–N7）与引用核验，与快照页内字面逐字一致；</li>"
+    + "<li>批准记录与工件内容指纹（sha256）绑定：批准后内容如有任何改动，批准即失效；</li>"
+    + "<li>比率类指标较上年变动以「个百分点」（净息差类以「基点」）表述，为绝对变动而非相对变动。</li>"
+    + "</ol></div>"
+    + tocHtml
+    + '<h2 class="rp-h2" id="sec-metrics">关键财务与监管指标</h2>'
+    + '<table class="rp-table"><thead><tr><th>指标</th><th>' + esc(a.report_period) + "</th><th>2024</th><th>同比增减</th></tr></thead>"
+    + "<tbody>" + rows + "</tbody></table>"
+    + '<div class="rp-table-note">注：较上年增减为绝对变动口径——比率类以「个百分点」、净息差类以「基点」、金额类以「亿元」表述；「%」仅用于水平值。2024 对比值取自快照 P46 原文。</div>'
+    + sectionHtml
+    + '<h2 class="rp-h2" id="sec-glossary">释义</h2><div class="rp-glossary"><dl>' + glossary + "</dl></div>"
+    + '<div class="rp-footnote">'
+    + "<p>一、数据来源：公司公开披露年报落盘快照（" + esc(m.snapshot_id) + "，内容 sha256 已登记），全部引用可逐页回溯验证。</p>"
+    + "<p>二、本稿通过确定性核验：数值核验 v" + esc(state.health.numeric_checker_version)
+    + "（规则 N1–N7）、引用核验 v" + esc(state.health.citation_checker_version)
+    + "；交付批准与工件指纹 sha256 绑定。</p>"
+    + "<p>三、本简报为受控交付的契约工件：批准后任何字节级改动都将使既有批准失效。</p>"
+    + "</div></article>";
+}
+/* 目录跳转：平滑滚动到报告章节锚点 */
+function scrollToSec(id) {
+  const el = document.getElementById(id);
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ———— 引用证据抽屉 ———— */
+function openCitation(id) {
+  const a = state.citeArtifact;
+  const c = a && a.citations.find(x => x.claim_id === id);
+  if (!c) return;
+  const src = ((state.manifest || {}).sources || []).find(s => s.content_sha256 === c.source_document_digest)
+    || (state.docSources || []).find(s => s.content_sha256 === c.source_document_digest);
+  $("#drawer").innerHTML =
+    "<h3>引用证据 · <span class=\"mono\">" + esc(c.claim_id)
+    + '</span><button class="d-close" onclick="closeDrawer()">×</button></h3>'
+    + '<div class="d-block"><div class="d-label">论断（CLAIM）</div><div class="d-val">' + esc(c.claim_text) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">证据摘录 · 快照 P' + esc(c.page) + '</div><div class="d-quote">' + esc(c.evidence_excerpt) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">摘录指纹 sha256</div><div class="digest">' + esc(c.evidence_excerpt_digest) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">信源</div><div class="d-val">'
+    + (src ? esc(src.title) + '<div class="digest">内容指纹 ' + esc(c.source_document_digest) + "</div>"
+           : esc(c.source_document_digest)) + "</div></div>"
+    + '<div class="d-block d-verify">✓ 摘录与快照页内文本逐字一致（引用核验器已复核）</div>'
+    + '<button class="btn" onclick="viewPage(' + Number(c.page) + ',\'' + esc(c.source_document_digest)
+    + '\')">查看快照页 P' + esc(c.page) + "</button>";
+  $("#drawer").classList.add("open");
+  $("#drawer-mask").classList.add("open");
+}
+function closeDrawer() {
+  $("#drawer").classList.remove("open");
+  $("#drawer").classList.remove("wide");
+  drawerWide = false;
+  $("#drawer-mask").classList.remove("open");
+}
+$("#drawer-mask").addEventListener("click", closeDrawer);
+async function viewPage(no, digestHint) {
+  closeDrawer(); switchTab("assets"); await ASSETS_RENDER;
+  if (digestHint) { // 引用页可能是用户导入资料的 live 快照页（页码与主快照集无关）：digest 不符即切换
+    try {
+      const cur = await jget("/v1/snapshot/pages/" + no);
+      if (String(cur.digest || "") !== digestHint) return loadAssetPage(no, "live");
+    } catch (e) { return loadAssetPage(no, "live"); }
+  }
+  loadAssetPage(no);
+}
+
+/* ———————————————————— 资产库（页签 2）：应用全部智能化资产 ———————————————————— */
+/* MCP / 核验规则静态资产清单（卡片与详情抽屉共用） */
+/* MCP 注册表：动态加载真 MCP（GET /v1/mcp），bind 即装配全限定名工具 */
+let MCP_SERVERS = [];
+async function ensureMcpData() {
+  if (!MCP_SERVERS.length) try { MCP_SERVERS = (await jget("/v1/tools")).tools || []; } catch (e) { MCP_SERVERS = []; }
+  return MCP_SERVERS;
+}
+const RULE_ASSETS = [
+  { id: "N1", name: "指标缺失", checker: "数值核验器（N1–N7）", desc: "关键指标必须齐备，缺一不放行。" },
+  { id: "N2", name: "单位不符", checker: "数值核验器（N1–N7）", desc: "单位必须与指标字典白名单一致。" },
+  { id: "N3", name: "数字无源", checker: "数值核验器（N1–N7）", desc: "数值须在快照对应页内字面出现。" },
+  { id: "N4", name: "派生复算", checker: "数值核验器（N1–N7）", desc: "派生比率按披露口径复算须一致。" },
+  { id: "N5", name: "期间口径", checker: "数值核验器（N1–N7）", desc: "期间 / 时点口径须与指标定义一致。" },
+  { id: "N6", name: "同比复算", checker: "数值核验器（N1–N7）", desc: "同比变动与 2024 对比值复算须一致。" },
+  { id: "N7", name: "变动口径", checker: "数值核验器（N1–N7）", desc: "比率变动须用「个百分点」（净息差类用「基点」），违规即 BLOCKING 拦截。" },
+  { id: "C1", name: "摘录伪造", checker: "引用核验器（C1–C2）", desc: "证据摘录须与快照页内文本逐字一致（FABRICATED_CITATION / EXCERPT_DIGEST_MISMATCH）。" },
+  { id: "C2", name: "信源未注册", checker: "引用核验器（C1–C2）", desc: "引用信源必须在快照注册表内（SOURCE_UNREGISTERED）。" }
+];
+async function renderAssets() {
+  const m = state.manifest || {};   // manifest 缺失不阻断资产库渲染
+  let agents = { runtime: [], catalog: [] };
+  let skills = [];
+  let taskCount = 0;
+  try { agents = await jget("/v1/agents"); } catch (e) {}
+  state.agentsData = agents;
+  try { skills = await jget("/v1/skills"); } catch (e) {}
+  state.skillsData = skills;
+  try { taskCount = (await jget("/v1/tasks")).length; } catch (e) {}
+  let docSources = [];
+  try { docSources = (await jget("/v1/sources")).filter(s => s.bank === "live"); } catch (e) {}
+  state.docSources = docSources;
+  const chief = (agents.runtime || []).find(x => x.agent_id === "editor-in-chief");
+  const team = (chief && chief.team) || [];
+
+  const agentTiles = (agents.runtime || []).map(a =>
+    '<div class="asset-tile clickable" onclick="openAssetDetail(\'agent\',\'' + esc(a.agent_id) + '\')">'
+    + '<div class="t-head"><span class="t-name">' + esc(a.name) + "</span>" + kindBadge(a.kind) + statusBadge(a.status) + "</div>"
+    + '<div class="t-ver">v' + esc(a.version) + " · " + esc(a.agent_id) + "</div>"
+    + '<div class="t-desc">' + esc(a.description) + "</div>"
+    + '<div class="t-foot">' + (a.capabilities || []).slice(0, 3).map(c => '<span class="chip">' + esc(c) + "</span>").join("") + "</div>"
+    + '<div class="t-summary">已绑技能 ' + (a.enabled_skills || []).length
+    + " · 主编团队 " + (a.agent_id === "editor-in-chief" ? "负责人" : (team.includes(a.agent_id) ? "✓ 已注册" : "— 未注册"))
+    + " · 点击查看详情与绑定</div></div>").join("");
+
+  const catalogTiles = (agents.catalog || []).map(a =>
+    '<div class="asset-tile">'
+    + '<div class="t-head"><span class="t-name">' + esc(a.name) + "</span>" + kindBadge(a.kind) + statusBadge(a.status) + "</div>"
+    + '<div class="t-ver">v' + esc(a.version) + " · " + esc(a.agent_id) + "</div>"
+    + '<div class="t-desc">' + esc(a.description) + "</div>"
+    + '<div class="t-foot">' + (a.capabilities || []).map(c => '<span class="chip">' + esc(c) + "</span>").join("") + "</div>"
+    + '<div style="margin-top:10px;display:flex;gap:6px">'
+    + '<button class="btn sm" onclick="openAssetDetail(\'agent\',\'' + esc(a.agent_id) + '\')">详情</button>'
+    + '<button class="btn sm primary" onclick="installAgent(\'' + esc(a.agent_id) + '\')">安装注册</button></div></div>').join("");
+
+  const skillTiles = (skills.length ? skills : []).map(s =>
+    '<div class="asset-tile clickable" onclick="openAssetDetail(\'skill\',\'' + esc(s.skill_id) + '\')">'
+    + '<div class="t-head"><span class="t-name">' + esc(s.name) + '</span><span class="badge neutral">已注册 ' + (s.registered_count || 0) + " agent</span></div>"
+    + '<div class="t-ver">' + esc(s.path) + "</div>"
+    + '<div class="t-desc">' + esc(s.description) + "</div>"
+    + '<div class="t-foot">' + (s.tags || []).map(c => '<span class="chip">' + esc(c) + "</span>").join("") + "</div>"
+    + '<div class="t-summary">点击查看详情 · 已绑定 agent 一览</div></div>').join("");
+
+  await ensureMcpData();
+  const mcpTiles = MCP_SERVERS.map(s =>
+    '<div class="asset-tile clickable" onclick="openAssetDetail(\'mcp\',\'' + esc(s.tool_id || s.server_id) + '\')">'
+    + '<div class="t-head"><span class="t-name">' + esc(s.name) + '</span><span class="t-ver">' + esc(s.tool_id || "") + "</span></div>"
+    + '<div class="t-desc">' + esc(s.description || s.desc || "") + "</div>"
+    + '<div class="t-foot">' + ((s.apis || (s.params || []).map(p2 => p2.name)).map(c => '<span class="chip">' + esc(c) + "</span>").join("")) + "</div>"
+    + '<div class="t-summary">' + (s.params || []).length + ' 个参数 · 点击查看详情</div></div>').join("");
+
+  const pageChips = Object.keys((m && m.page_digests) || {}).map(no =>
+    '<button class="chip" data-snap-page="' + Number(no) + '">P' + Number(no) + "</button>").join("");
+  const miRows = Object.values((m && m.metric_index) || {} || {}).map(mi =>
+    "<tr><td class=\"cell-mono\">" + esc(mi.key) + "</td><td>" + esc(mi.label) + "</td><td>"
+    + esc({ PERCENT: "%", YUAN: "亿元" }[mi.unit] || mi.unit) + "</td><td>" + esc(mi.kind) + "</td></tr>").join("");
+  const srcCards = (m.sources || []).map(s =>
+    '<div class="src-card">'
+    + '<span class="badge neutral">' + esc(s.authority || "SOURCE") + "</span>"
+    + '<div class="s-title">' + esc(s.title) + "</div>"
+    + '<div class="s-rows">来源：<a href="' + esc(s.origin_url) + '" target="_blank" rel="noopener">' + esc(s.origin_url) + "</a><br>"
+    + "抓取：" + esc((s.fetched_at || "").replace("T", " ").replace(/Z$/, " UTC")) + "</div>"
+    + '<div class="digest">内容指纹 sha256 ' + esc(s.content_sha256) + "</div>"
+    + '<div class="s-pages">' + (s.pages || []).map(p =>
+      '<button class="chip" data-snap-page="' + Number(p) + '">P' + Number(p) + "</button>").join("") + "</div></div>").join("");
+  const docCards = docSources.map(s =>
+    '<div class="src-card">'
+    + '<span class="badge neutral">' + esc(s.authority || "SOURCE") + '</span><span class="badge neutral">用户导入</span>'
+    + '<div class="s-title">' + esc(s.title) + "</div>"
+    + '<div class="s-rows">信源：' + esc(s.source_id) + " · live 快照集（冻结演示快照零改动）</div>"
+    + '<div class="digest">内容指纹 sha256 ' + esc(s.content_sha256) + "</div>"
+    + '<div class="s-pages">' + (s.pages || []).map(p =>
+      '<button class="chip" data-snap-page="' + Number(p) + '" data-snap-bank="live">P' + Number(p) + "</button>").join("")
+    + "</div></div>").join("");
+  const ruleTiles = RULE_ASSETS.map(r =>
+    '<div class="asset-tile clickable" onclick="openAssetDetail(\'rule\',\'' + esc(r.id) + '\')">'
+    + '<div class="t-head"><span class="t-name"><span class="mono">' + esc(r.id) + "</span> " + esc(r.name) + "</span></div>"
+    + '<div class="t-desc">' + esc(r.desc) + "</div>"
+    + '<div class="t-summary">所属：' + esc(r.checker) + " · BLOCKING</div></div>").join("");
+  const glossaryDl = (m.entities || []).map(en =>
+    "<dt style=\"font-size:12.5px;font-weight:600\">" + esc((en.short_names || []).join(" / "))
+    + "</dt><dd style=\"font-size:12.5px;color:var(--muted)\">" + esc(en.full_name) + "</dd>").join("");
+
+  $("#view-assets").innerHTML =
+    '<div class="card"><h3>Agent · 智能体 <span class="hint">运行时 ' + (agents.runtime || []).length
+    + " 个（任务动态按需加载）· 点击卡片查看详情 / 绑定技能 / 注销</span></h3>"
+    + '<div class="asset-grid">' + agentTiles + "</div>"
+    + '<div class="group-h">市场目录 <span class="g-tag">' + (agents.catalog || []).length + " 个 · 安装注册后进入运行时</span></div>"
+    + '<div class="asset-grid">' + (catalogTiles || "（市场目录为空）") + "</div>"
+    + '<div class="group-h">注册自定义 Agent <span class="g-tag">POST /v1/agents/register · 注册即加入运行时</span></div>'
+    + '<form class="reg-form" onsubmit="return submitRegisterAgent(event)">'
+    + '<input id="reg-agent-name" placeholder="名称（必填），如：宏观研究 Agent" required>'
+    + '<select id="reg-agent-kind"><option value="ANALYST">ANALYST · 分析</option><option value="ORCHESTRATOR">ORCHESTRATOR · 编排</option>'
+    + '<option value="CHECKER">CHECKER · 核验</option><option value="APPROVER">APPROVER · 批准</option></select>'
+    + '<input id="reg-agent-caps" class="full" placeholder="能力（逗号分隔，可空），如：宏观研究, 行业景气">'
+    + '<textarea id="reg-agent-desc" class="full" placeholder="描述（可空）"></textarea>'
+    + '<div class="full" style="display:flex;gap:10px;align-items:center">'
+    + '<button class="btn primary sm" type="submit">注册加入运行时</button>'
+    + '<span id="reg-agent-msg" style="font-size:12px;color:var(--muted)"></span></div>'
+    + "</form></div>"
+    + '<div class="card"><h3>Skill · 技能库 <span class="hint">skills/annual-report/（1 主技能 + 6 参考知识 · 共 ' + skills.length + ' 个技能，包内含 scripts/assets/evals 五件套）· 可绑定给任意运行时 agent</span></h3>'
+    + '<div class="asset-grid">' + skillTiles + "</div></div>"
+    + '<div class="card"><h3>MCP · 工具网关 <span class="hint">' + MCP_SERVERS.length + ' 个工具 · 配置驱动（deploy/tools.json）· 联网抓取须先经 snapshot_commit 落盘注册</span></h3>'
+    + '<div class="asset-grid">' + mcpTiles + "</div></div>"
+    + '<div class="card"><h3>信源与快照 · 材料库 <span class="hint">冻结快照 + 本地导入资料（live 快照集，sha256 注册可溯源）· 任务/指标为内存态——零数据库依赖</span></h3>'
+    + '<div class="group-h">快照库 <span class="g-tag">落盘页文本 + sha256</span></div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap">' + pageChips
+    + '<span class="chip" style="border:none;background:none" id="asset-snap-note">点击页码查看落盘文本</span></div>'
+    + '<div class="digest" id="asset-snap-digest" style="margin-top:8px"></div>'
+    + '<div class="page-text" id="asset-snap-text" style="margin-top:6px">（尚未载入页文本——点击上方页码装载）</div>'
+    + '<div class="group-h">任务库 <span class="g-tag">/v1/tasks · 服务端内存态</span></div>'
+    + '<div class="kv"><b>任务记录</b>' + taskCount + ' 条（刷新不丢，容器存活期内持久）</div>'
+    + '<div style="margin-top:8px"><button class="btn sm" onclick="switchTab(\'reports\')">查看报告库 →</button></div>'
+    + '<div class="group-h">指标索引 <span class="g-tag">metric_index</span></div>'
+    + '<table class="mi-table"><thead><tr><th>键</th><th>指标</th><th>单位</th><th>类型</th></tr></thead><tbody>'
+    + miRows + "</tbody></table></div>"
+    + '<div class="card"><h3>核验规则 <span class="hint">N1–N7 数值纪律 + C1–C2 引用溯源 · 与后端双核验器同源约定 · 释义/术语随此表</span></h3>'
+    + '<div class="group-h">信源注册表 <span class="g-tag">' + (m.sources || []).length + " 份</span></div>"
+    + '<div class="src-grid">' + srcCards + "</div>"
+    + '<div class="group-h">本地导入资料 <span class="g-tag">live 快照集 · ' + docSources.length
+    + " 份 · 与联网抓取同纪律门（sha256 注册后即可引用核验）</span></div>"
+    + (docCards || '<div class="kv">暂无导入资料 —— 对话页「导入资料」可上传 pdf/txt/md/json，落盘注册后即刻可被报告引用。</div>')
+    + '<div class="group-h">核验规则知识 <span class="g-tag">数值 N1–N7 + 引用 C1–C2</span></div>'
+    + '<div class="asset-grid cols-2">' + ruleTiles + "</div>"
+    + '<div class="group-h">释义知识 <span class="g-tag">entities</span></div>'
+    + '<dl style="display:grid;grid-template-columns:170px 1fr;row-gap:8px;column-gap:14px">' + glossaryDl + "</dl></div>"
+    + '<div class="card"><h3>验收演示 <span class="hint">六步 · 从口径拦截到篡改失效 · 每步真实调用后端 API</span></h3>'
+    + '<details><summary style="cursor:pointer;font-size:13px;color:var(--muted)">展开说明与入口</summary>'
+    + '<div style="font-size:12.5px;color:var(--muted);line-height:1.9;margin:10px 0">'
+    + "演示链复现受控交付的关键能力：<b>错误被当场拦截</b> → <b>修订后双检通过</b> → <b>具名批准与内容指纹绑定</b> → <b>任何篡改使批准立即失效</b>。日常编制无需使用，供验收 / 答辩演示。</div>"
+    + '<button class="btn sm primary" onclick="switchTab(\'demo\')">进入验收演示 →</button>'
+    + "</details></div>";
+}
+$("#view-assets").addEventListener("click", e => {
+  const chip = e.target.closest("[data-snap-page]");
+  if (chip) loadAssetPage(Number(chip.dataset.snapPage), chip.dataset.snapBank || undefined);
+});
+
+/* ———— 资产详情抽屉：Agent / Skill / MCP / 核验规则 ———— */
+function openAssetDetail(type, id) {
+  if (type === "agent") return openAgentDetail(id);
+  if (type === "skill") return openSkillDetail(id);
+  if (type === "mcp") return openMcpDetail(id);
+  if (type === "rule") return openRuleDetail(id);
+}
+async function ensureAgentsData() {
+  if (!state.agentsData || !state.agentsData.runtime)
+    try { state.agentsData = await jget("/v1/agents"); } catch (e) { state.agentsData = { runtime: [], catalog: [] }; }
+  return state.agentsData;
+}
+async function ensureSkillsData() {
+  if (!state.skillsData)
+    try { state.skillsData = await jget("/v1/skills"); } catch (e) { state.skillsData = []; }
+  return state.skillsData;
+}
+function agentNameOf(id) {
+  const d = state.agentsData || {};
+  for (const a of (d.runtime || []).concat(d.catalog || []))
+    if (a.agent_id === id) return a.name;
+  return (AGENT_META[id] || {}).name || id;
+}
+function fmtTs(s) { return String(s || "").replace("T", " ").replace(/Z$/, "") || "—"; }
+let drawerWide = false;
+function showDrawer(html) {
+  $("#drawer").innerHTML = html;
+  if (drawerWide) $("#drawer").classList.add("wide"); else $("#drawer").classList.remove("wide");
+  $("#drawer").classList.add("open");
+  $("#drawer-mask").classList.add("open");
+}
+async function openAgentDetail(id) {
+  const d = await ensureAgentsData();
+  const a = (d.runtime || []).concat(d.catalog || []).find(x => x.agent_id === id);
+  if (!a) { alert("未找到 agent：" + id); return; }
+  const running = a.status === "RUNNING";
+  const chief = (d.runtime || []).find(x => x.agent_id === "editor-in-chief");
+  const team = (chief && chief.team) || [];
+  const isChief = id === "editor-in-chief";
+  const inTeam = team.includes(id);
+  const skills = await ensureSkillsData();
+  const capChips = (a.capabilities || []).map(c => '<span class="chip">' + esc(c) + "</span>").join("");
+  const srcLabel = { BUILT_IN: "内置预置（随服务启动注册）", MARKET: "市场目录", CUSTOM: "自定义注册" }[a.source] || a.source;
+  let html = "<h3>Agent 详情 · " + esc(a.name)
+    + '<button class="d-close" onclick="closeDrawer()">×</button></h3>'
+    + '<div class="d-block"><div class="d-label">身份</div><div class="d-val"><span class="mono">' + esc(a.agent_id)
+    + "</span> · v" + esc(a.version) + " " + kindBadge(a.kind) + " " + statusBadge(a.status) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">描述</div><div class="d-val">' + esc(a.description) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">能力</div><div class="d-val">' + (capChips || "—") + "</div></div>"
+    + '<div class="d-block"><div class="d-label">来源</div><div class="d-val">' + esc(srcLabel) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">注册时间</div><div class="d-val mono">' + fmtTs(a.registered_at) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">最近按需加载</div><div class="d-val">'
+    + (a.last_loaded_task ? "任务 <span class=\"mono\">" + esc(a.last_loaded_task) + "</span> · " + fmtTs(a.last_loaded_at) : "—") + "</div></div>";
+  if (!running) {
+    html += '<div class="d-block"><div class="d-label">注册操作</div>'
+      + '<button class="btn primary" onclick="installAgent(\'' + esc(id) + '\')">安装注册（进入运行时）</button>'
+      + '<div style="font-size:12px;color:var(--muted);margin-top:6px">未安装注册的 agent 不参与运行时调度；安装后即可绑定技能、注册给主编编排 Agent 团队。</div></div>';
+  } else {
+    if (isChief) {
+      html += '<div class="d-block"><div class="d-label">主编团队（已注册给主编编排 Agent 的成员 ' + team.length + " 人）</div>"
+        + (team.length
+          ? team.map(m => '<div class="d-bind-row"><span class="b-name">' + esc(agentNameOf(m)) + '</span><span class="b-sub">' + esc(m) + '</span>'
+            + '<span class="b-ops"><button class="btn sm danger" onclick="toggleTeam(\'' + esc(m) + '\',\'unregister\',\'editor-in-chief\')">移出团队</button></span></div>').join("")
+          : '<div class="d-val" style="color:var(--muted)">（团队为空）</div>')
+        + "</div>";
+    } else {
+      html += '<div class="d-block"><div class="d-label">注册关系 · 主编编排 Agent 团队</div>'
+        + '<div class="d-bind-row"><span class="b-name">主编编排 Agent（editor-in-chief）</span><span class="b-sub">'
+        + (inTeam ? "已注册 ✓" : "未注册") + '</span><span class="b-ops">'
+        + (inTeam
+          ? '<button class="btn sm danger" onclick="toggleTeam(\'' + esc(id) + '\',\'unregister\',\'' + esc(id) + '\')">退出团队</button>'
+          : '<button class="btn sm primary" onclick="toggleTeam(\'' + esc(id) + '\',\'register\',\'' + esc(id) + '\')">注册给主编（加入团队）</button>')
+        + "</span></div></div>";
+    }
+    html += '<div class="d-block"><div class="d-label">技能绑定（已启用 ' + (a.enabled_skills || []).length + " 项）</div>"
+      + skills.map(s => {
+        const on = (a.enabled_skills || []).includes(s.skill_id);
+        return '<div class="d-bind-row"><span class="b-name">' + esc(s.name) + '</span><span class="b-sub">'
+          + esc(s.skill_id) + (on ? " · 已绑定" : " · 未绑定") + '</span><span class="b-ops">'
+          + (on
+            ? '<button class="btn sm danger" onclick="toggleSkillBinding(\'' + esc(id) + '\',\'' + esc(s.skill_id) + '\',\'unbind\')">解绑</button>'
+            : '<button class="btn sm" onclick="toggleSkillBinding(\'' + esc(id) + '\',\'' + esc(s.skill_id) + '\',\'bind\')">绑定</button>')
+          + "</span></div>";
+      }).join("") + "</div>";
+    html += '<div class="d-block"><div class="d-label">运行时注销</div>'
+      + (isChief
+        ? '<div style="font-size:12.5px;color:var(--muted)">主编编排 Agent 是运行时根节点，不可注销。</div>'
+        : '<button class="btn danger" onclick="unregisterAgent(\'' + esc(id) + '\')">注销该 Agent（移出运行时）</button>'
+          + (a.source === "MARKET"
+            ? '<div style="font-size:12px;color:var(--muted);margin-top:6px">市场来源：注销后退回市场目录，可重新安装。</div>'
+            : '<div style="font-size:12px;color:var(--muted);margin-top:6px">' + esc(srcLabel) + "：注销即从运行时删除。</div>"))
+      + "</div>";
+  }
+    // 运行时装配状态（bind 即装配：指令注入/工具挂载/A2A 通道）
+  try {
+    const asm = await jget("/v1/agents/" + encodeURIComponent(id) + "/assembly");
+    if (asm && asm.assembly) {
+      const sk = asm.assembly.skills || {};
+      const skIds = Object.keys(sk);
+      const a2a = (asm.assembly.a2a || {}).channels || [];
+      let asmHtml = '<div class="d-block"><div class="d-label">运行时装配 · 注册即装配（对齐 DeepAgent 动态装配）</div>';
+      if (skIds.length) {
+        asmHtml += '<div style="font-size:12px;color:var(--muted);margin-bottom:4px">已装配技能 ' + skIds.length + ' 个：</div>';
+        for (const sid of skIds) {
+          const e2 = sk[sid];
+          asmHtml += '<div class="d-bind-row"><span class="b-name">' + esc(sid) + '</span><span class="b-sub">'
+            + (e2.mode === "full"
+              ? "指令注入 " + fmtBytes(e2.instructions_bytes) + " · 工具 " + (e2.tools || []).length + " 个 · 资源 " + (e2.resources || []).length + " 份"
+              : "仅元数据（包文件缺失）")
+            + '</span></div>';
+          if ((e2.tools || []).length) {
+            asmHtml += '<div style="font-size:11.5px;color:var(--muted);margin:-2px 0 6px 8px" class="mono">'
+              + (e2.tools || []).map(t => esc(t.tool_name)).join(" · ") + "</div>";
+          }
+        }
+      }
+      if (a2a.length) {
+        asmHtml += '<div style="font-size:12px;color:var(--muted);margin:6px 0 4px">A2A 委托通道 ' + a2a.length + ' 条：</div>';
+        for (const ch of a2a) {
+          asmHtml += '<div class="d-bind-row"><span class="b-name mono">' + esc(ch.tool_name) + '</span><span class="b-sub">'
+            + esc(ch.protocol) + "</span></div>";
+        }
+      }
+      const mcpAsm = asm.assembly.mcps || {};
+      const mcpIds = Object.keys(mcpAsm);
+      if (mcpIds.length) {
+        asmHtml += '<div style="font-size:12px;color:var(--muted);margin:6px 0 4px">MCP 工具装配 ' + mcpIds.length + ' 个 server：</div>';
+        for (const mid of mcpIds) {
+          const e3 = mcpAsm[mid];
+          asmHtml += '<div class="d-bind-row"><span class="b-name mono">' + esc(mid) + '</span><span class="b-sub">'
+            + (e3.tools || []).length + ' 个工具 · JSON-RPC 2.0</span></div>';
+          asmHtml += '<div style="font-size:11px;color:var(--muted);margin:-2px 0 6px 8px" class="mono">'
+            + (e3.tools || []).map(t => esc(t.qualified_name)).join(" · ") + "</div>";
+        }
+      }
+      if (!skIds.length && !a2a.length) asmHtml += '<div class="d-val" style="color:var(--muted)">（无装配记录）</div>';
+      asmHtml += '</div>';
+      html += asmHtml;
+    }
+  } catch (e) { /* 无装配记录（404）时静默 */ }
+  showDrawer(html);
+}
+async function openSkillDetail(id) {
+  const skills = await ensureSkillsData();
+  const s = skills.find(x => x.skill_id === id);
+  if (!s) { alert("未找到 skill：" + id); return; }
+  await ensureAgentsData();
+  const ras = s.registered_agents || [];
+  let html = "<h3>Skill 详情 · " + esc(s.name)
+    + '<button class="d-close" onclick="closeDrawer()">×</button></h3>'
+    + '<div class="d-block"><div class="d-label">技能标识</div><div class="d-val mono">' + esc(s.skill_id) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">技能文件</div><div class="d-val mono">' + esc(s.path) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">描述</div><div class="d-val">' + esc(s.description) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">标签</div><div class="d-val">'
+    + (s.tags || []).map(t => '<span class="chip">' + esc(t) + "</span>").join("") + "</div></div>"
+    + '<div class="d-block"><div class="d-label">已绑定（注册）给 ' + ras.length + " 个运行时 agent</div>"
+    + (ras.length
+      ? ras.map(ag => '<div class="d-bind-row"><span class="b-name">' + esc(agentNameOf(ag)) + '</span><span class="b-sub">' + esc(ag) + '</span>'
+        + '<span class="b-ops"><button class="btn sm" onclick="openAgentDetail(\'' + esc(ag) + '\')">agent 详情</button>'
+        + '<button class="btn sm danger" onclick="toggleSkillBinding(\'' + esc(ag) + '\',\'' + esc(id) + '\',\'unbind\')">解绑</button></span></div>').join("")
+      : '<div class="d-val" style="color:var(--muted)">（尚未绑定给任何 agent）</div>')
+    + '<div style="font-size:12px;color:var(--muted);margin-top:4px">绑定 / 解绑即 POST /v1/agents/{agent}/skills，操作即时生效。</div></div>';
+  html += '<div class="d-block"><div class="d-label">技能包内容 · 官方 Agent Skills 五件套结构</div>'
+    + '<div id="skill-files-view" class="d-val" style="color:var(--muted);font-size:12px">加载中…</div></div>';
+  html += '<div class="d-block"><div class="d-label" id="skill-content-label">内容预览 · 点击上方文件查看</div>'
+    + '<div id="skill-content-view" class="d-val" style="color:var(--muted);font-size:12px">（选择一个文件开始预览）</div></div>';
+  drawerWide = true;
+  showDrawer(html);
+  // 加载包文件树（SKILL.md / scripts / references / assets / evals）
+  jget("/v1/skills/" + encodeURIComponent(id) + "/files").then(flist => {
+    const fview = document.getElementById("skill-files-view");
+    if (!fview) return;
+    if (!flist || !flist.files) {
+      fview.innerHTML = '<span style="color:#a32d2d">文件树不可用：' + esc((flist && flist.message) || "未知错误") + "</span>";
+      return;
+    }
+    const GROUP_META = {
+      "SKILL.md": { icon: "📄", label: "主文件" },
+      scripts:    { icon: "⚙", label: "脚本（确定性执行）" },
+      references: { icon: "📚", label: "参考文档" },
+      assets:     { icon: "🧩", label: "模板/注册表" },
+      evals:      { icon: "🧪", label: "评估用例" }
+    };
+    let currentGroup = null;
+    let tree = '<div class="skill-tree">' + flist.files.map(f => {
+      let html2 = "";
+      if (f.group !== currentGroup) {
+        currentGroup = f.group;
+        const g = GROUP_META[f.group] || { icon: "📁", label: f.group };
+        html2 += '<div class="st-group">' + g.icon + " " + esc(f.group === "SKILL.md" ? "SKILL.md · " + g.label : f.group + "/ · " + g.label) + "</div>";
+      }
+      const name = f.path.split("/").pop();
+      const ext = name.split(".").pop();
+      const extIcon = { py: "🐍", md: "📝", json: "🔧", txt: "📄" }[ext] || "📄";
+      return html2 + '<div class="st-file" onclick=\'loadSkillFile("' + esc(id) + '","' + esc(f.path) + '")\'">'
+        + '<span class="st-ico">' + extIcon + '</span><span class="st-name mono" title="' + esc(f.path) + '">' + esc(name) + "</span>"
+
+        + '<span class="st-size">' + fmtBytes(f.bytes) + "</span></div>";
+    }).join("") + "</div>";
+    fview.innerHTML = tree + '<div style="font-size:11px;color:var(--muted);margin-top:6px">'
+      + flist.count + " 个文件 · 点击预览 · 来源 GET /v1/skills/" + esc(id) + "/files</div>";
+    // 默认预览主文件
+    if (flist.files.some(f => f.path === "SKILL.md")) loadSkillFile(id, "SKILL.md");
+  }).catch(e => {
+    const fview = document.getElementById("skill-files-view");
+    if (fview) fview.innerHTML = '<span style="color:#a32d2d">加载失败：' + esc(e.message) + "</span>";
+  });
+  jget("/v1/skills/" + encodeURIComponent(id) + "/content").then(sc => {
+    const view = document.getElementById("skill-content-view");
+    if (!view) return;
+    if (!sc || !sc.content) {
+      view.innerHTML = '<span style="color:#a32d2d">内容不可用：' + esc((sc && sc.message) || "未知错误") + "</span>";
+      return;
+    }
+    view.innerHTML = '<div class="skill-doc">'
+      + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'
+      + esc(sc.path) + " · " + sc.bytes + " B · " + sc.lines + " 行</div>"
+      + renderMarkdown(sc.content)
+      + "</div>";
+  }).catch(e => {
+    const view = document.getElementById("skill-content-view");
+    if (view) view.innerHTML = '<span style="color:#a32d2d">加载失败：' + esc(e.message) + "</span>";
+  });
+}
+
+/* ———— Agent 运行实时面板（对话区右侧）———— */
+/** 轻量提示浮层（右上角，3s 自动消失）。 */
+function toast(msg) {
+  let t = document.getElementById("__toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "__toast";
+    t.style.cssText = "position:fixed;top:18px;right:20px;z-index:999;background:#222;color:#fff;padding:9px 14px;border-radius:8px;font-size:12.5px;box-shadow:0 4px 14px rgba(0,0,0,.2);opacity:0;transition:opacity .18s;pointer-events:none;";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = "1";
+  clearTimeout(toast._h);
+  toast._h = setTimeout(() => { t.style.opacity = "0"; }, 3000);
+}
+
+let RUN_PANEL = { trace: null, view: "timeline", timer: null, openNodes: new Set() };
+
+function fmtMs(ms) { return ms < 1000 ? ms + "ms" : (ms / 1000).toFixed(1) + "s"; }
+
+async function startAgentRun(bank) {
+  renderRunPanelLoading();
+  try {
+    // 走 pipeline/run（六工位受控流水线）→ 前端组装运行轨迹（nodes 供运行面板/执行图消费）
+    const resp = await jpost("/v1/pipeline/run", { bank: bank || "cmb" });
+    const t = resp && resp.data ? resp.data : resp;
+    if (!t || !t.stages) throw new Error((t && t.message) || "运行启动失败");
+    const nodes = t.stages.map(st => ({
+      id: st.stage_id, title: st.name + " · " + (st.agent || ""),
+      status: "SUCCEEDED", elapsed_ms: st.elapsed_ms || 0,
+      output: (st.details || []).join("；").slice(0, 300)
+    }));
+    RUN_PANEL.trace = {
+      run_id: t.task_id, status: "SUCCEEDED",
+      nodes,
+      checks: t.checks, digest: t.artifact_digest
+    };
+    renderRunPanel();
+    toast("运行 " + t.task_id + " 已完成：双核验 " + (t.checks ? t.checks.numeric.status + "/" + t.checks.citation.status : "—"));
+  } catch (e) {
+    renderRunPanelError(e.message);
+  }
+}
+
+function renderRunPanelLoading() {
+  const p = document.getElementById("run-panel");
+  if (!p) return;
+  p.className = "run-panel";
+  p.innerHTML = '<div class="rp-live-bar"><span class="rp-dot"></span>正在启动 agent 运行…（主编规划 → 工位执行 → 门禁核验）</div>'
+    + '<div class="rp-body"><div class="rp-tl">'
+    + ["主编 · 任务规划", "团队与通道检查", "快照装载", "指标抽取", "经营分析", "资产质量分析", "结构化成稿", "双核验门禁", "交付判断"]
+        .map((t, i) => '<div class="rp-node running" style="animation:rpPulse 1.1s ease-in-out ' + (i * 0.12) + 's infinite"><div class="rp-node-h"><span class="rp-ntype">AGENT</span><span class="rp-ntitle">' + t + '</span><span class="rp-nstatus">…</span></div></div>').join("")
+    + "</div></div>";
+}
+
+function renderRunPanelError(msg) {
+  const p = document.getElementById("run-panel");
+  if (p) { p.className = "run-panel"; p.innerHTML = '<div class="rp-body"><div style="color:#a32d2d;font-size:12.5px">运行失败：' + esc(msg) + "</div></div>"; }
+}
+
+function renderRunPanel() {
+  const p = document.getElementById("run-panel");
+  const t = RUN_PANEL.trace;
+  if (!p || !t) return;
+  p.className = "run-panel";
+  const nodes = t.nodes || [];
+  const ok = nodes.filter(n => n.status === "SUCCEEDED").length;
+  const st = { SUCCEEDED: ["✓", "var(--success)"], RUNNING: ["◐", "#3b7bf5"], FAILED: ["✕", "#d64545"] }[t.status] || ["?", "var(--muted)"];
+  let html = '<div class="rp-head"><h3>Agent 运行 <span style="font-size:11px;color:var(--muted);font-weight:400" class="mono">' + esc(t.run_id) + " · " + esc(t.task_id) + "</span>"
+    + '<span style="color:' + st[1] + ';font-size:12px">' + st[0] + " " + esc(t.status) + "</span></h3>"
+    + '<div class="rp-stats">'
+    + '<div class="rp-stat"><div class="v">' + nodes.length + '</div><div class="k">节点</div></div>'
+    + '<div class="rp-stat"><div class="v">' + fmtMs(t.elapsed_ms || 0) + '</div><div class="k">总耗时</div></div>'
+    + '<div class="rp-stat"><div class="v">' + (t.tokens || 0) + '</div><div class="k">TOKENS</div></div>'
+    + '<div class="rp-stat"><div class="v">' + esc(t.cost_estimate || "—") + '</div><div class="k">成本估算</div></div>'
+    + "</div></div>";
+  html += '<div class="rp-toolbar"><div class="rp-view-tabs">'
+    + [["timeline", "时间线"], ["graph", "执行图"], ["json", "原始"]].map(([v, l]) =>
+        '<button class="rp-vtab' + (RUN_PANEL.view === v ? " on" : "") + '" onclick="setRunView(\'' + v + '\')">' + l + "</button>").join("")
+    + '</div><button class="btn sm" onclick="startAgentRun(\'' + (t.bank || "cmb") + '\')">重跑</button>'
+    + '<span style="font-size:10.5px;color:var(--muted);margin-left:auto">触发：' + esc(t.trigger || "—") + " · " + esc((t.started_at || "").replace("T", " ").slice(5, 19)) + "</span></div>";
+
+  if (RUN_PANEL.view === "timeline") {
+    html += '<div class="rp-body"><div class="rp-tl">' + nodes.map(n => renderTraceNode(n)).join("") + "</div></div>";
+  } else if (RUN_PANEL.view === "graph") {
+    html += '<div class="rp-body"><div class="rp-graph">' + renderTraceGraph(nodes) + "</div></div>";
+  } else {
+    html += '<div class="rp-body"><pre style="font-size:10.5px;overflow:auto">' + esc(JSON.stringify(t, null, 1)) + "</pre></div>";
+  }
+  p.innerHTML = html;
+}
+
+function renderTraceNode(n) {
+  const cls = n.status === "FAILED" ? " failed" : (n.status === "RUNNING" ? " running" : "");
+  const open = RUN_PANEL.openNodes.has(n.id);
+  const stColor = n.status === "SUCCEEDED" ? "var(--success)" : (n.status === "FAILED" ? "#d64545" : "#3b7bf5");
+  let body = "";
+  if (open) {
+    if (n.thinking) body += '<div class="rp-field"><div class="fl">思考过程 THINKING</div><div class="rp-thinking">' + esc(n.thinking) + "</div></div>";
+    if (n.skill_used) body += '<div class="rp-field"><div class="fl">使用技能 SKILL</div><div class="fv">' + esc(n.skill_used) + "</div></div>";
+    if ((n.tool_calls || []).length) body += '<div class="rp-field"><div class="fl">工具调用 TOOL CALLS（MCP JSON-RPC）</div>'
+      + n.tool_calls.map(tc => '<div class="tc"><span class="tn">' + esc(tc.tool) + "</span><span>×" + tc.calls + '</span><span class="tp">' + esc(tc.protocol || "") + "</span></div>").join("") + "</div>";
+    body += '<div class="rp-field"><div class="fl">输入 INPUT</div><div class="fv">' + esc(n.input) + "</div></div>";
+    body += '<div class="rp-field"><div class="fl">输出 OUTPUT</div><div class="fv">' + esc(n.output) + "</div></div>";
+    if (n.outputs_detail) body += '<div class="rp-field"><div class="fl">输出明细</div><div class="fv">' + Object.entries(n.outputs_detail).map(([k, v]) => "· " + esc(k) + ": " + esc(String(v))).join("<br>") + "</div></div>";
+    if (n.gate_rule) body += '<div class="rp-field"><div class="fl">门禁规则</div><div class="fv">' + esc(n.gate_rule) + "</div></div>";
+    if (n.real_check) body += '<div class="rp-field"><div class="fl">✓ 真实核验</div><div class="fv">本节点实际调用了 NumericChecker/CitationChecker（非预录数据）</div></div>';
+    if (n.parallel_group) body += '<div class="rp-field"><div class="fl">并行组</div><div class="fv">' + esc(n.parallel_group) + "（与同组节点并行执行）</div></div>";
+    if (n.iteration) body += '<div class="rp-field"><div class="fl">Agent Loop</div><div class="fv">iteration #' + n.iteration + "</div></div>";
+  }
+  return '<div class="rp-node' + cls + (open ? " open" : "") + '">'
+    + '<div class="rp-node-h" onclick="toggleTraceNode(\'' + n.id + '\')">'
+    + '<span class="rp-ntype ' + n.type + '">' + n.type + '</span>'
+    + '<span class="rp-ntitle">' + esc(n.title) + "</span>"
+    + '<span class="rp-nmeta">' + (n.tokens ? n.tokens + "tok · " : "") + fmtMs(n.elapsed_ms || 0) + '</span>'
+    + '<span class="rp-nstatus" style="color:' + stColor + '">' + (n.status === "SUCCEEDED" ? "✓" : n.status) + "</span>"
+    + "</div>" + (body ? '<div class="rp-node-b">' + body + "</div>" : "") + "</div>";
+}
+
+function renderTraceGraph(nodes) {
+  // 聚合图：主编 → 查数 → 指标 → [双分析并行] → 写作 → 核验 → 门禁
+  const par = nodes.filter(n => n.parallel_group === "analysis");
+  const seq = nodes.filter(n => n.parallel_group !== "analysis");
+  const arrow = '<div class="rp-garrow">↓</div>';
+  let g = seq.map(n => '<div class="rp-gnode ok"><div class="gtitle">' + esc(n.title.split("·")[0].trim()) + '</div><div class="gmeta">' + n.type + " · " + fmtMs(n.elapsed_ms || 0) + "</div></div>");
+  // 并行段插入到写作之前
+  if (par.length) {
+    const parHtml = '<div class="rp-par">' + par.map(n => '<div class="rp-gnode ok" style="width:150px"><div class="gtitle">' + esc(n.title.split("·")[0].trim()) + '</div><div class="gmeta">' + n.type + " · " + n.tokens + "tok</div></div>").join("") + "</div>";
+    const wIdx = g.findIndex(x => x.includes("成稿") || x.includes("写作"));
+    if (wIdx > 0) g.splice(wIdx, 0, parHtml);
+  }
+  return g.join(arrow);
+}
+
+function toggleTraceNode(id) {
+  if (RUN_PANEL.openNodes.has(id)) RUN_PANEL.openNodes.delete(id); else RUN_PANEL.openNodes.add(id);
+  renderRunPanel();
+}
+function setRunView(v) { RUN_PANEL.view = v; renderRunPanel(); }
+
+function initRunPanel() {
+  const p = document.getElementById("run-panel");
+  if (!p) return;
+  p.className = "run-panel empty";
+  p.innerHTML = '<div style="text-align:center;padding:0 24px"><div style="font-size:26px;margin-bottom:8px">📡</div>'
+    + "<b>Agent 运行面板</b><div style=\"margin-top:6px;line-height:1.7\">发送任务或点击下方按钮启动运行<br>实时展示：主编规划 → 工位执行 → MCP 工具调用 → 核验门禁</div>"
+    + '<button class="btn primary" style="margin-top:12px" onclick="startAgentRun(\'cmb\')">启动演示运行（招行）</button></div>';
+}
+
+function fmtBytes(b) {
+  if (b == null) return "";
+  return b < 1024 ? b + " B" : (b / 1024).toFixed(1) + " KB";
+}
+
+/** 点击技能包文件加载预览：md → 渲染；py/json → 代码块。 */
+function loadSkillFile(skillId, filePath) {
+  const view = document.getElementById("skill-content-view");
+  const label = document.getElementById("skill-content-label");
+  if (!view) return;
+  if (label) label.textContent = "内容预览 · " + filePath;
+  view.innerHTML = '<span style="color:var(--muted);font-size:12px">加载中…</span>';
+  // 高亮当前选中文件
+  document.querySelectorAll(".st-file.sel").forEach(el => el.classList.remove("sel"));
+  document.querySelectorAll(".st-file").forEach(el => {
+    if (el.getAttribute("onclick") && el.getAttribute("onclick").includes("'" + filePath + "'")) el.classList.add("sel");
+  });
+  jget("/v1/skills/" + encodeURIComponent(skillId) + "/files?path=" + encodeURIComponent(filePath)).then(fc => {
+    if (!fc || !fc.content) {
+      view.innerHTML = '<span style="color:#a32d2d">不可用：' + esc((fc && fc.message) || "未知错误") + "</span>";
+      return;
+    }
+    const ext = filePath.split(".").pop().toLowerCase();
+    const head = '<div style="font-size:11px;color:var(--muted);margin-bottom:8px">'
+      + esc(filePath) + " · " + fmtBytes(fc.bytes) + " · " + fc.lines + " 行</div>";
+    if (ext === "md") {
+      view.innerHTML = '<div class="skill-doc">' + head + renderMarkdown(fc.content) + "</div>";
+    } else {
+      // py/json/txt 原文展示（代码块）
+      const lang = ext === "py" ? "python" : (ext === "json" ? "json" : "text");
+      view.innerHTML = head + '<pre class="skill-code"><code>' + esc(fc.content) + "</code></pre>"
+        + '<div style="font-size:11px;color:var(--muted);margin-top:4px">类型：' + lang + " · 原文展示</div>";
+    }
+  }).catch(e => {
+    view.innerHTML = '<span style="color:#a32d2d">加载失败：' + esc(e.message) + "</span>";
+  });
+}
+
+/** 轻量 Markdown 渲染（标题/表格/代码块/列表/粗体，预览用，不引外部库）。 */
+function renderMarkdown(md) {
+  function esc2(t) { return t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  const lines = String(md).split("\n");
+  let out = "", inCode = false, tableBuf = [];
+  const flushTable = () => {
+    if (!tableBuf.length) return;
+    let html = "<table>";
+    tableBuf.forEach((row, ri) => {
+      if (ri === 1 && /^[-\s|:]+$/.test(row)) return;
+      const cells = row.split("|").map(c => c.trim()).filter((c, idx, arr) => !(idx === 0 && c === "") && !(idx === arr.length - 1 && c === ""));
+      html += "<tr>" + cells.map(c => "<" + (ri === 0 ? "th" : "td") + ">" + esc2(c) + "</" + (ri === 0 ? "th" : "td") + ">").join("") + "</tr>";
+    });
+    out += html + "</table>";
+    tableBuf = [];
+  };
+  for (const l of lines) {
+    if (l.trim().startsWith("```")) { flushTable(); if (inCode) { out += "</pre>"; inCode = false; } else { out += "<pre>"; inCode = true; } continue; }
+    if (inCode) { out += esc2(l) + "\n"; continue; }
+    if (/^\|.*\|/.test(l.trim())) { tableBuf.push(l.trim()); continue; }
+    flushTable();
+    if (/^#{1,6}\s/.test(l)) { const lvl = l.match(/^#+/)[0].length; out += "<h" + Math.min(lvl+1,6) + ">" + esc2(l.replace(/^#+\s*/, "")) + "</h" + Math.min(lvl+1,6) + ">"; continue; }
+    if (/^(-{3,})$/.test(l.trim())) { out += "<hr>"; continue; }
+    if (/^[-*]\s/.test(l.trim())) { out += "<li>" + inlineMd(esc2(l.trim().replace(/^[-*]\s*/, ""))) + "</li>"; continue; }
+    if (!l.trim()) { out += "<div style=\"height:6px\"></div>"; continue; }
+    out += "<p>" + inlineMd(esc2(l)) + "</p>";
+  }
+  if (inCode) out += "</pre>";
+  flushTable();
+  function inlineMd(t) { return t.replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/`([^`]+)`/g, "<code>$1</code>"); }
+  return out;
+}
+async function openMcpDetail(id) {
+  const list = await ensureMcpData();
+  const s = list.find(x => x.server_id === id);
+  if (!s) return;
+  await ensureAgentsData();
+  const agents = state.agentsData ? state.agentsData.runtime : [];
+  // 该 MCP 已绑定给哪些 agent
+  const bound = agents.filter(a => (a.mcps || []).includes(id));
+  let html = "<h3>MCP 详情 · " + esc(s.name)
+    + '<button class="d-close" onclick="closeDrawer()">×</button></h3>'
+    + '<div class="d-block"><div class="d-label">服务端点</div><div class="d-val mono">' + esc(s.endpoint) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">协议</div><div class="d-val mono">' + esc(s.protocol) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">能力协商</div><div class="d-val mono" style="font-size:11.5px">POST ' + esc(s.endpoint) + ' {"method":"initialize"} → tools/list → tools/call</div></div>'
+    + '<div class="d-block"><div class="d-label">暴露工具（' + s.tools.length + "，全限定名 " + esc(s.server_id) + ":tool_name）</div>"
+    + s.tools.map(t => '<div class="d-bind-row"><span class="b-name mono">' + esc(s.server_id + ":" + t.name) + '</span><span class="b-sub">'
+      + esc((t.description || "").slice(0, 46)) + "</span></div>").join("") + "</div>"
+    + '<div class="d-block"><div class="d-label">已绑定给 ' + bound.length + " 个运行时 agent（bind 即装配全限定名工具）</div>"
+    + (bound.length
+      ? bound.map(a => '<div class="d-bind-row"><span class="b-name">' + esc(a.name) + '</span><span class="b-sub">' + esc(a.agent_id) + '</span>'
+        + '<span class="b-ops"><button class="btn sm" onclick="openAgentDetail(\'' + esc(a.agent_id) + '\')">agent 详情</button>'
+        + '<button class="btn sm danger" onclick="toggleMcpBinding(\'' + esc(a.agent_id) + '\',\'' + esc(id) + '\',\'unbind\')">解绑</button></span></div>').join("")
+      : '<div class="d-val" style="color:var(--muted)">（尚未绑定）</div>')
+    + '<div style="font-size:12px;color:var(--muted);margin-top:4px">绑定即 POST /v1/agents/{agent}/mcp —— agent 获得全限定名工具（ServerName:tool_name），经 JSON-RPC tools/call 调用。</div></div>'
+    + '<div class="d-block"><div class="d-label">绑定给其他 agent</div><div class="d-val">'
+    + '<select id="mcp-bind-target" style="font:inherit;padding:4px 8px;border:1px solid var(--border);border-radius:6px;max-width:70%">'
+    + agents.filter(a => a.agent_id !== "editor-in-chief" && !(a.mcps || []).includes(id))
+        .map(a => '<option value="' + esc(a.agent_id) + '">' + esc(a.name) + "</option>").join("")
+    + '</select> <button class="btn sm primary" onclick="mcpBindFromDetail(\'' + esc(id) + '\')">绑定</button></div></div>';
+  showDrawer(html);
+}
+
+/** MCP bind/unbind 调用 + 刷新详情。 */
+async function toggleMcpBinding(agentId, serverId, action) {
+  try {
+    await jpost("/v1/agents/" + encodeURIComponent(agentId) + "/mcp", { server_id: serverId, action });
+    toast(action === "bind" ? "MCP " + serverId + " 已装配给 " + agentId : "已解绑 " + serverId);
+    openMcpDetail(serverId);
+  } catch (e) { toast("操作失败：" + e.message); }
+}
+async function mcpBindFromDetail(serverId) {
+  const sel = document.getElementById("mcp-bind-target");
+  if (!sel || !sel.value) return;
+  await toggleMcpBinding(sel.value, serverId, "bind");
+}
+function openRuleDetail(id) {
+  const r = RULE_ASSETS.find(x => x.id === id);
+  if (!r) return;
+  const html = "<h3>核验规则详情 · " + esc(r.id) + " " + esc(r.name)
+    + '<button class="d-close" onclick="closeDrawer()">×</button></h3>'
+    + '<div class="d-block"><div class="d-label">所属核验器</div><div class="d-val">' + esc(r.checker) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">规则说明</div><div class="d-val">' + esc(r.desc) + "</div></div>"
+    + '<div class="d-block"><div class="d-label">严重级别</div><div class="d-val"><span class="badge fail">BLOCKING</span> '
+    + '<span style="font-size:12px;color:var(--muted)">fail-closed：任一规则违规即整体 FAILED，不放行交付。</span></div></div>';
+  showDrawer(html);
+}
+/* ———— 绑定 / 团队注册 / 注销：操作后统一刷新 ———— */
+async function afterAgentMutation(reopenId) {
+  try { state.agentsData = await jget("/v1/agents"); } catch (e) { state.agentsData = { runtime: [], catalog: [] }; }
+  try { state.skillsData = await jget("/v1/skills"); } catch (e) { state.skillsData = []; }
+  renderAssets();
+  if (reopenId) openAgentDetail(reopenId); else closeDrawer();
+}
+async function toggleSkillBinding(agentId, skillId, action) {
+  const r = await jpost("/v1/agents/" + encodeURIComponent(agentId) + "/skills", { skill_id: skillId, action: action });
+  if (!r.ok) { alert("操作失败：" + (((r.data || {}).message) || ("HTTP " + r.status))); return; }
+  await afterAgentMutation(agentId);
+}
+async function toggleTeam(agentId, action, reopenId) {
+  const r = await jpost("/v1/agents/editor-in-chief/team", { agent_id: agentId, action: action });
+  if (!r.ok) { alert("操作失败：" + (((r.data || {}).message) || ("HTTP " + r.status))); return; }
+  await afterAgentMutation(reopenId || agentId);
+}
+async function unregisterAgent(id) {
+  if (id === "editor-in-chief") { alert("主编编排 Agent 是运行时根节点，不可注销。"); return; }
+  let r = null, data = null;
+  try {
+    r = await fetch("/v1/agents/" + encodeURIComponent(id), { method: "DELETE" });
+    data = await r.json().catch(() => null);
+  } catch (e) { alert("注销请求失败：" + e.message); return; }
+  if (r.ok) {
+    alert("已注销 " + id + (data && data.returned_to_market ? "（市场来源：已退回市场目录，可重新安装）" : "（已从运行时删除）"));
+    await afterAgentMutation(null);
+  } else {
+    alert("注销失败：" + ((data || {}).message || ("HTTP " + r.status)));
+  }
+}
+
+async function loadAssetPage(no, bank) {
+  const key = (bank || "") + ":" + no;
+  try {
+    if (!state.pages[key]) state.pages[key] = await jget("/v1/snapshot/pages/" + no + (bank ? "?bank=" + bank : ""));
+    const p = state.pages[key];
+    const art = state.citeArtifact || state.artifact;
+    document.querySelectorAll("#view-assets [data-snap-page]").forEach(c =>
+      c.classList.toggle("on", Number(c.dataset.snapPage) === no));
+    $("#asset-snap-digest").textContent = "P" + no + (bank ? "（" + bank + " 快照集）" : "")
+      + " 页文本 sha256 = " + p.digest;
+    let html = esc(p.text), n = 0;
+    for (const c of (art ? art.citations : [])) {
+      if (c.page === no && c.evidence_excerpt) {
+        const ex = esc(c.evidence_excerpt);
+        if (html.includes(ex)) { html = html.split(ex).join("<mark>" + ex + "</mark>"); n++; }
+      }
+    }
+    $("#asset-snap-text").innerHTML = html;
+    $("#asset-snap-note").textContent = n
+      ? "绿色高亮 = 当前工件引用本页的 " + n + " 条证据摘录"
+      : "当前工件暂无引用本页";
+  } catch (e) {
+    $("#asset-snap-text").textContent = "页文本加载失败：" + e.message;
+  }
+}
+
+/* ———————————————————— 报告库（页签 3）：服务端任务历史 + 完整报告展开 ———————————————————— */
+function ensureReportsShell() {
+  if (!$("#reports-list")) {
+    $("#view-reports").innerHTML =
+      '<div class="reports-layout"><aside class="reports-list" id="reports-list"></aside>'
+      + '<div class="reports-detail" id="reports-detail"></div></div>';
+  }
+}
+async function refreshTasks() {
+  ensureReportsShell();
+  try { state.tasks = await jget("/v1/tasks"); } catch (e) { state.tasks = []; }
+  const arr = state.tasks.slice().reverse(); /* 新任务在前 */
+  const list = $("#reports-list");
+  list.innerHTML = arr.length ? arr.map(t =>
+    '<button class="task-item' + (t.task_id === state.selectedTask ? " active" : "")
+    + '" data-task="' + esc(t.task_id) + '">'
+    + '<div class="ti-head"><span class="ti-id">' + esc(t.task_id) + "</span>" + statusBadge(t.status) + "</div>"
+    + '<div class="ti-sub">' + esc(t.company || "招商银行") + " · " + esc(t.report_period || "2025年度") + "</div>"
+    + '<div class="ti-sum">' + esc(t.summary || "（无摘要）") + "</div>"
+    + '<div class="ti-time">更新于 ' + esc((t.updated_at || t.created_at || "").replace("T", " ").replace(/\..*$/, " UTC")) + "</div></button>").join("")
+    : '<div style="color:var(--muted);font-size:13px;padding:8px 4px">暂无任务记录。</div>';
+  if (state.selectedTask && arr.some(t => t.task_id === state.selectedTask)) return;
+  if (arr.length) openTask(arr[0].task_id);
+}
+$("#view-reports").addEventListener("click", e => {
+  const item = e.target.closest(".task-item");
+  if (item) openTask(item.dataset.task);
+});
+
+async function openTask(id) {
+  state.selectedTask = id;
+  document.querySelectorAll("#reports-list .task-item").forEach(el =>
+    el.classList.toggle("active", el.dataset.task === id));
+  ensureReportsShell();
+  const detail = $("#reports-detail");
+  detail.innerHTML = '<div class="card" style="color:var(--muted)">加载中……</div>';
+  let d;
+  try { d = await jget("/v1/tasks/" + encodeURIComponent(id)); }
+  catch (e) {
+    detail.innerHTML = '<div class="card" style="color:var(--destructive)">任务加载失败：' + esc(e.message) + "</div>";
+    return;
+  }
+  const t = d.task, a = d.artifact;
+  state.citeArtifact = a;
+  const nc = (t.checks || {}).numeric || {}, cc = (t.checks || {}).citation || {};
+  let html = '<div class="card task-meta-card"><h3>' + esc(t.task_id) + " " + statusBadge(t.status) + "</h3>"
+    + '<div class="kv"><b>编制主体</b>' + esc(t.company || a.company) + " · " + esc(t.report_period || a.report_period) + "</div>"
+    + '<div class="kv"><b>摘要</b><span style="flex:1">' + esc(t.summary || "—") + "</span></div>"
+    + '<div class="kv"><b>工件指纹</b><span class="digest" style="flex:1">' + esc(t.artifact_digest || "—") + "</span></div>"
+    + '<div class="kv"><b>数值核验</b>' + (nc.status
+      ? statusBadge(nc.status) + ' <span class="mono">' + esc(nc.checker_id || "") + " v" + esc(nc.checker_version || "") + "</span>"
+      : "—（未核验）") + "</div>"
+    + '<div class="kv"><b>引用核验</b>' + (cc.status
+      ? statusBadge(cc.status) + ' <span class="mono">' + esc(cc.checker_id || "") + " v" + esc(cc.checker_version || "") + "</span>"
+      : "—（未核验）") + "</div>";
+  if (t.approval) {
+    const ap = t.approval;
+    html += '<div class="kv"><b>交付批准</b>' + statusBadge(ap.status)
+      + ' <span class="mono">' + esc(ap.approval_id) + "</span> · 批准人 " + esc(ap.approver)
+      + ' · <span class="mono">' + esc((ap.approved_at || "").replace("T", " ").replace(/\..*$/, " UTC")) + "</span></div>";
+  }
+  if (t.status === "REFUSED") {
+    html += '<div class="refused-card" style="margin-top:10px"><b>该草稿被核验门禁拒绝</b>——以下违规项未清零：'
+      + vioRows(nc.violations) + "</div>";
+  }
+  html += "</div>"
+    + '<div class="report-actions"><button class="btn" onclick="window.print()">打印 / 导出 PDF</button>'
+    + '<button class="btn" onclick="refreshTasks()">刷新列表</button></div>'
+    + '<div class="report-shell">' + paperHtml(a) + "</div>";
+  detail.innerHTML = html;
+}
+/* ———————————————————— Agent 管理函数（数据/操作已并入资产库，供详情抽屉调用）———————————————————— */
+function agentTile(a) {
+  const d = state.agentsData || {};
+  const chief = (d.runtime || []).find(x => x.agent_id === "editor-in-chief");
+  const team = (chief && chief.team) || [];
+  return '<div class="asset-tile">'
+    + '<div class="t-head"><span class="t-name">' + esc(a.name) + "</span>" + kindBadge(a.kind) + statusBadge(a.status) + "</div>"
+    + '<div class="t-ver">v' + esc(a.version) + " · " + esc(a.agent_id) + "</div>"
+    + '<div class="t-desc">' + esc(a.description) + "</div>"
+    + '<div class="t-foot">' + (a.capabilities || []).map(c => '<span class="chip">' + esc(c) + "</span>").join("") + "</div>"
+    + '<div class="t-summary">已绑技能 ' + (a.enabled_skills || []).length
+    + " · 主编团队 " + (a.agent_id === "editor-in-chief" ? "负责人" : (team.includes(a.agent_id) ? "✓ 已注册" : "— 未注册")) + "</div>"
+    + '<div class="t-meta">' + esc(a.source) + " · 注册于 " + esc((a.registered_at || "").replace("T", " ").slice(0, 19) || "—") + "<br>"
+    + (a.last_loaded_task
+      ? "最近加载 " + esc(a.last_loaded_task) + " · " + esc((a.last_loaded_at || "").replace("T", " ").slice(0, 19))
+      : "最近加载 —") + "</div>"
+    + '<div style="margin-top:10px;display:flex;gap:6px;align-items:center">'
+    + '<button class="btn sm" onclick="openAssetDetail(\'agent\',\'' + esc(a.agent_id) + '\')">详情 · 绑定</button>'
+    + (a.agent_id === "editor-in-chief"
+      ? '<span class="chip">根节点 · 不可注销</span>'
+      : '<button class="btn sm danger" onclick="unregisterAgent(\'' + esc(a.agent_id) + '\')">注销</button>')
+    + "</div></div>";
+}
+
+async function installAgent(id) {
+  const r = await jpost("/v1/agents/install", { agent_id: id });
+  if (r.ok) { try { state.agentsData = await jget("/v1/agents"); } catch (e) {} renderAssets(); }
+  else alert("安装失败：" + ((r.data || {}).message || "HTTP " + r.status));
+}
+function submitRegisterAgent(ev) {
+  ev.preventDefault();
+  const name = $("#reg-agent-name").value.trim();
+  const msg = $("#reg-agent-msg");
+  if (!name) { msg.style.color = "#c0392b"; msg.textContent = "请填写名称。"; return false; }
+  const kind = $("#reg-agent-kind").value;
+  const caps = $("#reg-agent-caps").value.split(/[,，、]/).map(s => s.trim()).filter(Boolean);
+  const desc = $("#reg-agent-desc").value.trim();
+  submitRegisterAgentRun(name, kind, caps, desc);
+  return false;
+}
+async function submitRegisterAgentRun(name, kind, caps, desc) {
+  const msg = $("#reg-agent-msg");
+  msg.style.color = "var(--muted)";
+  msg.textContent = "注册中…";
+  const r = await jpost("/v1/agents/register", { name: name, kind: kind, capabilities: caps, description: desc });
+  if (r.ok) {
+    const a = r.data || {};
+    msg.style.color = "var(--success)";
+    msg.textContent = "已注册 " + (a.agent_id || "新 agent") + "（v" + (a.version || "1.0") + "），已加入运行时。";
+    $("#reg-agent-name").value = ""; $("#reg-agent-caps").value = ""; $("#reg-agent-desc").value = "";
+    try { state.agentsData = await jget("/v1/agents"); } catch (e) {}
+    renderAssets();
+  } else {
+    msg.style.color = "#c0392b";
+    msg.textContent = "注册失败：" + ((r.data || {}).message || "HTTP " + r.status);
+  }
+}
+
+/* ———————————————————— 演示链（页签 5）：六步 · 每步真实调用后端 ———————————————————— */
+const s2body = a => a.sections.find(s => s.section_id === "S-2");
+const s2Sentence = a => (s2body(a).body.match(/拨备覆盖率[^。]*。/) || [""])[0];
+
+function demoStep(no, title, desc, btnText, fn) {
+  const div = document.createElement("div");
+  div.className = "step";
+  div.id = "demo-step-" + no;
+  div.innerHTML =
+    '<div class="s-no">' + no + "</div><div>"
+    + '<div class="s-head"><span class="s-title">' + esc(title) + '</span><span class="badge neutral" id="demo-badge-' + no + '">待执行</span></div>'
+    + '<div class="s-desc">' + esc(desc) + "</div>"
+    + '<div class="s-body"><button class="btn sm primary" id="demo-btn-' + no + '">' + esc(btnText) + "</button>"
+    + '<div id="demo-res-' + no + '"></div></div></div>';
+  $("#demo-steps").appendChild(div);
+  $("#demo-btn-" + no).addEventListener("click", async () => {
+    try { await fn(); }
+    catch (e) {
+      setStep(no, "refused", "出错", '<div class="refused-card">执行出错：' + esc(e.message) + "</div>");
+    }
+  });
+}
+function setStep(no, cls, badge, res) {
+  const step = $("#demo-step-" + no);
+  if (step) step.className = "step " + cls;
+  const b = $("#demo-badge-" + no);
+  if (b) {
+    b.className = "badge " + ({ done: "success", blocked: "destructive", refused: "warning" }[cls] || "neutral");
+    b.textContent = badge;
+  }
+  if (res !== undefined) { const el = $("#demo-res-" + no); if (el) el.innerHTML = res; }
+}
+
+function demoStep1() {
+  state.artifact = clone(state.positive);
+  setStep(1, "done", "正例已载入",
+    '<div class="quote">' + esc(s2Sentence(state.artifact)).replace("下降20.19个百分点",
+      '<span class="fix">下降20.19个百分点</span>') + "</div>"
+    + '<div class="pass-note">口径正确：比率变动以「个百分点」表述，符合 N7 变动口径铁律。</div>');
+}
+async function demoStep2() {
+  const a = await jget("/demo/error-artifact.json");
+  state.artifact = a;
+  const r = await jpost("/v1/checks/numeric", a);
+  setStep(2, "blocked", "已拦截",
+    '<div class="quote">' + esc(s2Sentence(a)).replace("下降20.19%", "<mark>下降20.19%</mark>") + "</div>"
+    + vioRows(r.data.violations)
+    + '<div class="refused-card">BLOCKING：草稿被当场拒收——「下降20.19%」口径违反 N7 变动口径铁律。</div>');
+}
+async function demoStep3() {
+  const a = state.artifact;
+  s2body(a).body = s2body(a).body.replace("下降20.19%", "下降20.19个百分点");
+  const n = await jpost("/v1/checks/numeric", a);
+  const c = await jpost("/v1/checks/citation", a);
+  setStep(3, "done", "双检通过",
+    '<div class="quote">' + esc(s2Sentence(a)).replace("下降20.19个百分点",
+      '<span class="fix">下降20.19个百分点</span>') + "</div>"
+    + '<div class="pass-note">数值核验 PASSED · v' + esc(n.data.checker_version) + "（仅改该句口径，其余零改动）</div>"
+    + '<div class="pass-note">引用核验 PASSED · v' + esc(c.data.checker_version) + "</div>");
+}
+async function demoStep4() {
+  const r = await jpost("/v1/approvals?approver=" + encodeURIComponent("Alice"), state.artifact);
+  if (!r.ok) {
+    setStep(4, "blocked", "失败", '<div class="refused-card">HTTP ' + r.status + "：" + esc((r.data || {}).message || "") + "</div>");
+    return;
+  }
+  state.approval = r.data;
+  setStep(4, "done", "已批准",
+    '<div class="approval-card"><b style="color:var(--success)">交付批准已签发</b><div class="a-grid">'
+    + '<span><b>批准编号</b><span class="mono">' + esc(r.data.approval_id) + "</span></span>"
+    + "<span><b>批准人</b>" + esc(r.data.approver) + "</span>"
+    + '<span><b>批准时间</b><span class="mono">' + esc(r.data.approved_at) + "</span></span>"
+    + "<span><b>数值核验</b>PASSED · " + esc(r.data.checks.numeric.checker_version) + "</span>"
+    + "<span><b>引用核验</b>PASSED · " + esc(r.data.checks.citation.checker_version) + "</span>"
+    + '<span><b>工件指纹</b><span class="digest">' + esc(r.data.artifact_digest) + "</span></span></div></div>");
+}
+async function demoStep5() {
+  const a = state.artifact;
+  const pv = a.metrics.find(m => m.key === "PROVISION_COVERAGE");
+  pv.value = "391.99";
+  s2body(a).body = s2body(a).body.replace("拨备覆盖率391.79%", "拨备覆盖率391.99%");
+  const dg = await jpost("/v1/artifacts/digest", a);
+  const n = await jpost("/v1/checks/numeric", a);
+  const ap = await jpost("/v1/approvals?approver=" + encodeURIComponent("Alice"), a);
+  setStep(5, "refused", "篡改无效",
+    '<div class="diff-banner"><div>'
+    + "批准记录绑定的工件指纹 ≠ 篡改稿指纹，既有批准立即失效：<br>"
+    + '批准时指纹 <span class="digest">' + esc(state.approval ? state.approval.artifact_digest : "—") + "</span><br>"
+    + '篡改稿指纹 <span class="digest">' + esc(dg.data.artifact_digest) + "</div></div>"
+    + vioRows(n.data.violations)
+    + (ap.ok
+      ? ""
+      : '<div class="refused-card">POST /v1/approvals → HTTP ' + ap.status + " "
+      + esc((ap.data || {}).status || "") + "：" + esc((ap.data || {}).message || "") + "</div>"));
+}
+function demoStep6() {
+  state.artifact = clone(state.positive);
+  renderDemoShell();
+  setStep(6, "done", "已重置", '<div class="pass-note">演示已重置：正例工件已载入，各步状态清零。</div>');
+}
+
+function renderDemoShell() {
+  $("#view-demo").innerHTML =
+    '<div style="margin-bottom:12px"><button class="btn sm" onclick="switchTab(\'assets\')">← 返回资产库</button></div>'
+    + '<div class="card"><h3>演示链：从「口径错误拦截」到「篡改失效」 <span class="hint">六步 · 每步真实调用后端 API</span></h3>'
+    + '<div style="font-size:12.5px;color:var(--muted);line-height:1.9;margin-bottom:16px">'
+    + "本演示链复现受控交付的关键能力：<b>错误被当场拦截</b> → <b>修订后双检通过</b> → <b>具名批准与内容指纹绑定</b> → <b>任何篡改使批准立即失效</b>。"
+    + "请按编号顺序点击各步按钮。</div>"
+    + '<div id="demo-steps"></div></div>';
+  demoStep(1, "载入正例工件", "口径正确版本：拨备覆盖率较上年末下降 20.19 个百分点。", "载入正例", demoStep1);
+  demoStep(2, "注入「%」口径草稿", "同一份年报把「个百分点」写成「%」——数值核验器应当场拦截。", "注入口径错误草稿", demoStep2);
+  demoStep(3, "采纳修订并双检重跑", "把「%」改回「个百分点」，数值与引用核验重跑。", "修订为「个百分点」", demoStep3);
+  demoStep(4, "具名批准交付", "批准记录绑定工件内容指纹（sha256），批准人 Alice。", "Alice 批准交付", demoStep4);
+  demoStep(5, "篡改检测：改动指标再申请批准", "把拨备覆盖率 391.79% 篡改为 391.99%，既有批准应立即失效、新批准被拒绝。", "篡改指标后申请批准", demoStep5);
+  demoStep(6, "重置演示", "恢复正例工件、清零步骤状态。", "重置演示", demoStep6);
+}
+
+/* ———————————————————— 初始化 ———————————————————— */
+async function init() {
+  try {
+    const [health, manifest, positive, banks] = await Promise.all([
+      jget("/health"), jget("/v1/snapshot/manifest"), jget("/demo/positive-artifact.json"), jget("/v1/banks")
+    ]);
+    state.health = health;
+    state.manifest = manifest;
+    state.positive = positive;
+    state.artifact = clone(positive);
+    state.citeArtifact = state.artifact;
+    state.banks = Array.isArray(banks) ? banks : [];
+    /* 各银行快照 manifest 并行装载（对话流按所选银行取指标索引/释义） */
+    const mans = await Promise.all(state.banks.map(b =>
+      jget("/v1/snapshot/manifest?bank=" + b.bank).then(m => [b.bank, m]).catch(() => [b.bank, manifest])));
+    state.manifests = Object.fromEntries(mans);
+    const hb = $("#health-badge");
+    if (health.status === "ok") { hb.className = "badge success"; hb.textContent = "服务正常"; }
+    else { hb.className = "badge warning"; hb.textContent = health.status || "状态未知"; }
+    $("#health-ver").textContent = "vNumericChecker " + (health.numeric_checker_version || "?")
+      + " · vCitationChecker " + (health.citation_checker_version || "?")
+      + " · 银行快照 " + state.banks.length + " 家";
+    const p46 = await jget("/v1/snapshot/pages/46");
+    state.y2024 = extract2024(p46.text);
+    state.y2024s = { cmb: state.y2024 };
+    ASSETS_RENDER = renderAssets();
+    renderDemoShell();
+    greet();
+    refreshTasks();
+  } catch (e) {
+    const hb = $("#health-badge");
+    hb.className = "badge destructive";
+    hb.textContent = "初始化失败";
+    addMsg("editor-in-chief", '<span style="color:var(--destructive)">初始化失败：' + esc(e.message) + "</span>");
+  }
+}
+init();
+
+initRunPanel();
+</script>
+</body>
+</html>

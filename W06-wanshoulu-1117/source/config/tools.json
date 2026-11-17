@@ -1,0 +1,214 @@
+{
+  "gateway": {
+    "name": "w06-tool-gateway",
+    "registry_note": "工具注册表唯一事实源：清单/参数/默认参数/样例参数全部配置驱动，前端 MCP 资产页经 GET /v1/tools 渲染，前端零硬编码",
+    "list_endpoint": "/v1/tools",
+    "call_endpoint": "POST /v1/tools/call",
+    "call_body": "{\"tool_name\": \"…\", \"arguments\": {…}}",
+    "discipline": "联网抓取产物必须经 snapshot_commit 落盘 + sha256 注册进信源注册表，才能被引用核验（C1/C2）与数值核验（N3）接受——抓得到与可引用之间有纪律门",
+    "data_capability": "0.3.8 数据能力补强：table_extract + table_analyze 把拍平财报表格结构化为真实数据表，pipeline 注入任务书并随工件输出"
+  },
+  "tools": [
+    {
+      "tool_id": "web_search",
+      "name": "web_search 联网搜索",
+      "description": "联网搜索公开信息：按配置引擎顺序容错（Bing HTML 端点为主引擎，DuckDuckGo 备选），返回标题/链接/摘要。搜索结果仅作线索，编制素材须经 snapshot_commit 落盘注册后方可引用。",
+      "params": [
+        {
+          "name": "query",
+          "type": "string",
+          "required": true,
+          "desc": "搜索关键词"
+        },
+        {
+          "name": "max_results",
+          "type": "integer",
+          "required": false,
+          "desc": "返回条数上限，默认 5，上限 10"
+        }
+      ],
+      "default_args": {
+        "engines": [
+          "bing",
+          "duckduckgo"
+        ],
+        "timeout_ms": 10000
+      },
+      "sample_args": {
+        "query": "工商银行 2024 年度报告 巨潮",
+        "max_results": 5
+      }
+    },
+    {
+      "tool_id": "web_fetch",
+      "name": "web_fetch 网页抓取",
+      "description": "抓取 URL 并抽取正文：HTML 剔除 script/style 与全部标签后取正文文本，实体解码，限长截断（默认 4000 字，上限 20000）。",
+      "params": [
+        {
+          "name": "url",
+          "type": "string",
+          "required": true,
+          "desc": "目标 URL（http/https，跟随重定向）"
+        },
+        {
+          "name": "max_chars",
+          "type": "integer",
+          "required": false,
+          "desc": "正文限长，默认 4000，上限 20000"
+        }
+      ],
+      "default_args": {
+        "timeout_ms": 15000
+      },
+      "sample_args": {
+        "url": "https://www.gov.cn",
+        "max_chars": 1500
+      }
+    },
+    {
+      "tool_id": "pdf_extract",
+      "name": "pdf_extract PDF 抽取",
+      "description": "下载 PDF 并逐页抽取文本（Apache PDFBox，jar 随 deploy/libs 分发）。单次最多 20 页，返回 total_page_count 供 from_page/to_page 分批续传。",
+      "params": [
+        {
+          "name": "url",
+          "type": "string",
+          "required": true,
+          "desc": "PDF 直链（http/https，≤60MB）"
+        },
+        {
+          "name": "from_page",
+          "type": "integer",
+          "required": false,
+          "desc": "起始页（1 起算），默认 1"
+        },
+        {
+          "name": "to_page",
+          "type": "integer",
+          "required": false,
+          "desc": "结束页（含），默认 from+19 与总页数取小"
+        }
+      ],
+      "default_args": {
+        "timeout_ms": 60000
+      },
+      "sample_args": {
+        "url": "http://static.cninfo.com.cn/finalpage/2025-04-26/1223312132.PDF",
+        "from_page": 3,
+        "to_page": 4
+      }
+    },
+    {
+      "tool_id": "snapshot_commit",
+      "name": "snapshot_commit 快照注册",
+      "description": "把抓取产物（web_fetch / pdf_extract 的 pages）落盘为快照页（/snapshot/live，独立快照集，冻结演示快照 cmb/icbc/ccb 零改动）+ sha256 注册进信源注册表。注册后引用核验 C1/C2 与数值核验 N3 即刻可用。",
+      "params": [
+        {
+          "name": "url",
+          "type": "string",
+          "required": true,
+          "desc": "真实来源 URL（写入 origin_url，不再是快照假地址）"
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "desc": "信源标题"
+        },
+        {
+          "name": "pages",
+          "type": "array",
+          "required": true,
+          "desc": "页文本数组 [{\"text\": …, \"origin_page\": 原始页码?}]"
+        },
+        {
+          "name": "authority",
+          "type": "string",
+          "required": false,
+          "desc": "信源权威级：PRIMARY_OFFICIAL / SECONDARY_INSTITUTIONAL / TERTIARY_AGGREGATED，默认 TERTIARY_AGGREGATED"
+        }
+      ],
+      "default_args": {},
+      "sample_args": {
+        "url": "http://static.cninfo.com.cn/finalpage/2025-04-26/1223312132.PDF",
+        "title": "工商银行 2024 年度报告（巨潮法定披露平台）",
+        "authority": "PRIMARY_OFFICIAL",
+        "pages": [
+          {
+            "text": "示例：本页文本须来自 web_fetch / pdf_extract 的真实抓取产物，逐字落盘。",
+            "origin_page": 3
+          }
+        ]
+      }
+    },
+    {
+      "tool_id": "table_extract",
+      "name": "table_extract 表格结构化抽取",
+      "description": "从已落盘快照页原文中抽取结构化财报表格：识别表头年份/项目名/数字列，把被 PDF 拍平的表格还原为「表-行-单元格」结构，逐格保留原文数值（千分位/括号负数/%）。数据能力补强核心工具：让报告可以用真实数据表支撑论断。参数 bank 缺省 live，pages 不传则全扫描。",
+      "params": [
+        {
+          "name": "bank",
+          "type": "string",
+          "required": false,
+          "desc": "快照集：live（默认，联网抓取落盘）/ icbc / cmb / ccb"
+        },
+        {
+          "name": "pages",
+          "type": "array",
+          "required": false,
+          "desc": "页号数组，如 [15,16,73]；不传则扫描全部分页"
+        },
+        {
+          "name": "page",
+          "type": "integer",
+          "required": false,
+          "desc": "单页快捷参数（与 pages 二选一）"
+        }
+      ],
+      "default_args": {
+        "bank": "live"
+      },
+      "sample_args": {
+        "bank": "live",
+        "pages": [
+          15,
+          73
+        ]
+      }
+    },
+    {
+      "tool_id": "table_analyze",
+      "name": "table_analyze 数据汇总分析",
+      "description": "对结构化表做确定性汇总分析：同比变动额/增长率（给算式）、占比结构排序、合计校验。派生值全部来自脚本复算并附 formula，遵循「数字照抄原文、派生值来自脚本」纪律。不传 tables 时先对 pages 抽取再分析。",
+      "params": [
+        {
+          "name": "tables",
+          "type": "array",
+          "required": false,
+          "desc": "table_extract 产出的 tables 数组；不传则按 pages 现场抽取"
+        },
+        {
+          "name": "pages",
+          "type": "array",
+          "required": false,
+          "desc": "页号数组（tables 缺失时使用）"
+        },
+        {
+          "name": "bank",
+          "type": "string",
+          "required": false,
+          "desc": "快照集，默认 live"
+        }
+      ],
+      "default_args": {
+        "bank": "live"
+      },
+      "sample_args": {
+        "pages": [
+          15,
+          73
+        ]
+      }
+    }
+  ]
+}

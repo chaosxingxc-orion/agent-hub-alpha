@@ -1,0 +1,34 @@
+{
+ "company": "招商银行",
+ "period": "2025年度",
+ "sources": [
+  {
+   "source_id": "cmb-ar-2025-primary",
+   "title": "招商银行2025年报节选",
+   "authority": "PRIMARY_OFFICIAL",
+   "origin_url": "demo",
+   "fetched_at": "2026-11-16",
+   "content_sha256": "demo",
+   "pages": "12,45"
+  },
+  {
+   "source_id": "cmb-ar-2024-comparison",
+   "title": "招商银行2024年报对比",
+   "authority": "PRIMARY_OFFICIAL",
+   "origin_url": "demo",
+   "fetched_at": "2026-11-16",
+   "content_sha256": "demo",
+   "pages": "46"
+  }
+ ],
+ "metric_index": {
+  "OPERATING_REVENUE": 12,
+  "NET_PROFIT_ATTRIBUTABLE": 12,
+  "NET_INTEREST_MARGIN": 12,
+  "COST_INCOME_RATIO": 12,
+  "NPL_BALANCE": 45,
+  "NPL_RATIO": 45,
+  "PROVISION_COVERAGE": 45,
+  "CET1_RATIO": 45
+ }
+}

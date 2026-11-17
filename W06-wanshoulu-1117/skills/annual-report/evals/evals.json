@@ -1,0 +1,50 @@
+{
+ "skill_name": "annual-report",
+ "evals": [
+  {
+   "id": 1,
+   "prompt": "对招商银行 2025 年报快照生成经营与资产质量简报，八指标全部核验通过后交付",
+   "expected_output": "AnnualReportArtifacts 工件；verify_metrics.py 与 check_citation.py 均 PASSED",
+   "files": [
+    "evals/case-ok.json",
+    "evals/snapshot-mini"
+   ]
+  },
+  {
+   "id": 2,
+   "prompt": "核验这份报告：营业收入单位写成万元，核心一级资本充足率被改为 999.99",
+   "expected_output": "verify_metrics.py FAILED：UNIT_MISMATCH + FABRICATED_NUMBER（及连带 CALC_MISMATCH）",
+   "files": [
+    "evals/case-unit-mismatch.json"
+   ]
+  },
+  {
+   "id": 3,
+   "prompt": "正文宣称营业收入同比增长 5%，核验是否属实",
+   "expected_output": "YOY_MISMATCH BLOCKING：复算 0.83% vs 宣称 5%",
+   "files": [
+    "evals/case-yoy-mismatch.json"
+   ]
+  },
+  {
+   "id": 4,
+   "prompt": "核验引用：论断含 2025 年但证据摘录无期间信息",
+   "expected_output": "PARTIAL_SUPPORT WARNING → WAITING_HUMAN（不由 judge 放行）",
+   "files": []
+  },
+  {
+   "id": 5,
+   "prompt": "核验一条指向第 99 页的引用",
+   "expected_output": "FABRICATED_CITATION + SOURCE_UNREGISTERED 双违规 BLOCKING",
+   "files": []
+  },
+  {
+   "id": 6,
+   "prompt": "核验这份报告：不良贷款率从 0.95% 降至 0.94%，正文写「不良贷款率下降 0.01%」",
+   "expected_output": "verify_metrics.py FAILED：DELTA_UNIT_MISMATCH BLOCKING（比率变动须用个百分点）",
+   "files": [
+    "evals/case-delta-unit-mismatch.json"
+   ]
+  }
+ ]
+}

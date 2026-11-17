@@ -1,0 +1,485 @@
+{
+ "schema": "w06.alk05.annual-report@1.0.0",
+ "note": "能力知识卡（ALK）：年报场景包。每卡四元组——id+描述 / applies_to（何时该用）/ constraints（何时不该用）/ 版本。主 Agent 规划期消费：召回看 id+applies_to，过滤看 constraints，组装绑定 version。与注册表解耦：RDC 管'能不能调到'，本卡管'该不该用'。",
+ "capabilities": [
+  {
+   "id": "material-agent",
+   "version": "1.0.0",
+   "kind": "TOOL",
+   "description": "信源快照装载与页读取，编制资料导入的唯一入口",
+   "applies_to": {
+    "scenario": [
+     "年报",
+     "季报",
+     "半年报"
+    ],
+    "operations": [
+     "快照装载",
+     "页文本读取",
+     "指标索引"
+    ]
+   },
+   "constraints": {
+    "scope": "冻结快照内",
+    "note": "无网络路径，快照外信息一律不取"
+   },
+   "inputs": {
+    "read_page": {
+     "page": "int",
+     "bank": "string?"
+    }
+   },
+   "outputs": {
+    "triple": "digest/page/excerpt"
+   }
+  },
+  {
+   "id": "metrics-agent",
+   "version": "1.0.0",
+   "kind": "TOOL",
+   "description": "八指标结构化抽取：值照抄原文（含千分位）",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "operations": [
+     "指标抽取"
+    ],
+    "metrics": "ALL_8"
+   },
+   "constraints": {
+    "caliber": "集团合并口径",
+    "period": "2025年度+2024对比"
+   },
+   "inputs": {
+    "source": "material 输出三元组"
+   },
+   "outputs": {
+    "metrics": "MetricValue[8] 含三元组"
+   }
+  },
+  {
+   "id": "finance-analyst",
+   "version": "1.0.0",
+   "kind": "ANALYST",
+   "description": "经营业绩与盈利结构分析",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "sections": [
+     "总体经营",
+     "利润表",
+     "资产负债表",
+     "收入结构",
+     "上年同期对比"
+    ],
+    "metrics": [
+     "OPERATING_REVENUE",
+     "NET_PROFIT_ATTRIBUTABLE",
+     "NET_INTEREST_MARGIN",
+     "COST_INCOME_RATIO"
+    ]
+   },
+   "constraints": {
+    "caliber": "仅集团合并口径——母公司口径任务必须排除本能力（ALK-05 验收用例）",
+    "input_isolation": "只消费注入指标子集"
+   },
+   "inputs": {
+    "metrics_subset": "骨架 metric_keys 声明的经营类指标"
+   },
+   "outputs": {
+    "draft": "带 [C-n] 引用的分节草稿"
+   }
+  },
+  {
+   "id": "risk-analyst",
+   "version": "1.0.0",
+   "kind": "ANALYST",
+   "description": "贷款质量与风险抵补分析",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "sections": [
+     "贷款质量"
+    ],
+    "metrics": [
+     "NPL_BALANCE",
+     "NPL_RATIO",
+     "PROVISION_COVERAGE"
+    ]
+   },
+   "constraints": {
+    "caliber": "仅集团合并口径",
+    "input_isolation": "只消费资产质量三指标"
+   },
+   "inputs": {
+    "metrics_subset": [
+     "NPL_BALANCE",
+     "NPL_RATIO",
+     "PROVISION_COVERAGE"
+    ]
+   },
+   "outputs": {
+    "draft": "带 [C-n] 引用的贷款质量草稿"
+   }
+  },
+  {
+   "id": "capital-analyst",
+   "version": "1.0.0",
+   "kind": "ANALYST",
+   "description": "资本充足分析（高级法/权重法 CET1 口径）",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "sections": [
+     "资本充足"
+    ],
+    "metrics": [
+     "CET1_RATIO"
+    ]
+   },
+   "constraints": {
+    "caliber": "仅集团合并口径",
+    "input_isolation": "只消费 CET1"
+   },
+   "inputs": {
+    "metrics_subset": [
+     "CET1_RATIO"
+    ]
+   },
+   "outputs": {
+    "draft": "带 [C-n] 引用的资本充足草稿"
+   }
+  },
+  {
+   "id": "writer-agent",
+   "version": "1.0.0",
+   "kind": "WRITER",
+   "description": "按骨架模板结构化成稿，metrics 原样转抄",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "operations": [
+     "成稿"
+    ],
+    "join": "等全部前驱分析草稿"
+   },
+   "constraints": {
+    "no_invention": "论断只来自上游草稿，metrics 一字不改"
+   },
+   "inputs": {
+    "drafts": "分析草稿集",
+    "template": "report-structure.json"
+   },
+   "outputs": {
+    "artifact": "AnnualReportArtifacts JSON"
+   }
+  },
+  {
+   "id": "numeric-checker",
+   "version": "0.3.0",
+   "kind": "CHECKER",
+   "description": "N1-N7 数值纪律确定性核验（结论绑定工件指纹）",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "operations": [
+     "交付前核验"
+    ],
+    "always_in_graph": true
+   },
+   "constraints": {
+    "zero_llm": "纯代码复算",
+    "fail_closed": "FAILED 阻断交付"
+   },
+   "inputs": {
+    "artifact": "AnnualReportArtifacts"
+   },
+   "outputs": {
+    "verdict": "CheckResult 含 artifact_sha256"
+   }
+  },
+  {
+   "id": "citation-checker",
+   "version": "0.3.0",
+   "kind": "CHECKER",
+   "description": "引用溯源核验：三元组比对+信源注册表+支持度三级",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "operations": [
+     "交付前核验"
+    ],
+    "always_in_graph": true
+   },
+   "constraints": {
+    "zero_llm": "纯比对",
+    "fail_closed": "语义灰区 PARTIAL→转人工"
+   },
+   "inputs": {
+    "artifact": "AnnualReportArtifacts"
+   },
+   "outputs": {
+    "verdict": "CheckResult 含 artifact_sha256"
+   }
+  },
+  {
+   "id": "approver",
+   "version": "1.0.0",
+   "kind": "APPROVER",
+   "description": "具名批准交付（绑定工件指纹，独立于编排链）",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "operations": [
+     "交付批准"
+    ],
+    "precondition": "双核验 PASSED"
+   },
+   "constraints": {
+    "independent": "不可被主编分派/移出（E02）",
+    "digest_bound": "改内容批准即失效"
+   },
+   "inputs": {
+    "verdicts": "双 PASSED 核验结论"
+   },
+   "outputs": {
+    "approval": "具名批准记录"
+   }
+  },
+  {
+   "id": "mcp:w06-compute",
+   "version": "1.0.0",
+   "kind": "MCP",
+   "description": "派生计算服务：eval_expression 安全算式求值 / yoy_calc 同比计算",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "operations": [
+     "派生值计算"
+    ],
+    "consumers": [
+     "finance-analyst",
+     "risk-analyst",
+     "capital-analyst"
+    ]
+   },
+   "constraints": {
+    "no_mental_math": "分析节点派生值一律经本工具，不心算"
+   },
+   "inputs": {
+    "expression": "仅数字与四则运算"
+   },
+   "outputs": {
+    "result": "数值+算式回显"
+   }
+  },
+  {
+   "id": "mcp:w06-snapshot",
+   "version": "1.0.0",
+   "kind": "MCP",
+   "description": "年报快照服务：read_page / list_metrics_index / get_manifest",
+   "applies_to": {
+    "scenario": [
+     "年报",
+     "季报"
+    ],
+    "operations": [
+     "取数",
+     "回查原文"
+    ]
+   },
+   "constraints": {
+    "scope": "冻结快照内",
+    "bank_param": "cmb/icbc/ccb 可选定向"
+   },
+   "inputs": {
+    "page": "int",
+    "bank": "string?"
+   },
+   "outputs": {
+    "page_text": "页原文"
+   }
+  },
+  {
+   "id": "chart-agent",
+   "version": "1.0.0",
+   "kind": "RENDERER",
+   "description": "受控图表绘制：按图表数据文件与骨架挂载节位渲染内联 SVG，只渲染不改数",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "operations": [
+     "图表渲染"
+    ],
+    "consumers": [
+     "writer-agent"
+    ]
+   },
+   "constraints": {
+    "no_invention": "图表数据必须来自指标工件，禁自行取数"
+   },
+   "inputs": {
+    "charts": "工件 charts 字段（bar/line/pie/flow 规格）"
+   },
+   "outputs": {
+    "svg": "内联 SVG 图表产物"
+   }
+  },
+  {
+   "id": "disclosure-officer",
+   "version": "1.0.0",
+   "kind": "ANALYST",
+   "description": "披露规范审查：口径铁律、释义与脚注体例（纯合规审查，不兼任主笔）",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "operations": [
+     "披露合规审查"
+    ],
+    "sections": [
+     "释义与重要提示",
+     "重要事项"
+    ]
+   },
+   "constraints": {
+    "advisory": "审查结论供 writer 修订参考；不阻断交付（阻断由双 checker 负责）"
+   },
+   "inputs": {
+    "draft": "工件或草稿"
+   },
+   "outputs": {
+    "findings": "合规审查意见清单"
+   }
+  },
+  {
+   "id": "mcp:w06-artifacts",
+   "version": "1.0.0",
+   "kind": "MCP",
+   "description": "工件登记与查询：任务登记/工件存取/digest 计算（内容寻址）",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "operations": [
+     "工件登记",
+     "digest 计算"
+    ],
+    "consumers": [
+     "writer-agent",
+     "approver"
+    ]
+   },
+   "constraints": {
+    "digest_bound": "工件/批准均绑定 sha256 指纹"
+   },
+   "inputs": {},
+   "outputs": {}
+  },
+  {
+   "id": "mcp:w06-approval",
+   "version": "1.0.0",
+   "kind": "MCP",
+   "description": "交付批准：具名批准/查询批准记录（绑定工件 digest）",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "operations": [
+     "交付批准",
+     "批准查询"
+    ],
+    "consumers": [
+     "approver"
+    ]
+   },
+   "constraints": {
+    "digest_bound": "工件/批准均绑定 sha256 指纹"
+   },
+   "inputs": {},
+   "outputs": {}
+  },
+  {
+   "id": "mcp:w06-checker",
+   "version": "1.0.0",
+   "kind": "MCP",
+   "description": "核验服务 MCP 面：check_numeric/check_citation/verify_artifact（与 Java checker 三形态同源）",
+   "applies_to": {
+    "scenario": [
+     "年报"
+    ],
+    "operations": [
+     "核验调用"
+    ],
+    "consumers": [
+     "writer-agent",
+     "numeric-checker",
+     "citation-checker"
+    ]
+   },
+   "constraints": {
+    "zero_llm": "确定性核验",
+    "fail_closed": "FAILED 阻断交付"
+   },
+   "inputs": {
+    "artifact": "AnnualReportArtifacts"
+   },
+   "outputs": {
+    "verdict": "CheckResult 含 artifact_sha256+execution_o"
+   }
+  },
+  {
+   "id": "editor-in-chief",
+   "version": "1.0.0",
+   "kind": "ORCHESTRATOR",
+   "description": "主编编排智能体（图生成者）：澄清任务→四步纪律生成候选图→汇总交付；分派由图驱动",
+   "applies_to": {
+    "scenario": [
+     "年报",
+     "季报"
+    ],
+    "operations": [
+     "任务受理",
+     "候选图生成",
+     "交付汇总"
+    ]
+   },
+   "constraints": {
+    "not_selectable": "本卡是编排者自描述——不可被选为图节点（图生成者不进自己生成的图）"
+   },
+   "inputs": {
+    "task": "用户任务描述"
+   },
+   "outputs": {
+    "candidate_graph": "候选图{digest}+选择记录"
+   }
+  }
+ ],
+ "selection_records": [
+  {
+   "case": "full-report",
+   "file": "case-full-report.json",
+   "note": "完整年报任务→完整图；全部能力入选（无口径冲突）"
+  },
+  {
+   "case": "quality-focus",
+   "file": "case-quality-focus.json",
+   "note": "资产质量重点→图裁剪掉经营/资本节点（有依据差异，ALK-05 用例1）"
+  },
+  {
+   "case": "parent-company-caliber",
+   "file": "case-rejected.json",
+   "note": "母公司口径→三个分析能力按 constraints 排除（高分不适用，ALK-05 用例2）"
+  }
+ ]
+}

@@ -1,0 +1,104 @@
+# W06 部署编排（Agent Bus 内部网络，不映射宿主端口）
+#
+# 调用路径（v2 §2）：Runtime(既有 Graph 执行器) → Agent Bus Gateway/RDC → 本项目各容器。
+# 本 compose 只起 W06 职责内的服务；Go Control / java-runtime / rdc / gateway 由
+# demo 主 compose（W04/W05/W07）提供，此处以 external network 接入。
+
+name: w06-annual-report
+
+networks:
+  control-net:
+    external: true        # 由主 demo compose 创建（internal: true）
+  w06-net:
+    internal: true         # W06 内部：角色 agent 之间也不互通，只经 gateway 调用
+
+volumes:
+  annual-report-snapshot:  # W01 冻结的招商银行 2025 年报快照（manifest + pages/）
+
+services:
+  # ---- 专业角色（A2A 暴露，经 RDC 注册；进程数量与能力角色分别登记） ----
+  material-agent:
+    build: ../agents
+    environment: &agent-env
+      LLM_PROVIDER: ${W06_LLM_PROVIDER:-OpenAI}
+      LLM_API_KEY: ${W06_LLM_API_KEY_FILE:/run/secrets/llm-key}   # 密钥不进镜像/日志（#16 How|5）
+      LLM_API_BASE: ${W06_LLM_API_BASE:-https://dashscope.aliyuncs.com/compatible-mode/v1}   # qwen OpenAI 兼容端点（10:12 实测）
+      LLM_MODEL: ${W06_LLM_MODEL:-qwen-plus}
+      LLM_MODEL_FLASH: ${W06_LLM_MODEL_FLASH:-qwen3.8-flash}
+    volumes:
+      - annual-report-snapshot:/snapshot:ro                        # 只读快照
+    networks: [w06-net]
+    deploy:
+      resources:
+        limits: { memory: 512M }                                   # 共享机资源约束（容量审计结论）
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://localhost:18094/a2a/.well-known/agent-card.json"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  metrics-agent:
+    build: ../agents
+    networks: [w06-net]
+    deploy:
+      resources:
+        limits: { memory: 512M }
+
+  operation-agent:
+    build: ../agents
+    networks: [w06-net]
+    deploy:
+      resources:
+        limits: { memory: 512M }
+
+  asset-quality-agent:
+    build: ../agents
+    networks: [w06-net]
+    deploy:
+      resources:
+        limits: { memory: 512M }
+
+  writer-agent:
+    build: ../agents
+    networks: [w06-net]
+    deploy:
+      resources:
+        limits: { memory: 512M }
+
+  # ---- 编排 root + 门禁 ----
+  orchestrator:
+    build: ../agent-orchestrator
+    environment:
+      <<: *agent-env
+      MATERIAL_AGENT_URL: http://material-agent:18094
+      METRICS_AGENT_URL: http://metrics-agent:18094
+      OPERATION_AGENT_URL: http://operation-agent:18094
+      ASSET_QUALITY_AGENT_URL: http://asset-quality-agent:18094
+      WRITER_AGENT_URL: http://writer-agent:18094
+      CRITIC_AGENT_URL: http://critic:18094
+      W06_GATEKEEP_MAX_ROUNDS: "1"        # 与采纳图 revision_gate 预声明一致
+    volumes:
+      - w06-workspace:/workspace
+    networks: [w06-net, control-net]      # 桥接到 control-net 供 Gateway 调用
+    deploy:
+      resources:
+        limits: { memory: 768M }
+
+  # ---- 确定性核验（无模型；数字与引用的第一道死关卡） ----
+  checker:
+    build: ../checker
+    networks: [w06-net]
+    deploy:
+      resources:
+        limits: { memory: 256M }
+
+  # ---- 语义支持度判定（L2 Critic；temperature=0） ----
+  critic:
+    build: ../checker
+    networks: [w06-net]
+    deploy:
+      resources:
+        limits: { memory: 512M }
+
+volumes:
+  w06-workspace:

@@ -1,0 +1,140 @@
+<svg viewBox="0 0 680 1420" width="100%" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>W06 技术方案 v3.0 完整架构图</title>
+  <desc>四层全组件：主Agent知识包与候选图、Go/PG控制面、BlueprintScheduler运行面、W06六节点执行层与三接口契约</desc>
+  <defs>
+    <marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <style>
+    .ts{font:12px sans-serif;fill:#555}.th{font:14px sans-serif;font-weight:500;fill:#222}
+    .arr{stroke:#5F5E5A;stroke-width:1.5;fill:none}.leader{stroke:#888780;stroke-width:.5;stroke-dasharray:4 3;fill:none}
+  </style>
+  <text class="th" x="40" y="26" style="font-size:15px">W06 技术方案 v3.0 完整架构：主 Agent 生成图 → Go 冻结 → Runtime 推进 → W06 专家执行 → 谓词交付</text>
+  <rect x="40" y="44" width="600" height="270" rx="12" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text class="th" x="52" y="64">W02 用户协作层 · 主 Agent（图的唯一生成者）</text>
+  <rect x="56" y="78" width="184" height="76" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="148" y="98" text-anchor="middle">WorkSwarm 对话/编排台</text>
+  <text class="ts" x="64" y="118">任务澄清 · 图卡确认{digest} · 交付验收</text>
+  <text class="ts" x="64" y="134">只读投影（SSE）· 零状态权</text>
+  <rect x="252" y="78" width="380" height="76" rx="8" fill="#EEEDFE" stroke="#7F77DD" stroke-width="0.5"/>
+  <text class="th" x="442" y="98" text-anchor="middle">主 Agent · 四步纪律生成候选图</text>
+  <text class="ts" x="262" y="118">①召回→②适用性（constraints 排除）→③排序→④选择组装</text>
+  <text class="ts" x="262" y="134">候选图{digest}+选择记录 · 不采纳不执行不批准</text>
+  <rect x="56" y="166" width="576" height="136" rx="10" fill="#CECBF6" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text class="th" x="66" y="186">orchestrator-skill 主 Agent 知识包（四类知识）</text>
+  <text class="ts" x="66" y="206">能力知识：三注册表（Agent13/Skill7/MCP5×12）+ 能力卡四元组（id/applies_to/constraints/@v）</text>
+  <text class="ts" x="66" y="222">专业知识 domain-brief · 流程方法 planning-method（四步纪律+失败三态）</text>
+  <text class="ts" x="66" y="238">规范约束 constraints（Go 会拒什么）· 案例经验 evals 三例（ALK-05 全覆盖）</text>
+  <text class="ts" x="66" y="258">知识卡与注册表解耦：RDC 管"能不能调到"，能力卡管"该不该用"</text>
+  <text class="ts" x="66" y="292">渐进披露：目录常驻→正文触发→脚本执行时</text>
+  <line x1="150" y1="314" x2="150" y2="352" class="arr" marker-end="url(#a1)"/>
+  <text class="ts" x="165" y="338">①命令（commandId 幂等）</text>
+  <line x1="520" y1="352" x2="520" y2="314" class="arr" stroke="#185FA5" marker-end="url(#a2)"/>
+  <text class="ts" x="535" y="338">②只读投影</text>
+  <rect x="40" y="352" width="600" height="238" rx="12" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text class="th" x="52" y="372">W04 控制/事实层（Go + PG · yougq 已交付 08e2e40 · 唯一提交权）</text>
+  <rect x="56" y="386" width="180" height="88" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text class="th" x="146" y="404" text-anchor="middle">命令幂等服务</text>
+  <text class="ts" x="64" y="424">同 cmdId 同内容→原回执（A03）</text>
+  <text class="ts" x="64" y="440">改内容→409（A04）· E02 伪造→拒</text>
+  <rect x="246" y="386" width="180" height="88" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text class="th" x="336" y="404" text-anchor="middle">图采纳服务</text>
+  <text class="ts" x="254" y="424">schema→能力+版本→依赖→循环→预算</text>
+  <text class="ts" x="254" y="440">确认 digest→冻结 T/g · 漂移→拒</text>
+  <rect x="436" y="386" width="196" height="88" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text class="th" x="534" y="404" text-anchor="middle">执行许可+结果/审计</text>
+  <text class="ts" x="444" y="424">lease+epoch · effect token（E06/E07）</text>
+  <text class="ts" x="444" y="440">o=(T,g,path,iter) 唯一 · 复用/冲突/UNKNOWN</text>
+  <rect x="56" y="486" width="576" height="92" rx="8" fill="#9FE1CB" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text class="th" x="66" y="506">PostgreSQL 权威账本 + 交付谓词</text>
+  <text class="ts" x="66" y="526">graph_revisions · node_attempts · committed_results · outbox · checks · approvals · audit_log</text>
+  <text class="ts" x="66" y="544">Deliverable ⟺ numeric∧citation∧confirm ∧ 三记录绑定同一 artifact_sha256</text>
+  <text class="ts" x="66" y="562">接口3：checks 表消费 W06 带 digest 结论（N3 后）· 接口2：Contract-C 身份</text>
+  <line x1="340" y1="590" x2="340" y2="628" class="arr" marker-end="url(#a1)"/>
+  <text class="ts" x="355" y="612">③采纳图 T/g + dispatch</text>
+  <rect x="40" y="628" width="600" height="180" rx="12" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="52" y="648">W03 运行推进层（BlueprintScheduler · yougq 已交付 · 唯一推进权）</text>
+  <rect x="56" y="662" width="280" height="130" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="196" y="682" text-anchor="middle">调度循环</text>
+  <text class="ts" x="66" y="702">ready(n) ⟺ ∀p∈pred(n): Committed(p)</text>
+  <text class="ts" x="66" y="718">并行组同时派发 · join 等全齐 · 修订环×1</text>
+  <text class="ts" x="66" y="734">DAG 无环→结构性不可能死循环</text>
+  <text class="ts" x="66" y="754">接口2：W06 节点携 o 身份（Contract-C）</text>
+  <text class="ts" x="66" y="770">checkpoint≠业务成功，Go ack 才算</text>
+  <rect x="348" y="662" width="284" height="130" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="490" y="682" text-anchor="middle">故障恢复（S03-S09 已验）</text>
+  <text class="ts" x="358" y="702">kill→读账本续跑 · 增量=0（S03）</text>
+  <text class="ts" x="358" y="718">双 worker→epoch 栅栏（先查重后代次）</text>
+  <text class="ts" x="358" y="734">回执丢失→按 b 补记 · UNKNOWN→人工</text>
+  <line x1="230" y1="808" x2="230" y2="846" class="arr" marker-end="url(#a1)"/>
+  <text class="ts" x="52" y="830">④effect token 经 Gateway</text>
+  <line x1="460" y1="846" x2="460" y2="808" class="arr" stroke="#185FA5" marker-end="url(#a2)"/>
+  <text class="ts" x="475" y="830">⑤observation 回流</text>
+  <rect x="40" y="846" width="600" height="348" rx="12" fill="#FAECE7" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="52" y="866">W05/W06 专业执行层（六节点 · A2A 挂 RDC · 干活权 · 零提交权）</text>
+  <rect x="56" y="880" width="126" height="96" rx="8" fill="#FAECE7" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="119" y="898" text-anchor="middle">material-agent</text>
+  <text class="ts" x="62" y="918">快照装载唯一入口</text>
+  <text class="ts" x="62" y="934">read_page{bank,page}</text>
+  <text class="ts" x="62" y="950">三元组 · 缺料如实报</text>
+  <line x1="182" y1="928" x2="194" y2="928" class="arr" marker-end="url(#a1)"/>
+  <rect x="196" y="880" width="126" height="96" rx="8" fill="#FAECE7" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="259" y="898" text-anchor="middle">metrics-agent</text>
+  <text class="ts" x="202" y="918">八指标结构化抽取</text>
+  <text class="ts" x="202" y="934">值照抄原文含千分位</text>
+  <text class="ts" x="202" y="950">单位白名单（N2）</text>
+  <line x1="322" y1="928" x2="334" y2="928" class="arr" marker-end="url(#a1)"/>
+  <rect x="336" y="880" width="140" height="96" rx="8" fill="#FAECE7" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="406" y="898" text-anchor="middle">finance ∥ risk ∥ capital</text>
+  <text class="ts" x="342" y="918">三分析并行（隔离注入）</text>
+  <text class="ts" x="342" y="934">互斥越界→citation 拦截</text>
+  <text class="ts" x="342" y="950">派生值调 MCP 不心算</text>
+  <line x1="476" y1="928" x2="488" y2="928" class="arr" marker-end="url(#a1)"/>
+  <rect x="490" y="880" width="142" height="96" rx="8" fill="#FAECE7" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="561" y="898" text-anchor="middle">writer（join）</text>
+  <text class="ts" x="496" y="918">等全部分析草稿（R2 新上）</text>
+  <text class="ts" x="496" y="934">metrics 原样转抄</text>
+  <text class="ts" x="496" y="950">AnnualReportArtifacts</text>
+  <line x1="340" y1="976" x2="340" y2="998" class="arr" marker-end="url(#a1)"/>
+  <rect x="150" y="998" width="180" height="96" rx="8" fill="#FAECE7" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="240" y="1016" text-anchor="middle">numeric-checker（N1-N7）</text>
+  <text class="ts" x="158" y="1036">完整性/单位/溯源/复算/同比</text>
+  <text class="ts" x="158" y="1052">/百分点口径（N7 新增）</text>
+  <text class="ts" x="158" y="1068">+artifact_sha256（N3）+o（N5）</text>
+  <rect x="350" y="998" width="180" height="96" rx="8" fill="#FAECE7" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="440" y="1016" text-anchor="middle">citation-checker</text>
+  <text class="ts" x="358" y="1036">三元组比对+信源注册表</text>
+  <text class="ts" x="358" y="1052">支持度三级（PARTIAL→人工）</text>
+  <text class="ts" x="358" y="1068">双 PASSED 才可进批准</text>
+  <rect x="150" y="1106" width="380" height="74" rx="8" fill="#FAECE7" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="340" y="1126" text-anchor="middle">approver 具名批准官（R5 独立于主编）</text>
+  <text class="ts" x="158" y="1146">批准绑定 digest · 改内容即失效（E03/E02）· 回流 approvals 表</text>
+  <rect x="56" y="1106" width="80" height="74" rx="8" fill="#F5C4B3" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="96" y="1130" text-anchor="middle">⑤回流</text>
+  <text class="ts" x="96" y="1148" text-anchor="middle">checks/</text>
+  <text class="ts" x="96" y="1162" text-anchor="middle">approvals</text>
+  <rect x="56" y="1198" width="576" height="84" rx="10" fill="#F5C4B3" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="66" y="1218">节点内自治单元 + 治理面（线上工作台 18083）</text>
+  <text class="ts" x="66" y="1238">Agent Loop + Skill 五件套（渐进披露）+ GatekeepRail（fail-closed 修订×1→人工）</text>
+  <text class="ts" x="66" y="1254">+ MCP 5 server 12 工具（JSON-RPC 全限定名，bind 即装配）</text>
+  <text class="ts" x="66" y="1270">工作台：三注册表 + 装配引擎 + 装配查询 + 运行轨迹面板</text>
+  <rect x="56" y="1300" width="180" height="76" rx="8" fill="#EAF3DE" stroke="#97C459" stroke-width="0.5"/>
+  <text class="th" x="146" y="1320" text-anchor="middle">Agent Bus Gateway（W05）</text>
+  <text class="ts" x="64" y="1340">验 token/epoch/payload</text>
+  <text class="ts" x="64" y="1356">目录≠授权</text>
+  <rect x="248" y="1300" width="180" height="76" rx="8" fill="#EAF3DE" stroke="#97C459" stroke-width="0.5"/>
+  <text class="th" x="338" y="1320" text-anchor="middle">RDC 注册中心（W05）</text>
+  <text class="ts" x="256" y="1340">真实 AgentCard@版本</text>
+  <text class="ts" x="256" y="1356">接口1：六节点注册于此</text>
+  <rect x="440" y="1300" width="192" height="76" rx="8" fill="#EAF3DE" stroke="#97C459" stroke-width="0.5"/>
+  <text class="th" x="536" y="1320" text-anchor="middle">Model Proxy（唯一外呼）</text>
+  <text class="ts" x="448" y="1340">LLM 调用=子 effect</text>
+  <text class="ts" x="448" y="1356">前置授权+缓存</text>
+  <line x1="236" y1="1338" x2="248" y2="1338" class="leader"/>
+  <line x1="428" y1="1338" x2="440" y2="1338" class="leader"/>
+  <text class="ts" x="40" y="1402">三权分立：推进权=W03 · 提交权=W04 · 干活权=W06 | 智能在两头，确定性在中间</text>
+</svg>
