@@ -2,7 +2,7 @@
 // verification results and a detail panel for the clicked node.
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Background, Controls, ReactFlow, useReactFlow, type Node } from "@xyflow/react";
-import { CircleCheck, CircleX, RotateCcw, X } from "lucide-react";
+import { CircleCheck, CircleX, X } from "lucide-react";
 import { finished, type Graph, type GraphNode, type Options } from "../types";
 import { associationText, busOverviewHTML, executionDetailHTML } from "./bus-detail";
 import { build, Delays, type Built } from "./layout";
@@ -20,11 +20,11 @@ export function CreditGraph({ g, opts }: { g: Graph; opts: Options }) {
   const built = useMemo(() => build(g, delays.current), [g]);
   const [detail, setDetail] = useState<string>();
   const [gate, setGate] = useState(false);
-  const canApprove = !!g.approve && !!opts.approve && !opts.page;
+  const canApprove = !!g.approve && !!opts.approve;
   useEffect(() => { if (!canApprove) setGate(false); }, [canApprove]);
 
   return (
-    <div className={`cg m-${mode}${g.run?.stalled ? " m-stalled" : ""}`}>
+    <div className={`cg m-${mode}`}>
       <Head g={g} canApprove={canApprove} onApprove={() => setGate((x) => !x)} />
       {gate && canApprove && <Gate g={g} opts={opts} onClose={() => setGate(false)} />}
       {g.bus && <BusOverview g={g} onInspect={(id) => setDetail(id)} />}
@@ -40,24 +40,20 @@ export function CreditGraph({ g, opts }: { g: Graph; opts: Options }) {
 function Head({ g, canApprove, onApprove }: { g: Graph; canApprove: boolean; onApprove: () => void }) {
   const total = g.nodes.length;
   const settled = g.nodes.filter((n) => finished(n.status) || n.status === "skipped").length;
-  const reused = g.nodes.filter((n) => n.status === "reused").length;
   let chip: [string, string];
   if (g.verify) {
     const pass = g.verify.checks.filter((c) => c.ok).length;
     chip = g.verify.ok ? ["ok", `验证通过 ${pass}/${g.verify.checks.length}`] : ["bad", `验证未通过 ${pass}/${g.verify.checks.length}`];
   } else if (g.run) {
     chip = ({ queued: ["wait", "排队中"], running: ["run", `执行中 ${settled}/${total}`], waiting: ["wait", "等待核对远端结果"], blocked: ["bad", "任务受阻"], done: ["ok", "已完成"], failed: ["bad", "执行失败"] } as Record<string, [string, string]>)[g.run.status] ?? ["mute", g.run.status];
-    if (g.run.stalled) chip = ["bad", "执行器无响应 · 等待接管"];
   } else if (!g.ok) chip = ["bad", "预检未通过"];
-  else if (g.superseded) chip = ["mute", `已更新为 v${g.superseded}`];
   else chip = ["wait", "待批准"];
-  const running = g.run?.status === "running" && !g.run.stalled ? g.nodes.filter((n) => n.status === "running").map((n) => n.name) : [];
+  const running = g.run?.status === "running" ? g.nodes.filter((n) => n.status === "running").map((n) => n.name) : [];
   const progress = g.run ? settled / Math.max(total, 1) : 0;
   return (
     <div className="cg-head">
       <div className="cg-line">
         <span className="cg-goal" title={g.goal}>{g.goal || `${g.case} 年报分析`}</span>
-        {g.run && g.run.leases > 1 && <span className="chip soft"><RotateCcw className="ci" />执行器重启 · 复用 {reused} 步</span>}
         <span key={chip[1]} className={`chip ${chip[0]}`}><i />{chip[1]}</span>
         {canApprove && <button className="cg-btn" onClick={onApprove}>批准</button>}
       </div>
@@ -212,19 +208,6 @@ function Foot({ g }: { g: Graph }) {
 // ---------- detail ----------
 
 function Detail({ g, id, onClose }: { g: Graph; id: string; onClose: () => void }) {
-  const m = /^(.+)\/b(\d+)$/.exec(id);
-  if (m) {
-    const b = g.nodes.find((x) => x.id === m[1])?.branches?.[Number(m[2])];
-    if (!b) return null;
-    return (
-      <div className="cg-detail">
-        <button className="x" onClick={onClose} aria-label="关闭"><X className="ci" /></button>
-        <h4>{b.title}<small>Loop Forest 分支</small></h4>
-        <p>{b.goal}</p>
-        {b.finding && <><div className="k">结论</div><p>{b.finding}</p></>}
-      </div>
-    );
-  }
   const n = g.nodes.find((x) => x.id === id);
   if (!n) return null;
   if (n.execution || n.remote) return <BusDetail n={n} onClose={onClose} />;
@@ -234,7 +217,6 @@ function Detail({ g, id, onClose }: { g: Graph; id: string; onClose: () => void 
       <h4>{n.name}{n.role && n.role !== n.name && <small>{n.role}</small>}</h4>
       <p>{n.task}</p>
       {n.denied && !g.ok && <p className="t-bad">{n.denied}</p>}
-      {!!n.reads?.length && <><div className="k">读取</div>{n.reads.map((r) => <code key={r}>{r}</code>)}</>}
       {n.contract && <><div className="k">契约</div><code>{n.contract}</code></>}
       {n.output && <><div className="k">产物</div><div className="out">{n.output}</div></>}
     </div>

@@ -249,6 +249,7 @@ $env:REPORT_TEST_SNAPSHOT = "$private/evidence/restore-source.json" # 先完成 
 & $go -C demos/report-demo/control-go test ./... -count=1 -json > "$private/evidence/go-tests.jsonl"
 $env:REPORT_TEST_MATERIAL = "$private/material.json"
 $env:REPORT_CANONICAL_BINARY = "$private/bin/report-control.exe"
+$env:REPORT_FAULT_SOURCE_TASK = Read-Host '本环境已创建的任务ID（T-...）'
 mvn -s .local/maven-settings.xml -f demos/report-demo/orchestrator-java/pom.xml test -q
 & $py demos/report-demo/tests/canonical_probe.py --binary $env:REPORT_CANONICAL_BINARY --report "$private/evidence/canonical-python.json"
 & $py demos/report-demo/tests/p0_probe.py --config "$private/config.json" --report "$private/evidence/p0-technical.json"
@@ -267,7 +268,7 @@ JSON日志中应核对 `Action=fail` 和 `Action=skip`，当前完整 Demo 口�
 
 `p0_probe.py` 使用预制的技术图验证 MCP/编译/确认/PG，最后会暂停该夹具，避免真实 worker 消费。它明确 `real_model_planning=false`；不能替代第 7 节的真实对话。
 
-Java `RemoteWindowIntegrationTest` 额外需要有效 `REPORT_DEMO_CONFIG`、Go EXE、已运行的本工程 Java compiler，以及已经创建的源任务。默认读取本次主任务，也可通过 `REPORT_FAULT_SOURCE_TASK` 指定自己的模型候选任务。它启动独立本机 Go 进程和独立 `fault-...` PG scope，通过隔离 HTTP 提供方注入断点；进程和临时配置在结束时清理，不停止主演示服务，不调用模型。这些测试不是实际 Gateway/Runtime 重启或独立业务核验；对应真实身份/主链另见第 6–7 节。
+Java `RemoteWindowIntegrationTest` 额外需要有效 `REPORT_DEMO_CONFIG`、Go EXE、已运行的本工程 Java compiler，以及已经创建的源任务。必须通过 `REPORT_FAULT_SOURCE_TASK` 显式指定本环境已创建的模型候选任务；不再回退到作者数据库中的历史任务。它启动独立本机 Go 进程和独立 `fault-...` PG scope，通过隔离 HTTP 提供方注入断点；进程和临时配置在结束时清理，不停止主演示服务，不调用模型。这些测试不是实际 Gateway/Runtime 重启或独立业务核验；对应真实身份/主链另见第 6–7 节。
 
 缺必要环境时相关 Java 集成用例会 skip，不能只看 Maven 返回 0。协议与 10 组 golden vectors 见 [contracts/README.md](contracts/README.md)。Java 通过实际 JSON 解析/序列化后核对 Go 的权威 JCS，不另造 Java JCS；原生 runtimeSpecDigest 单独保留。
 
@@ -316,7 +317,7 @@ $env:REPORT_TEST_SNAPSHOT = "$private/evidence/restore-source.json"
 对已经计算结束的测试任务执行；会短暂停止本工程记录的 control，不停止 Java/Runtime/PG：
 
 ```powershell
-& $py demos/report-demo/tests/control_restart_probe.py --private-root $private --task-id T-d2c511867ab929cbfe371cf5057de6b6
+& $py demos/report-demo/tests/control_restart_probe.py --private-root $private --task-id $env:REPORT_FAULT_SOURCE_TASK
 ```
 
 预期新 `control_session_id`，任务投影/远端调用身份/持久事件相同，数值游标递增且续读无重复，内容完整。该脚本为清晰比较只接受事件少于 200 条的已结束任务；不是任意活动任务的故障注入器。结果见 `evidence/control-restart.json`。
@@ -338,14 +339,14 @@ python demos/report-demo/deploy/postgres_admin.py diagnose --private-root $priva
 以下是有意注入故障的联合验证，使用真实模型，会重启本工程记录的 worker/指定本地服务。先确保没有其它活动任务；脚本拒绝在 pending 非空时开始，不重启 PG，也不以新任务冒充原任务恢复。
 
 ```powershell
-& $py demos/report-demo/tests/revision_probe.py --private-root $private --source-task T-d2c511867ab929cbfe371cf5057de6b6
-& $py demos/report-demo/tests/runtime_restart_probe.py --private-root $private --source-task T-d2c511867ab929cbfe371cf5057de6b6 --service business-analyst
-& $py demos/report-demo/tests/runtime_restart_probe.py --private-root $private --source-task T-d2c511867ab929cbfe371cf5057de6b6 --service gateway
+& $py demos/report-demo/tests/revision_probe.py --private-root $private --source-task $env:REPORT_FAULT_SOURCE_TASK
+& $py demos/report-demo/tests/runtime_restart_probe.py --private-root $private --source-task $env:REPORT_FAULT_SOURCE_TASK --service business-analyst
+& $py demos/report-demo/tests/runtime_restart_probe.py --private-root $private --source-task $env:REPORT_FAULT_SOURCE_TASK --service gateway
 ```
 
 修订脚本仅修改目标 draft0 的回包单位，保留真实原回包与注入回包，检查 REVISE→真实 writer 修订一次→复检 PASS；不将注入错误写成模型自然错误。Runtime 重启需要在隐藏提示中输入模型密钥，只传子进程环境；Gateway 重启不需要模型密钥。观察代理只记录方法、身份和错误，转发字节不改动。脚本结束恢复原 Gateway 配置并启动原 worker；未知任务暂停留证，不盲目补发。
 
-这几份已验证的历史任务绑定旧执行版本；源代码/执行配置改变后应使用新版本真实规划候选作为 source-task。原任务和报告仍可只读核验，不能热改旧绑定。
+故障验证使用当前环境已创建的真实候选；不要把公开报告中的历史任务ID当作本环境输入。源代码/执行配置改变后，应使用新版本真实规划候选作为 source-task。原任务和报告仍可只读核验，不能热改旧绑定。
 
 ### 8.5 规划助手工具边界
 
@@ -357,21 +358,22 @@ $env:PYTHONPATH = 'D:/Code/openJiuwen/jiuwenswarm'
 & $py demos/report-demo/tests/planner_policy_probe.py --report "$private/evidence/planner-ability-policy.json"
 ```
 
-随后用模型环境/隐藏输入启动器重启本工程 AgentServer。策略只保留五个 report-orchestration MCP 工具、skill_tool 和 ask_user，隐藏并拒绝文件、shell、其它 MCP 与后注册的无权工具；UI 的“完全访问权限”不撤销这层能力限制。MCP 服务配置须保留给宿主完成连接，模型可见工具和执行仍按精确名称过滤。原生边界不等于进程或用户权限隔离，不能把此测试当作完整沙箱证明。
+随后用模型环境/隐藏输入启动器重启本工程 AgentServer。策略只保留六个 report-orchestration MCP 工具、skill_tool 和 ask_user，隐藏并拒绝文件、shell、其它 MCP 与后注册的无权工具；UI 的“完全访问权限”不撤销这层能力限制。MCP 服务配置须保留给宿主完成连接，模型可见工具和执行仍按精确名称过滤。原生边界不等于进程或用户权限隔离，不能把此测试当作完整沙箱证明。
 
 首次启动时等配置加载完成再使用。如果模型列表初次请求在 worker 尚未就绪时超时，待 worker 就绪后刷新页面；不要因此重新录入或覆盖已有密钥。
 
 ### 8.6 只读复核本次完整模型链
 
-本机最新主任务为 `T-202e02a56e2275a0aa62837e51d79969`，执行绑定 `d7576071…`，测试账号已交付。下面只导出和检查已有事实，不再次调用模型或交付：
+使用第8节设置的 `REPORT_FAULT_SOURCE_TASK`，以下命令只读取、导出已有事实，不重新调用模型、批准或交付：
 
 ```powershell
-& $py demos/report-demo/tests/export_trace.py --private-root $private --task-id T-202e02a56e2275a0aa62837e51d79969
-& $py demos/report-demo/tests/task_probe.py --private-root $private --task-id T-202e02a56e2275a0aa62837e51d79969 --action download
-& $py demos/report-demo/tests/verify_main_flow.py --private-root $private --task-id T-202e02a56e2275a0aa62837e51d79969
+& $py demos/report-demo/tests/export_trace.py --private-root $private --task-id $env:REPORT_FAULT_SOURCE_TASK
+& $py demos/report-demo/tests/export_handoff.py --private-root $private --task-id $env:REPORT_FAULT_SOURCE_TASK
+& $py demos/report-demo/tests/shared_contract_probe.py --private-root $private verify --task-id $env:REPORT_FAULT_SOURCE_TASK
+& $py demos/report-demo/tests/task_probe.py --private-root $private --task-id $env:REPORT_FAULT_SOURCE_TASK --action download
 ```
 
-预期 `all_passed=true`、10 项为 true：四个独立真实专家/remote task、两条完成的 Loop 分支、同 c/h/a 的完成回包与正式正文一致、同报告摘要的程序检查/测试账号批准、重复交付身份、下载正文及原始字节 SHA-256 一致。独立人工核验仍待完成。对自己的新任务，应先完成第 7 节操作并导出 `-trace/-delivery/-report.json`，再替换 task-id。
+`verify_main_flow.py` 另需本环境实际记录的 `*-delivery.json`（含真实重复交付回执）及下载原字节。该文件不是只读下载命令的产物；没有这份记录时不执行该离线核对，也不手填成功标记。新任务的自动浏览器主链按第13节运行；共享契约的 `start` 仅为显式技术复跑入口，不能代替真实新规划。
 
 ### 8.7 留存实际依赖解析与制品来源
 
@@ -433,7 +435,7 @@ PR #25 原有类型和 schema 保留在 `agent-festival` 原目录，Demo 的 Go
 用已生成的候选图做一次真实专家集成复跑（不是新一轮模型规划）：
 
 ```powershell
-& $py demos/report-demo/tests/shared_contract_probe.py --private-root $private start --source-task T-202e02a56e2275a0aa62837e51d79969
+& $py demos/report-demo/tests/shared_contract_probe.py --private-root $private start --source-task $env:REPORT_FAULT_SOURCE_TASK
 & $py demos/report-demo/tests/shared_contract_probe.py --private-root $private status
 ```
 
@@ -503,30 +505,15 @@ calls创建响应新增action，与Java须成套升级；缺失或未知action�
 
 ## 13. 本轮受控集成的复跑核对
 
-1. 按第4—6节构建并启动当前源码；更换源码/模型后重新执行 `bind_profile.py`，重启 control/compiler/四专家，重新装配助手及插件，并重启 WorkSwarm AgentServer/Gateway。四专家本身会读 ENV 校验实际模型绑定，不能只保留旧 profile 换模型启动。
-2. 按第7节从“专家 → 我的专家 → 年报协作规划助手 → 详情 → 使用”新开对话。当前 WorkSwarm 构建的卡片悬浮“使用”按钮可能被头像挡住，详情页的“使用”入口已实测。不复用历史任务冒充新规划。
-3. 新候选应带 `graph.selection={id,digest}`；选择记录在同一 PG 的 `selection_records`，母公司高分仍排除，未知不通过。当前只开放“经营”和“经营+资产质量”，不是通用知识平台或语义召回。未经用户确认调用数必须为0。
-4. 从编排台批准，观察四专家和实际 Bus task。可在前驱已提交、后继实际运行时停止本工作区 compiler，等待租约到期后重启；原任务应查询原 remote task，已完成节点新增调用为0，不重新规划。需要显式暂停时，输入演示密码点“暂停新节点”；等待状态可从原任务恢复。BLOCKED 必须核对绑定原因，不能普通恢复。
-5. 完成后按第7节从插件批准/交付/下载。写作至多修订一次，可能有4或5次远端调用，但始终是4位独立专家。程序 PASS、测试账号交付和独立业务验收分别记录。
-
-对某个真实新对话做只读核对（替换为自己的会话/任务ID）：
+先完成第1—7节的装配、就绪及人工操作；自动验收统一使用已有浏览器主链入口。此命令会真实调用模型并使用测试账号确认、批准和交付，先核对本环境模型预算和当前任务状态。
 
 ```powershell
-$env:PYTHONPATH = $env:WORKSWARM_SOURCE
-& $py demos/report-demo/tests/verify_planning.py --private-root $private --session '<WorkSwarm会话ID>' --task-id '<T-ID>'
-& $py demos/report-demo/tests/export_trace.py --private-root $private --task-id '<T-ID>'
-& $py demos/report-demo/tests/export_handoff.py --private-root $private --task-id '<T-ID>'
-& $py demos/report-demo/tests/model_process_probe.py --private-root $private --java "$env:JAVA_HOME/bin/java.exe"
-Push-Location demos/report-demo/workswarm/workbench-plugin/app
-npm.cmd test
-$env:BROWSER_EXECUTABLE = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
-& $py test/workbench-browser.py
-Pop-Location
+& $py demos/report-demo/tests/live_smoke.py --private-root $private --browser-executable 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 ```
 
-`model_process_probe` 用真实专家JAR和本地模型出口替身，验证直接启动时“旧profile+ENV模型B”“缺绑定”均在出口前拒绝，不能拿它代替真实业务模型测试。前三条只读命令不做批准/交付；`verify_main_flow.py` 还需要 `task_probe.py --action download` 和已记录的测试账号交付证据。公开接收样例不含凭据、完整模型返回和思考链；异机复跑和业务签收仍由实际接收人完成。
+结果在本环境 `evidence/platform-live-smoke.json`，必须核对新 task_id、`all_passed`、报告摘要及各检查。发生等待时读取原记录，按该脚本的 `--resume-task` 继续原任务，不以新任务掩盖恢复失败。HUMAN 按第7.1节处理，不能当作程序 PASS。
 
-新增备份使用 `report-demo-backup/2`，包含选择记录；旧 `/1` 快照仍可读取/恢复，不为旧任务补写模型或选择绑定。旧任务可以读历史，新执行不能偷偷采用当前默认模型。
+把这次实际任务ID设为 `REPORT_FAULT_SOURCE_TASK`，再执行第8节回归和第8.6节只读导出。规划来源另用 `verify_planning.py --private-root $private --session '<本环境会话ID>' --task-id '<本环境任务ID>'` 核对；它不创建任务。真实专家出口、故障注入、Windows历史兼容等专项入口按第8节选择运行，不作为另一套日常操作流程。交付材料见第14节。
 
 ## 14. 接收配置与最终材料入口
 

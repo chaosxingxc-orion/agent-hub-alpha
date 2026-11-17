@@ -163,7 +163,8 @@ Go/PG 集成回归需要真实 DSN：
 ```bash
 export REPORT_DEMO_CONFIG="$private/config.json"
 export REPORT_CANONICAL_BINARY="$private/bin/report-control"
-export REPORT_FAULT_SOURCE_TASK='<本环境新任务T-ID>'
+read -r -p '本环境已创建的任务ID（T-...）: ' REPORT_FAULT_SOURCE_TASK
+export REPORT_FAULT_SOURCE_TASK
 # GO 测试读取的 DSN 变量和执行方式见 LOCAL-RUN 第8节；不要使用无数据库导致的 skip 冒充通过。
 mvn -s .local/maven-settings.xml -f demos/report-demo/orchestrator-java/pom.xml test
 mvn -s .local/maven-settings.xml -f demos/report-demo/experts-java/pom.xml test

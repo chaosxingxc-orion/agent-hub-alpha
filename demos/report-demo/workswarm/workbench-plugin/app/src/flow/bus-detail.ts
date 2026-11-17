@@ -38,7 +38,7 @@ const stateLabel = (s?: string) => ({ pending: "尚未派发", running: "执行�
 
 export function executionLabel(n: GraphNode): string {
   if (n.execution?.kind === "agent_bus" || n.remote) return "Agent Bus · DIRECT";
-  return n.execution?.kind === "loop_forest" || n.kind === "blackbox" ? "宿主内 · Loop Forest" : "宿主内执行";
+  return n.execution?.kind === "loop_forest" ? "宿主内 · Loop Forest" : "宿主内执行";
 }
 
 export function busOverviewHTML(g: Graph): string {
@@ -74,7 +74,7 @@ export function executionDetailHTML(n: GraphNode): string {
   const heading = `<header class="cg-detail-head"><div><h4 tabindex="-1">${esc(n.name)} · 执行详情</h4><p>${esc(executionLabel(n))} · ${esc(stateLabel(n.status))}</p></div><button type="button" class="cg-detail-close" data-detail-close aria-label="关闭执行详情">关闭 ×</button></header>`;
   let body = `<p class="cg-detail-task">${esc(n.task)}</p>`;
   if (!remote) {
-    body += `<div class="cg-local-execution"><b>${esc(executionLabel(n))}</b><p>${n.kind === "blackbox" ? "在 Java 宿主的已授权节点内展开 Loop Forest。" : "由 Java Graph 宿主执行本节点。"}</p></div>`;
+    body += `<div class="cg-local-execution"><b>${esc(executionLabel(n))}</b><p>由 Java Graph 宿主执行本节点。</p></div>`;
   } else {
     if (reused) body += `<p class="cg-detail-notice">本次读取已保存产物；下方保留原调用记录。累计复用 ${r?.reused_count ?? 1} 次。</p>`;
     if (r?.reason) body += `<p class="cg-detail-notice ${n.status === "unknown" || n.status === "failed" ? "warn" : ""}">${esc(r.reason)}</p>`;
@@ -96,7 +96,7 @@ export function executionDetailHTML(n: GraphNode): string {
       <div class="cg-detail-actions"><button type="button" data-copy-evidence>复制关联信息</button><span role="status" data-copy-status></span><span class="cg-proof-note">时间按浏览器时区显示</span></div>`;
   }
   if (n.denied) body += `<p class="cg-detail-notice warn">${esc(n.denied)}</p>`;
-  if (n.reads?.length || n.contract) body += `<details data-detail-section="permissions"><summary>读取权限与节点契约</summary><dl>${row("读取范围", n.reads?.join("、"))}${row("契约摘要", n.contract)}</dl></details>`;
+  if (n.contract) body += `<details data-detail-section="permissions"><summary>节点契约</summary><dl>${row("契约", n.contract)}</dl></details>`;
   if (n.output) body += `<details data-detail-section="output"><summary>查看产物内容摘要</summary><pre class="cg-detail-output">${esc(n.output)}</pre></details>`;
   return `${heading}<div class="cg-detail-body">${body}</div>`;
 }

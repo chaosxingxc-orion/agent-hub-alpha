@@ -1,6 +1,6 @@
 /* Plan card, in the visual language of WorkSwarm's SwarmFlow graph.
    Node heights are fixed so the layout can be computed up front: an expert
-   card is 74px plus 22px per extra row, a fork card 50px (layout.ts).
+   card is 74px plus one 22px status row during execution (layout.ts).
    Looping animations only touch transform and opacity. */
 .cg {
   --text: #1f2937; --muted: #6b7280; --line: #e5e7eb; --card: #fff;
@@ -21,7 +21,7 @@
 .cg-goal { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cg-sub { margin-top: 2px; color: var(--muted); font-size: 12px; height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cg-now { display: inline-flex; align-items: center; gap: 6px; color: var(--blue); animation: cg-fade .3s both; }
-.cg-now i, .chip.run i, .cn-row.act i, .cb-sub.act i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: cg-pulse 1.2s ease-in-out infinite; flex: none; }
+.cg-now i, .chip.run i, .cn-row.act i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: cg-pulse 1.2s ease-in-out infinite; flex: none; }
 .chip { display: inline-flex; align-items: center; gap: 5px; padding: 1px 8px; border-radius: 999px; border: 1px solid; font-size: 11px; font-weight: 500; white-space: nowrap; animation: cg-fade .3s both; }
 .chip i { display: none; }
 .chip.run i { display: block; }
@@ -30,7 +30,6 @@
 .chip.ok { color: #047857; background: #ecfdf5; border-color: #a7f3d0; }
 .chip.bad { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
 .chip.mute { color: var(--muted); background: #f9fafb; border-color: var(--line); }
-.chip.soft { color: #1d4ed8; background: #eff6ff; border-color: transparent; }
 .chip .ci { width: 12px; height: 12px; }
 .cg-btn { height: 26px; padding: 0 12px; border: 0; border-radius: 6px; background: var(--blue); color: #fff; font: inherit; font-weight: 500; cursor: pointer; transition: background .15s, transform .15s; }
 .cg-btn:hover { background: #2563eb; } .cg-btn:active { transform: scale(.97); } .cg-btn:disabled { opacity: .7; cursor: default; }
@@ -75,51 +74,17 @@
 .cn-row.res.t-ok span { background: #ecfdf5; } .cn-row.res.t-bad span { background: #fef2f2; } .cn-row.res.t-mute span { background: #f3f4f6; color: var(--muted); }
 .cn-row.act { color: var(--blue); animation: cg-slide .28s cubic-bezier(.2, .8, .2, 1) both; }
 .cn-row.note { color: var(--muted); animation: cg-fade .3s both; } .cn-row.note.t-ok { color: #059669; } .cn-row.note.t-bad { color: #b91c1c; }
-.cn-row.box { color: var(--purple); gap: 3px; }
-.cn-row.box i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: cg-pulse 1.2s ease-in-out infinite; }
-.cn-row.box i:nth-child(2) { animation-delay: .15s; } .cn-row.box i:nth-child(3) { animation-delay: .3s; }
-.cn-row.box span { margin-left: 4px; }
 .cn.s-running { border-color: rgba(59, 130, 246, .6); }
 .cn.s-running::after { content: ""; position: absolute; inset: -4px; border: 2px solid rgba(59, 130, 246, .35); border-radius: 9px; pointer-events: none; animation: cg-pulse 1.6s ease-in-out infinite; }
-.m-stalled .cn.s-running::after { animation: none; opacity: 0; }
 .cn.s-done { border-color: rgba(16, 185, 129, .45); }
 .cn.s-reused { border-color: rgba(59, 130, 246, .4); background: #f8fbff; }
 .cn.s-failed, .cn.denied { border-color: rgba(239, 68, 68, .6); background: #fffafa; }
 .cn.s-skipped { opacity: .55; border-style: dashed; }
 .cn.s-pending { opacity: .8; }
-.cn.k-blackbox:not(.host) { border-style: dashed; border-color: rgba(168, 85, 247, .5); background: #fdfaff; }
-.cn.k-blackbox.s-running:not(.host) { border-style: solid; }
-.cn.host { animation: none; }
 .cn.denied { animation: cg-in .38s cubic-bezier(.2, .8, .2, 1) both, cg-shake .45s both; }
 .tag { flex: none; padding: 0 5px; border-radius: 4px; font-size: 10.5px; line-height: 16px; font-weight: 500; }
-.tag.bb { color: #7e22ce; background: #f3e8ff; } .tag.irr { color: #b45309; background: #fffbeb; }
 .tag.reuse { color: #1d4ed8; background: #eff6ff; } .tag.mute { color: var(--muted); background: #f3f4f6; } .tag.bad { color: #b91c1c; background: #fef2f2; }
 .tag.bus { color: #0f766e; background: #f0fdfa; } .tag.warn { color: #b45309; background: #fffbeb; }
-
-/* Loop Forest group (native loop node look) and its fork cards: 50px */
-.lf { box-sizing: border-box; width: 100%; height: 100%; border: 2px solid rgba(168, 85, 247, .4); border-radius: 8px; background: rgba(168, 85, 247, .05);
-  animation: cg-in .38s cubic-bezier(.2, .8, .2, 1) both; }
-.lf-head { display: flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; color: #7e22ce; font-weight: 600; }
-.lf-head em { margin-left: auto; font-style: normal; font-weight: 500; color: #a78bfa; font-size: 11px; }
-.lf .sway { animation: cg-sway 1.6s ease-in-out infinite; }
-.lf-wait { position: absolute; right: 10px; top: 30px; bottom: 10px; width: 196px; display: flex; align-items: center; justify-content: center; gap: 4px;
-  border: 1px dashed rgba(168, 85, 247, .35); border-radius: 6px; color: #a78bfa; }
-.lf-wait i { width: 4px; height: 4px; border-radius: 50%; background: currentColor; animation: cg-pulse 1.2s ease-in-out infinite; }
-.lf-wait i:nth-child(2) { animation-delay: .15s; } .lf-wait i:nth-child(3) { animation-delay: .3s; } .lf-wait span { margin-left: 4px; }
-.lf-more { position: absolute; left: 0; right: 0; bottom: 4px; text-align: center; color: #a78bfa; font-size: 11px; }
-.cb { box-sizing: border-box; width: 100%; height: 100%; padding: 6px 8px; background: var(--card); border: 1px solid rgba(168, 85, 247, .35);
-  border-radius: 6px; box-shadow: 0 1px 2px rgba(16, 24, 40, .05); transition: border-color .35s, opacity .35s;
-  animation: cg-fork .42s cubic-bezier(.2, .8, .2, 1) both; }
-.cb.s-finished { border-color: rgba(16, 185, 129, .45); }
-.cb.s-interrupted { opacity: .55; border-style: dashed; }
-.cb-head { display: flex; align-items: center; gap: 6px; height: 18px; }
-.cb-name { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cb-name em { font-style: normal; color: var(--purple); margin-right: 3px; }
-.cb-sub { display: flex; align-items: center; gap: 6px; height: 16px; margin-top: 2px; color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; }
-.cb-sub span { overflow: hidden; text-overflow: ellipsis; }
-.cb-sub.act { color: var(--purple); }
-.cb-sub.find span { font-weight: 600; }
-.cb-sub.find.t-ok span { color: #047857; } .cb-sub.find.t-warn span { color: #b45309; } .cb-sub.find.t-bad span { color: #b91c1c; }
 
 /* edges: drawn on once, then a flowing dash while the target works */
 .cg .react-flow__edge-path.ce { stroke: #b1b1b7; stroke-width: 1.4; stroke-dasharray: 1; stroke-dashoffset: 0; transition: stroke .35s;
@@ -128,12 +93,10 @@
 .cg .ce.s-done { stroke: rgba(16, 185, 129, .55); }
 .cg .ce.s-skip { stroke: #d1d5db; stroke-dasharray: .015 .015; animation: none; }
 .cg .ce.s-bad { stroke: #fca5a5; }
-.cg .ce.s-lf { stroke: rgba(168, 85, 247, .45); } .cg .ce.s-lf-active { stroke: rgba(168, 85, 247, .3); } .cg .ce.s-lf-off { stroke: #d1d5db; }
 .cg .ce-flow { fill: none; stroke-width: 2; stroke-dasharray: 5 7; stroke-linecap: round; animation: cg-dash .6s linear infinite; pointer-events: none; }
-.cg .ce-flow.s-active { stroke: var(--blue); } .cg .ce-flow.s-lf-active { stroke: var(--purple); }
+.cg .ce-flow.s-active { stroke: var(--blue); }
 .ce-label { position: absolute; padding: 0 6px; border-radius: 999px; background: #fff; border: 1px solid var(--line); color: var(--muted);
   font: 500 10.5px/16px -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; pointer-events: none; animation: cg-fade .3s both; transition: color .3s, border-color .3s, background-color .3s, opacity .3s; }
-.ce-label.on { color: #047857; border-color: #a7f3d0; background: #ecfdf5; }
 .ce-label.off { opacity: .5; }
 
 /* ---------- foot and detail ---------- */
@@ -208,7 +171,6 @@
 @keyframes cg-pop { 0% { opacity: 0; transform: scale(.4); } 100% { opacity: 1; transform: scale(1); } }
 @keyframes cg-spin { to { transform: rotate(360deg); } }
 @keyframes cg-pulse { 50% { opacity: .3; } }
-@keyframes cg-sway { 50% { transform: rotate(-14deg); } }
 @keyframes cg-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
 @keyframes cg-dash { to { stroke-dashoffset: -12; } }
 @keyframes cg-shake { 15%, 85% { transform: translateX(-2px); } 30%, 70% { transform: translateX(4px); } 45% { transform: translateX(-5px); } 55% { transform: translateX(5px); } }

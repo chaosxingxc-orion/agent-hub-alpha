@@ -5,6 +5,41 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 const bundle = await build({ stdin: { contents: 'export { Gateway } from "./src/workbench/gateway"; export { newer } from "./src/order";', resolveDir: process.cwd() }, bundle: true, write: false, format: 'esm', platform: 'node' });
 const { Gateway, newer } = await import('data:text/javascript;base64,' + Buffer.from(bundle.outputFiles[0].text).toString('base64'));
+const layoutBundle = await build({ stdin: { contents: 'export { build, Delays } from "./src/flow/layout";', resolveDir: process.cwd() }, bundle: true, write: false, format: 'esm', platform: 'node' });
+const { build: layout, Delays } = await import('data:text/javascript;base64,' + Buffer.from(layoutBundle.outputFiles[0].text).toString('base64'));
+
+const reportGraph = () => ({plan:'T-fixture',version:1,case:'annual-report',goal:'report',ok:true,hash:'fixture',
+  layers:[['extract'],['business','quality'],['draft'],['check']],nodes:[
+    {id:'extract',name:'extract',kind:'extract',task:'fixed material',deps:[]},
+    {id:'business',name:'business',kind:'business',task:'business',deps:['extract']},
+    {id:'quality',name:'quality',kind:'quality',task:'quality',deps:['extract']},
+    {id:'draft',name:'draft',kind:'write',task:'join both branches',deps:['business','quality']},
+    {id:'check',name:'check',kind:'check',task:'check draft',deps:['draft']}
+  ]});
+
+test('annual-report plan retains both analysis branches, join and stable positions',()=>{
+  const g=reportGraph(), planned=layout(g,new Delays());
+  assert.deepEqual(planned.nodes.map(n=>n.id),g.nodes.map(n=>n.id));
+  assert.equal(planned.nodes.every(n=>n.type==='expert'),true);
+  assert.deepEqual(planned.edges.map(e=>e.id),['extract>business','extract>quality','business>draft','quality>draft','draft>check']);
+  const running=layout({...g,run:{id:g.plan,status:'running',leases:1,url:''},nodes:g.nodes.map(n=>({...n,status:'running'}))},new Delays());
+  assert.deepEqual(running.nodes.map(n=>n.position.x),planned.nodes.map(n=>n.position.x));
+  const node=id=>planned.nodes.find(n=>n.id===id);
+  assert.ok(node('draft').position.x>node('business').position.x);
+  assert.ok(node('draft').position.x>node('quality').position.x);
+});
+
+test('annual-report projection preserves unknown, authorized skip and condition labels',()=>{
+  const g=reportGraph();g.run={id:g.plan,status:'waiting',leases:1,url:''};
+  g.nodes=g.nodes.map(n=>({...n,status:n.id==='quality'?'unknown':'done',activity:n.id==='quality'?'retain remote task':undefined}));
+  g.nodes.find(n=>n.id==='check').when={step:'draft',contains:'REVISE'};
+  const built=layout(g,new Delays());
+  assert.equal(built.nodes.find(n=>n.id==='quality').data.line.text,'retain remote task');
+  assert.equal(built.edges.find(e=>e.id==='draft>check').data.label,'含 REVISE');
+  g.nodes.find(n=>n.id==='check').status='skipped';
+  const skipped=layout(g,new Delays());
+  assert.equal(skipped.nodes.some(n=>n.id==='check'),false);
+});
 
 function transport(t) {
   const sent = [], timers = new Map();

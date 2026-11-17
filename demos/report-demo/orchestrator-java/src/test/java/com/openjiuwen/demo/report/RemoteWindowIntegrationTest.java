@@ -42,6 +42,21 @@ import org.junit.jupiter.api.io.TempDir;
 class RemoteWindowIntegrationTest {
     @TempDir Path temp;
 
+    static String requireSourceTask(String source) {
+        if (source == null || !source.matches("T-[0-9a-f]{32}")) {
+            throw new IllegalArgumentException("Set REPORT_FAULT_SOURCE_TASK to a task ID created in this private environment");
+        }
+        return source;
+    }
+
+    @Test void faultSourceTaskMustBeExplicitBeforeAccessingServices() {
+        assertThrows(IllegalArgumentException.class, () -> requireSourceTask(null));
+        assertThrows(IllegalArgumentException.class, () -> requireSourceTask(""));
+        assertThrows(IllegalArgumentException.class, () -> requireSourceTask("another-environment"));
+        String local = "T-" + "1".repeat(32);
+        assertEquals(local, requireSourceTask(local));
+    }
+
     @Test void changedBusEnvironmentBlocksBothNewSendAndRecoveryQuery() throws Exception {
         for (boolean recovery : List.of(false, true)) {
             try (var h = new Harness(temp.resolve("bus-change-" + recovery))) {
@@ -372,10 +387,10 @@ class RemoteWindowIntegrationTest {
             this.directory=directory;
             String privatePath=System.getenv("REPORT_DEMO_CONFIG");binary=System.getenv("REPORT_CANONICAL_BINARY");
             Assumptions.assumeTrue(privatePath!=null&&binary!=null,"Actual private PG config and built Go executable required for isolated fault integration");
+            String source=requireSourceTask(System.getenv("REPORT_FAULT_SOURCE_TASK"));
             Files.createDirectories(directory);
             config=(ObjectNode)Json.read(Files.readString(Path.of(privatePath)));
             String originalBase=config.path("public_url").asText();
-            String source=System.getenv().getOrDefault("REPORT_FAULT_SOURCE_TASK","T-d2c511867ab929cbfe371cf5057de6b6");
             var original=new ControlClient(originalBase,config.path("tokens").path("worker").asText()).get("/v1/tasks/"+source);
             ObjectNode graph=(ObjectNode)original.path("graph").deepCopy();
             graph.put("goal","ISOLATED HTTP FAULT FIXTURE; not real model planning: "+graph.path("goal").asText());
