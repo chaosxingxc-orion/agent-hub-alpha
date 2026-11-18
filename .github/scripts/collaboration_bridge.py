@@ -21,7 +21,7 @@ def number(value):
 
 
 def managed_branch(value):
-    return bool(re.fullmatch(r'(gitcode/mr-|github/pr-)[1-9][0-9]*', value))
+    return bool(re.fullmatch(r'(gitcode/mr-|github/pr-)[1-9][0-9]*|(gitcode|github)/base-[0-9a-f]{40}', value))
 
 
 def marker(key):
@@ -39,6 +39,8 @@ def origin_body(key, obj, url):
     status = 'merged' if obj.get('merged_at') else obj.get('state', 'open')
     return (f'{marker(key)}\nSource: {url}\nSource status: {status}\n'
             f'Source head: {obj.get("head", {}).get("sha", "n/a")}\n\n'
+            f'Source base: {obj.get("base", {}).get("ref", "n/a")} '
+            f'({obj.get("base", {}).get("sha", "n/a")})\n\n'
             'Synchronized review copy. Final integration is on GitHub; '
             'copied reviews are attributed discussion, not approval.\n\n' + (obj.get('body') or ''))
 
@@ -130,6 +132,22 @@ def upsert_comments(api, family, n, changes):
             api.call(f'/{family}/comments/{ident}', 'PATCH', {'body': body})
 
 
+def mirror_base(source, obj, dest):
+    base = obj.get('base', {})
+    ref, sha = base.get('ref', ''), base.get('sha', '')
+    if not ref or not re.fullmatch(r'[0-9a-f]{40}', sha):
+        raise ValueError('Missing or invalid source base; refusing main fallback')
+    if ref == 'main':
+        return 'main'
+    # Immutable snapshots avoid force-pushing or overwriting team-owned branches.
+    # Recheck the named source ref during transfer so a moving base fails closed.
+    branch = f'{"gitcode" if source == "gc" else "github"}/base-{sha}'
+    if dest is None or dest.get('base', {}).get('ref') != branch:
+        transfer(GC_GIT if source == 'gc' else GH_GIT, GH_GIT if source == 'gc' else GC_GIT,
+                 f'refs/heads/{ref}', branch, sha)
+    return branch
+
+
 def sync_discussion(gh, gc, gnum, cnum, family):
     gc_path = f'{family}/{cnum}'
     gh_path = f'issues/{gnum}'
@@ -178,14 +196,28 @@ def reconcile(gh, gc):
                 api = gh if source == 'gc' else gc
                 branch = f'gitcode/mr-{n}' if source == 'gc' else f'github/pr-{n}'
                 sha = obj['head']['sha']
+                active = obj.get('state') == 'open' and (dest is None or dest.get('state') == 'open')
+                base = mirror_base(source, obj, dest) if active else None
                 if dest is None or (dest.get('state') == 'open' and dest.get('head', {}).get('sha') != sha):
                     transfer(GC_GIT if source == 'gc' else GH_GIT, GH_GIT if source == 'gc' else GC_GIT,
                              f'refs/merge-requests/{n}/head' if source == 'gc' else f'refs/pull/{n}/head', branch, sha)
                 if dest is None:
-                    dest = api.call('/pulls', 'POST', {'title': title, 'body': body, 'head': branch, 'base': 'main', 'draft': True})
+                    dest = api.call('/pulls', 'POST', {'title': title, 'body': body, 'head': branch, 'base': base,
+                                                     'draft': True if source == 'gc' else bool(obj.get('draft'))})
                     targets.append(dest)
-                elif dest.get('body') != body or not matches_title(dest, title):
-                    api.call(f'/pulls/{number(dest["number"])}', 'PATCH', {'title': title, 'body': body})
+                else:
+                    payload = {'title': title, 'body': body}
+                    changed = dest.get('body') != body or not matches_title(dest, title)
+                    if active:
+                        payload['base'] = base
+                        changed |= dest.get('base', {}).get('ref') != base
+                    if source == 'gh':
+                        # GitCode resets omitted draft on PATCH. GitHub mirror readiness
+                        # is instead a maintainer decision and is never auto-promoted.
+                        payload['draft'] = bool(obj.get('draft')) if active else bool(dest.get('draft'))
+                        changed |= dest.get('draft') != payload['draft']
+                    if changed:
+                        api.call(f'/pulls/{number(dest["number"])}', 'PATCH', payload)
                 gn, cn = (number(dest['number']), n) if source == 'gc' else (n, number(dest['number']))
                 sync_discussion(gh, gc, gn, cn, 'pulls')
                 print(f'Linked GitCode MR {cn} and GitHub PR {gn}; source {sha}')

@@ -22,7 +22,18 @@ GitHub uses its per-run token. Never put credentials in comments.
 
 Run both test_sync_gitcode.py and test_collaboration_bridge.py before changing
 the bridge. Inspect authentication, divergence or API failures before rerunning.
-Do not start a competing reverse full mirror. Generated requests start as drafts;
-copied reviews are discussion, not approval.
+Do not start a competing reverse full mirror. GitCode-origin requests start as
+GitHub drafts; only maintainers change their review readiness. GitHub-origin
+requests project their Draft state to GitCode, including on description updates.
+Copied reviews and Ready state are not approval or permission to merge.
+
+Main-targeted requests keep main as their target. Other targets use bridge-owned
+immutable `github/base-<40-character SHA>` or `gitcode/base-<SHA>` snapshots of the
+source base. The description retains the original base name and SHA. When the
+source base advances, the open mirror targets its new snapshot; missing or moving
+bases fail visibly rather than falling back to main. These snapshots are review
+bases, not release branches. Closed requests retain their historical targets.
+No developer-owned branch is overwritten. Final integration still occurs only
+on GitHub into the source request's declared target.
 
 [Migration and historical discussion](../docs/migration/README.md).
