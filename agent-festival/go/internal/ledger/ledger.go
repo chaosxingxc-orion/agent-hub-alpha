@@ -101,7 +101,7 @@ type Identity struct {
 	BusinessRequestID  string `json:"business_request_id"`
 	EvaluationRevision string `json:"evaluation_revision,omitempty"`
 	OperationID        string `json:"operation_id"`
-	// v0.2.0 batch-0 structured keys (optional, backward compatible).
+	// v0.2.0 batch-0 structured keys (optional in v0.2.0; document version migration remains explicit).
 	LogicalExecution    *LogicalExecution `json:"logical_execution,omitempty"`
 	ExecutionGeneration *int              `json:"execution_generation,omitempty"`
 }
