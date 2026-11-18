@@ -28,12 +28,21 @@ requests project their Draft state to GitCode, including on description updates.
 Copied reviews and Ready state are not approval or permission to merge.
 
 Main-targeted requests keep main as their target. Other targets use bridge-owned
-immutable `github/base-<40-character SHA>` or `gitcode/base-<SHA>` snapshots of the
-source base. The description retains the original base name and SHA. When the
-source base advances, the open mirror targets its new snapshot; missing or moving
-bases fail visibly rather than falling back to main. These snapshots are review
-bases, not release branches. Closed requests retain their historical targets.
-No developer-owned branch is overwritten. Final integration still occurs only
-on GitHub into the source request's declared target.
+`github/base-<name digest>` or `gitcode/base-<name digest>` branches (first 40 hex
+characters of SHA-256 of the source base ref). The description retains the actual
+source name and commit SHA. The bridge base advances only by normal fast-forward;
+missing, moving or divergent bases fail visibly rather than falling back to main.
+These are review bases, not release branches. No developer-owned branch is
+overwritten. Final integration occurs only on GitHub into the declared target.
+
+GitCode v5 PATCH does not support base retargeting: an HTTP success with a `base`
+field does not prove it changed. Creation and updates are read back. An existing
+mirror with the wrong target is made Draft and synchronization reports failure;
+a maintainer must retarget via the UI or create a correctly targeted replacement,
+link the historical discussion, replace the old origin marker with a superseded
+marker and close the old copy. The bridge never performs that replacement or
+closure automatically. Base advancement uses the stable bridge ref, avoiding a
+new MR per commit. Closed copies retain their target ref, not a frozen commit;
+the source receipt supplies the audited commit identity.
 
 [Migration and historical discussion](../docs/migration/README.md).

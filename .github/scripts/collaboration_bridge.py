@@ -1,5 +1,6 @@
 """NGA collaboration bridge. Never merge, approve, delete, or execute imported code."""
 import json
+import hashlib
 import os
 import re
 import subprocess
@@ -139,10 +140,11 @@ def mirror_base(source, obj, dest):
         raise ValueError('Missing or invalid source base; refusing main fallback')
     if ref == 'main':
         return 'main'
-    # Immutable snapshots avoid force-pushing or overwriting team-owned branches.
-    # Recheck the named source ref during transfer so a moving base fails closed.
-    branch = f'{"gitcode" if source == "gc" else "github"}/base-{sha}'
-    if dest is None or dest.get('base', {}).get('ref') != branch:
+    # GitCode v5 cannot retarget existing requests. A stable bridge-owned branch
+    # follows normal fast-forwards; rewinds/divergence fail, never force-update.
+    key = hashlib.sha256(ref.encode('utf-8')).hexdigest()[:40]
+    branch = f'{"gitcode" if source == "gc" else "github"}/base-{key}'
+    if dest is None or dest.get('base', {}).get('ref') != branch or dest.get('base', {}).get('sha') != sha:
         transfer(GC_GIT if source == 'gc' else GH_GIT, GH_GIT if source == 'gc' else GC_GIT,
                  f'refs/heads/{ref}', branch, sha)
     return branch
@@ -198,17 +200,20 @@ def reconcile(gh, gc):
                 sha = obj['head']['sha']
                 active = obj.get('state') == 'open' and (dest is None or dest.get('state') == 'open')
                 base = mirror_base(source, obj, dest) if active else None
+                if active and source == 'gh' and dest and dest.get('base', {}).get('ref') != base:
+                    api.call(f'/pulls/{number(dest["number"])}', 'PATCH', {'title': title, 'draft': True})
+                    raise RuntimeError('GitCode v5 cannot retarget an existing mirror; replace or retarget it in the UI before resuming')
                 if dest is None or (dest.get('state') == 'open' and dest.get('head', {}).get('sha') != sha):
                     transfer(GC_GIT if source == 'gc' else GH_GIT, GH_GIT if source == 'gc' else GC_GIT,
                              f'refs/merge-requests/{n}/head' if source == 'gc' else f'refs/pull/{n}/head', branch, sha)
                 if dest is None:
                     dest = api.call('/pulls', 'POST', {'title': title, 'body': body, 'head': branch, 'base': base,
-                                                     'draft': True if source == 'gc' else bool(obj.get('draft'))})
+                                                     'draft': True})
                     targets.append(dest)
                 else:
                     payload = {'title': title, 'body': body}
                     changed = dest.get('body') != body or not matches_title(dest, title)
-                    if active:
+                    if active and source == 'gc':
                         payload['base'] = base
                         changed |= dest.get('base', {}).get('ref') != base
                     if source == 'gh':
@@ -218,6 +223,16 @@ def reconcile(gh, gc):
                         changed |= dest.get('draft') != payload['draft']
                     if changed:
                         api.call(f'/pulls/{number(dest["number"])}', 'PATCH', payload)
+                if active:
+                    actual = api.call(f'/pulls/{number(dest["number"])}')
+                    if actual.get('base', {}).get('ref') != base:
+                        if source == 'gh':
+                            api.call(f'/pulls/{number(dest["number"])}', 'PATCH', {'title': title, 'draft': True})
+                        raise RuntimeError('Mirror base verification failed; request remains unapproved')
+                    if source == 'gh' and bool(actual.get('draft')) != bool(obj.get('draft')):
+                        api.call(f'/pulls/{number(dest["number"])}', 'PATCH', {'title': title, 'draft': bool(obj.get('draft'))})
+                        if bool(api.call(f'/pulls/{number(dest["number"])}').get('draft')) != bool(obj.get('draft')):
+                            raise RuntimeError('Mirror draft verification failed')
                 gn, cn = (number(dest['number']), n) if source == 'gc' else (n, number(dest['number']))
                 sync_discussion(gh, gc, gn, cn, 'pulls')
                 print(f'Linked GitCode MR {cn} and GitHub PR {gn}; source {sha}')
