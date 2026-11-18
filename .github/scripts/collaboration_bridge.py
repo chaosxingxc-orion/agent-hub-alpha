@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 import urllib.error
 import urllib.request
+import urllib.parse
 
 GH = 'https://api.github.com/repos/chaosxingxc-orion/agent-hub-alpha'
 GC = 'https://api.gitcode.com/api/v5/repos/xingchao_ml/agent-hub-alpha'
@@ -133,13 +134,20 @@ def upsert_comments(api, family, n, changes):
             api.call(f'/{family}/comments/{ident}', 'PATCH', {'body': body})
 
 
-def mirror_base(source, obj, dest):
+def mirror_base(source, obj, dest, source_api):
     base = obj.get('base', {})
     ref, sha = base.get('ref', ''), base.get('sha', '')
     if not ref or not re.fullmatch(r'[0-9a-f]{40}', sha):
         raise ValueError('Missing or invalid source base; refusing main fallback')
     if ref == 'main':
         return 'main'
+    # Pull payloads can retain a historical comparison base. Resolve the live
+    # named branch before import; transfer still rejects concurrent movement.
+    current = source_api.call('/branches/' + urllib.parse.quote(ref, safe=''))['commit']
+    sha = current.get('sha') or current.get('id') or ''
+    if not re.fullmatch(r'[0-9a-f]{40}', sha):
+        raise ValueError('Invalid live source base')
+    obj['base'] = {**base, 'sha': sha}
     # GitCode v5 cannot retarget existing requests. A stable bridge-owned branch
     # follows normal fast-forwards; rewinds/divergence fail, never force-update.
     key = hashlib.sha256(ref.encode('utf-8')).hexdigest()[:40]
@@ -193,13 +201,13 @@ def reconcile(gh, gc):
                 continue
             try:
                 source_url = obj['html_url']
-                body = origin_body(key, obj, source_url)
                 title = f'[{"GitCode MR" if source == "gc" else "GitHub PR"} #{n}] {obj["title"]}'[:250]
                 api = gh if source == 'gc' else gc
                 branch = f'gitcode/mr-{n}' if source == 'gc' else f'github/pr-{n}'
                 sha = obj['head']['sha']
                 active = obj.get('state') == 'open' and (dest is None or dest.get('state') == 'open')
-                base = mirror_base(source, obj, dest) if active else None
+                base = mirror_base(source, obj, dest, gc if source == 'gc' else gh) if active else None
+                body = origin_body(key, obj, source_url)
                 if active and source == 'gh' and dest and dest.get('base', {}).get('ref') != base:
                     api.call(f'/pulls/{number(dest["number"])}', 'PATCH', {'title': title, 'draft': True})
                     raise RuntimeError('GitCode v5 cannot retarget an existing mirror; replace or retarget it in the UI before resuming')

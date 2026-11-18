@@ -13,6 +13,19 @@ spec.loader.exec_module(b)
 
 
 class Tests(unittest.TestCase):
+    def test_live_branch_tip_wins_over_stale_pull_base_sha(self):
+        gh, gc = FakeAPI('gh'), FakeAPI('gc')
+        gh.pulls[0]['base'] = {'ref': 'candidate', 'sha': 'b'*40}
+        call = gh.call
+        def live(path, method='GET', data=None):
+            if path == '/branches/candidate':
+                return {'commit': {'sha': 'c'*40}}
+            return call(path, method, data)
+        with patch.object(b, 'transfer') as transfer, patch.object(gh, 'call', side_effect=live):
+            b.reconcile(gh, gc)
+            self.assertTrue(any(c.args[2] == 'refs/heads/candidate' and c.args[4] == 'c'*40 for c in transfer.call_args_list))
+            self.assertIn('Source base: candidate ('+'c'*40+')', gc.pulls[1]['body'])
+
     def test_candidate_base_tracks_source_without_retargeting(self):
         gh, gc = FakeAPI('gh'), FakeAPI('gc')
         gh.pulls[0]['base'] = {'ref': 'codex/candidate', 'sha': 'b' * 40}
@@ -229,6 +242,10 @@ class FakeAPI:
     def call(self, path, method='GET', data=None):
         bits = path.strip('/').split('/')
         if method == 'GET':
+            if bits[0] == 'branches':
+                ref = b.urllib.parse.unquote(bits[1])
+                p = next(x for x in self.pulls if x.get('base', {}).get('ref') == ref)
+                return {'commit': {'sha': p['base']['sha']}}
             objects = self.pulls if bits[0] == 'pulls' else self.issues
             return copy.deepcopy(next(x for x in objects if x['number'] == int(bits[1])))
         if method == 'POST' and bits[-1] == 'comments':
