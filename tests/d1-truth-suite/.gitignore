@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+_probe_results/
+_battery_work/
+seeds/truth-doc-*.md
