@@ -1,0 +1,82 @@
+<svg viewBox="0 0 680 760" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <title>下半部：Runtime 推进层与专家执行层</title>
+  <style>.ts{font:12px sans-serif;fill:#555}.th{font:14px sans-serif;font-weight:500}.arr{stroke:#5F5E5A;stroke-width:1.5;fill:none}.leader{stroke:#888780;stroke-width:.5;stroke-dasharray:4 3;fill:none}</style>
+  <defs><marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5"/></marker><marker id="a2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#185FA5" stroke-width="1.5"/></marker></defs>
+  <text class="th" x="40" y="26">下半部：Java Runtime（openJiuwen）→ 专家 Agent + 支撑组件</text>
+  <rect x="40" y="44" width="600" height="230" rx="12" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="52" y="64">W03 运行推进层（唯一推进权 · Go dispatch 才执行）</text>
+  <rect x="56" y="78" width="280" height="180" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="196" y="98" text-anchor="middle">BlueprintScheduler 调度循环</text>
+  <text class="ts" x="66" y="120">loop：读 snapshot + dispatch(afterSeq)</text>
+  <text class="ts" x="66" y="136">ready(n) ⟺ ∀p∈pred(n): Committed(p)</text>
+  <text class="ts" x="66" y="152">并行组同时派发 · join 等全齐 · 修订环×1</text>
+  <text class="ts" x="66" y="168">DAG 无环→结构性不可能死循环</text>
+  <text class="ts" x="66" y="188">提交观察 POST observations{eventId,o}</text>
+  <text class="ts" x="66" y="204">Go ack 后才算记录（checkpoint≠成功）</text>
+  <rect x="348" y="78" width="280" height="180" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="488" y="98" text-anchor="middle">故障恢复（#19 S03–S09 全对照）</text>
+  <text class="ts" x="358" y="120">kill -9 → 新 worker 读账本续跑</text>
+  <text class="ts" x="358" y="136">已提交节点复用，模型调用增量=0</text>
+  <text class="ts" x="358" y="152">双 worker → epoch 栅栏（只一方提交）</text>
+  <text class="ts" x="358" y="168">回执丢失→同 o 重提交识别为复用</text>
+  <text class="ts" x="358" y="184">远端生效回执丢→按 b 查询补记</text>
+  <text class="ts" x="358" y="204">S09 教训：先判重复再判代次</text>
+  <line x1="230" y1="274" x2="230" y2="310" class="arr" marker-end="url(#a1)"/>
+  <text class="ts" x="52" y="296">④RemoteAgentCaller 经 Gateway（effect token+回调坐标）</text>
+  <line x1="460" y1="310" x2="460" y2="274" class="arr" stroke="#185FA5" marker-end="url(#a2)"/>
+  <text class="ts" x="475" y="296">⑤observation 回报</text>
+  <rect x="40" y="310" width="600" height="300" rx="12" fill="#FAECE7" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="52" y="330">W06 专家执行层（六节点 · 干活权 · 零提交权）</text>
+  <rect x="56" y="344" width="136" height="120" rx="8" fill="#FAECE7" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="124" y="362" text-anchor="middle">material-agent</text>
+  <text class="ts" x="64" y="384">读快照 read_page{bank,page}</text>
+  <text class="ts" x="64" y="400">三元组 digest/page/excerpt</text>
+  <text class="ts" x="64" y="416">缺料→MATERIAL_MISSING</text>
+  <text class="ts" x="64" y="432">skill: source-library</text>
+  <rect x="204" y="344" width="136" height="120" rx="8" fill="#FAECE7" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="272" y="362" text-anchor="middle">finance ∥ risk</text>
+  <text class="ts" x="212" y="384">双分析并行（输入互斥隔离）</text>
+  <text class="ts" x="212" y="400">risk 缺 metric-dict 绑定（R3）</text>
+  <text class="ts" x="212" y="416">产出带 [C-n] 引用草稿</text>
+  <text class="ts" x="212" y="432">派生值→MCP 不心算</text>
+  <rect x="352" y="344" width="136" height="120" rx="8" fill="#FAECE7" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="420" y="362" text-anchor="middle">writer（缺位→R2）</text>
+  <text class="ts" x="360" y="384">Java WriterAgent 存在未上注册表</text>
+  <text class="ts" x="360" y="400">report-template 填充</text>
+  <text class="ts" x="360" y="416">metrics 原样转抄</text>
+  <text class="ts" x="360" y="432">AnnualReportArtifacts</text>
+  <rect x="500" y="344" width="136" height="120" rx="8" fill="#FAECE7" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="568" y="362" text-anchor="middle">checker × 2</text>
+  <text class="ts" x="508" y="384">Numeric N1-N7（N7 待实现）</text>
+  <text class="ts" x="508" y="400">Citation 支持度三级</text>
+  <text class="ts" x="508" y="416">缺 artifact_sha256（N3）</text>
+  <text class="ts" x="508" y="432">→ 无法进 Go checks 表</text>
+  <rect x="56" y="476" width="280" height="122" rx="8" fill="#F5C4B3" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="66" y="496">Skill 五件套（每个专家的知识层）</text>
+  <text class="ts" x="66" y="516">SKILL.md（pushy description）· scripts/ 确定性</text>
+  <text class="ts" x="66" y="532">references/×6 · assets/ · evals/</text>
+  <text class="ts" x="66" y="548">渐进披露：元数据→正文→链接文件</text>
+  <rect x="348" y="476" width="280" height="122" rx="8" fill="#F5C4B3" stroke="#F0997B" stroke-width="0.5"/>
+  <text class="th" x="358" y="496">Rail 与 MCP 装配（bind 即真实装配）</text>
+  <text class="ts" x="358" y="516">GatekeepRail：PASSED→deliverable</text>
+  <text class="ts" x="358" y="532">FAILED→修订×1→waiting_human</text>
+  <text class="ts" x="358" y="548">MCP：initialize→tools/list→tools/call 全限定名</text>
+  <rect x="56" y="626" width="184" height="94" rx="8" fill="#EAF3DE" stroke="#97C459" stroke-width="0.5"/>
+  <text class="th" x="148" y="644" text-anchor="middle">Agent Bus Gateway</text>
+  <text class="ts" x="66" y="664">验 token/epoch/payload</text>
+  <text class="ts" x="66" y="680">RDC 解析路由</text>
+  <text class="ts" x="66" y="696">目录≠授权</text>
+  <rect x="252" y="626" width="184" height="94" rx="8" fill="#EAF3DE" stroke="#97C459" stroke-width="0.5"/>
+  <text class="th" x="344" y="644" text-anchor="middle">RDC 注册中心</text>
+  <text class="ts" x="262" y="664">真实 AgentCard@版本</text>
+  <text class="ts" x="262" y="680">实例发现≠许可</text>
+  <text class="ts" x="262" y="696">Go 白名单=业务契约</text>
+  <rect x="448" y="626" width="188" height="94" rx="8" fill="#EAF3DE" stroke="#97C459" stroke-width="0.5"/>
+  <text class="th" x="542" y="644" text-anchor="middle">Model Proxy</text>
+  <text class="ts" x="458" y="664">LLM 调用=子 effect_id</text>
+  <text class="ts" x="458" y="680">前置授权+按 effect 缓存</text>
+  <text class="ts" x="458" y="696">无 token 同样被拒</text>
+  <line x1="240" y1="673" x2="252" y2="673" class="leader"/>
+  <line x1="436" y1="673" x2="448" y2="673" class="leader"/>
+  <text class="ts" x="40" y="742">执行层铁律：节点内可用 LLM，但零提交权——observation 必回流 Go；W06 缺口 N3/N5/R2/R3 全在此层修复</text>
+</svg>

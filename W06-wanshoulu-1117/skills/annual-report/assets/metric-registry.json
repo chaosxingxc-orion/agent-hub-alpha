@@ -1,0 +1,70 @@
+{
+  "$comment": "指标注册表（机器可读）——由 references/metric-dictionary.md 同源维护。verify_metrics.py 读取本表驱动 N1/N2 规则；writer 按 expected_unit 填充。",
+  "version": "1.0.0",
+  "metrics": {
+    "OPERATING_REVENUE": {
+      "name_zh": "营业收入", "expected_unit": "亿元",
+      "definition": "集团合并口径（非母公司单体）",
+      "derived": null
+    },
+    "NET_PROFIT_ATTRIBUTABLE": {
+      "name_zh": "归母净利润", "expected_unit": "亿元",
+      "definition": "归属于本行股东的净利润，扣少数股东权益",
+      "derived": null
+    },
+    "NET_INTEREST_MARGIN": {
+      "name_zh": "净息差", "expected_unit": "%",
+      "definition": "利息净收入/平均生息资产（日均，非期末）",
+      "derived": null
+    },
+    "COST_INCOME_RATIO": {
+      "name_zh": "成本收入比", "expected_unit": "%",
+      "definition": "业务及管理费/营业收入",
+      "derived": {
+        "formula": "业务及管理费 / 营业收入 * 100",
+        "base_keyword": "业务及管理费",
+        "numerator_page_of": "OPERATING_REVENUE",
+        "tolerance_pp": 0.5,
+        "on_base_missing": "WARNING"
+      }
+    },
+    "NPL_BALANCE": {
+      "name_zh": "不良贷款余额", "expected_unit": "亿元",
+      "definition": "五级分类次级+可疑+损失",
+      "derived": null
+    },
+    "NPL_RATIO": {
+      "name_zh": "不良贷款率", "expected_unit": "%",
+      "definition": "不良余额/贷款和垫款本金总额（期末）",
+      "derived": {
+        "formula": "NPL_BALANCE / 贷款和垫款本金总额 * 100",
+        "base_keyword": "贷款和垫款本金总额",
+        "fallback_keyword": "贷款总额",
+        "base_page_of": "NPL_BALANCE",
+        "tolerance_pp": 0.05,
+        "on_base_missing": "WARNING"
+      }
+    },
+    "PROVISION_COVERAGE": {
+      "name_zh": "拨备覆盖率", "expected_unit": "%",
+      "definition": "贷款减值准备余额/不良贷款余额",
+      "derived": {
+        "formula": "贷款减值准备 / NPL_BALANCE * 100",
+        "base_keyword": "贷款减值准备",
+        "base_page_of": "NPL_BALANCE",
+        "tolerance_pp": 1.0,
+        "on_base_missing": "WARNING"
+      }
+    },
+    "CET1_RATIO": {
+      "name_zh": "核心一级资本充足率", "expected_unit": "%",
+      "definition": "监管口径（非总资本充足率、非一级资本充足率）",
+      "derived": null
+    }
+  },
+  "period_rules": {
+    "prior_period": "2024年度",
+    "prior_source_independent": true,
+    "yoy_tolerance_pp": 0.1
+  }
+}

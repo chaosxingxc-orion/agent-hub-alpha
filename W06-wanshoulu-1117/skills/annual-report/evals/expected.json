@@ -1,0 +1,50 @@
+{
+ "case-ok": {
+  "numeric": "PASSED"
+ },
+ "case-unit-mismatch": {
+  "numeric": "FAILED",
+  "rules": [
+   "UNIT_MISMATCH"
+  ]
+ },
+ "case-fabricated-number": {
+  "numeric": "FAILED",
+  "rules": [
+   "FABRICATED_NUMBER",
+   "CALC_MISMATCH"
+  ]
+ },
+ "case-missing-metric": {
+  "numeric": "FAILED",
+  "rules": [
+   "METRIC_MISSING"
+  ]
+ },
+ "case-calc-mismatch-npl": {
+  "numeric": "FAILED",
+  "rules": [
+   "CALC_MISMATCH",
+   "FABRICATED_NUMBER"
+  ]
+ },
+ "case-calc-mismatch-provision": {
+  "numeric": "FAILED",
+  "rules": [
+   "FABRICATED_NUMBER",
+   "CALC_MISMATCH"
+  ]
+ },
+ "case-yoy-mismatch": {
+  "numeric": "FAILED",
+  "rules": [
+   "YOY_MISMATCH"
+  ]
+ },
+ "case-delta-unit-mismatch": {
+  "numeric": "FAILED",
+  "rules": [
+   "DELTA_UNIT_MISMATCH"
+  ]
+ }
+}

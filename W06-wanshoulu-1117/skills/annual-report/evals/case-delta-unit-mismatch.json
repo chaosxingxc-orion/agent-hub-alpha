@@ -1,0 +1,90 @@
+{
+ "task_id": "eval-001",
+ "company": "招商银行",
+ "report_period": "2025年度",
+ "metrics": [
+  {
+   "key": "OPERATING_REVENUE",
+   "value": "3,374.88",
+   "unit": "亿元",
+   "period": "2025年度",
+   "source_document_digest": "any",
+   "page": 12,
+   "evidence_excerpt_digest": "any"
+  },
+  {
+   "key": "NET_PROFIT_ATTRIBUTABLE",
+   "value": "1,405.66",
+   "unit": "亿元",
+   "period": "2025年度",
+   "source_document_digest": "any",
+   "page": 12,
+   "evidence_excerpt_digest": "any"
+  },
+  {
+   "key": "NET_INTEREST_MARGIN",
+   "value": "1.98",
+   "unit": "%",
+   "period": "2025年度",
+   "source_document_digest": "any",
+   "page": 12,
+   "evidence_excerpt_digest": "any"
+  },
+  {
+   "key": "COST_INCOME_RATIO",
+   "value": "33.06",
+   "unit": "%",
+   "period": "2025年度",
+   "source_document_digest": "any",
+   "page": 12,
+   "evidence_excerpt_digest": "any"
+  },
+  {
+   "key": "NPL_BALANCE",
+   "value": "656.10",
+   "unit": "亿元",
+   "period": "2025年度",
+   "source_document_digest": "any",
+   "page": 45,
+   "evidence_excerpt_digest": "any"
+  },
+  {
+   "key": "NPL_RATIO",
+   "value": "0.95",
+   "unit": "%",
+   "period": "2025年度",
+   "source_document_digest": "any",
+   "page": 45,
+   "evidence_excerpt_digest": "any"
+  },
+  {
+   "key": "PROVISION_COVERAGE",
+   "value": "411.98",
+   "unit": "%",
+   "period": "2025年度",
+   "source_document_digest": "any",
+   "page": 45,
+   "evidence_excerpt_digest": "any"
+  },
+  {
+   "key": "CET1_RATIO",
+   "value": "14.86",
+   "unit": "%",
+   "period": "2025年度",
+   "source_document_digest": "any",
+   "page": 45,
+   "evidence_excerpt_digest": "any"
+  }
+ ],
+ "citations": [],
+ "sections": [
+  {
+   "section_id": "s2",
+   "title": "贷款质量",
+   "body": "报告期末，不良贷款率较上年末下降 0.01%。[C-1]",
+   "claim_ids": [
+    "C-1"
+   ]
+  }
+ ]
+}

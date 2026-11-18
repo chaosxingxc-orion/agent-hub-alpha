@@ -1,0 +1,38 @@
+{
+ "case": "parent-company-caliber",
+ "task": {
+  "bank": "cmb",
+  "period": "2025年度",
+  "caliber": "母公司",
+  "scope": "全部章节"
+ },
+ "selection_record": {
+  "recalled": [
+   "finance-analyst",
+   "risk-analyst",
+   "capital-analyst",
+   "material-agent",
+   "metrics-agent"
+  ],
+  "excluded": [
+   {
+    "id": "finance-analyst",
+    "match_score": "高（章节/指标全匹配）",
+    "reason": "constraints.caliber=仅集团合并口径——母公司口径任务必须排除（ALK-05：高分不适用候选仍被排除）"
+   },
+   {
+    "id": "risk-analyst",
+    "match_score": "高",
+    "reason": "同上 constraints.caliber"
+   },
+   {
+    "id": "capital-analyst",
+    "match_score": "高",
+    "reason": "同上 constraints.caliber"
+   }
+  ],
+  "outcome": "无可用分析能力 → 按失败三态之'规约未覆盖'：显式报告并等待，不降级冒充（ALK-05 用例3 精神：全不可用不能瞎选）",
+  "expected": "生成侧拒绝 + 向用户说明可用口径选项"
+ },
+ "expected_graph": "无图（显式拒绝）"
+}

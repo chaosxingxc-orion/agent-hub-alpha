@@ -1,0 +1,59 @@
+server:
+  port: ${ORCHESTRATOR_PORT:18094}
+
+spring:
+  application:
+    name: W06AnnualReportOrchestrator
+
+openjiuwen:
+  service:
+    handler: agentcore-ext
+    a2a:
+      agent-name: "AnnualReportOrchestrator"
+      agent-description: "W06 年报报告编排：资料→指标→双分析并行→写作→双门禁→交付/修订/人工"
+      provider-organization: "agent-hub-alpha"
+      streaming: true
+      default-input-modes: ["text", "text/plain"]
+      default-output-modes: ["text", "text/plain"]
+      skills:
+        - id: "annual_report"
+          name: "Annual Report Generation"
+          description: "从固定年报快照生成经营与资产质量简报：八指标+引用+双分支分析，经确定性核验与语义门禁"
+          tags: ["w06", "annual-report", "finance"]
+      # 五个专业角色 + critic 经 A2A 注入（RemoteA2aToolInstaller 自动注册为工具）
+      remote-agents:
+        - name: material-agent
+          url: ${MATERIAL_AGENT_URL:}
+          streaming: false
+        - name: metrics-agent
+          url: ${METRICS_AGENT_URL:}
+          streaming: false
+        - name: operation-agent
+          url: ${OPERATION_AGENT_URL:}
+          streaming: false
+        - name: asset-quality-agent
+          url: ${ASSET_QUALITY_AGENT_URL:}
+          streaming: false
+        - name: writer-agent
+          url: ${WRITER_AGENT_URL:}
+          streaming: false
+        - name: critic
+          url: ${CRITIC_AGENT_URL:}
+          streaming: false
+  demo:
+    w06-orchestrator:
+      provider: ${LLM_PROVIDER:OpenAI}
+      api-key: ${LLM_API_KEY}
+      api-base: ${LLM_API_BASE:}
+      model-name: ${LLM_MODEL}
+      ssl-verify: ${LLM_SSL_VERIFY:true}
+      temperature: 0.2
+      max-iterations: ${ORCHESTRATOR_MAX_ITERATIONS:16}
+      completion-timeout: ${ORCHESTRATOR_COMPLETION_TIMEOUT:900s}
+      workspace-path: ${W06_WORKSPACE:/workspace}
+      # 修订上限：与采纳图 revision_gate 预声明一致（max_rounds=1）
+      gatekeep-max-rounds: ${W06_GATEKEEP_MAX_ROUNDS:1}
+
+logging:
+  level:
+    com.agenthub.w06: DEBUG

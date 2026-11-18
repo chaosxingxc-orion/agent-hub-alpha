@@ -1,0 +1,83 @@
+<svg viewBox="0 0 680 940" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <title>主 Agent 知识配置与候选图生成机制</title>
+  <style>.ts{font:12px sans-serif;fill:#555}.th{font:14px sans-serif;font-weight:500}.arr{stroke:#5F5E5A;stroke-width:1.5;fill:none}</style>
+  <defs><marker id="a1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5"/></marker></defs>
+  <text class="th" x="40" y="26">主 Agent（编排智能体）知识配置 → 候选图生成 → 双重门禁</text>
+  <rect x="40" y="46" width="600" height="240" rx="12" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text class="th" x="52" y="66">知识层一：目录索引（渐进披露第一层 · 每卡几十 token）</text>
+  <rect x="56" y="80" width="184" height="88" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="148" y="98" text-anchor="middle">AgentCard 目录 × N</text>
+  <text class="ts" x="64" y="118">agent_id · 描述（动词+触发语境）</text>
+  <text class="ts" x="64" y="134">输入输出 schema · 版本</text>
+  <text class="ts" x="64" y="150">卡片质量=选图质量上限</text>
+  <rect x="252" y="80" width="184" height="88" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="344" y="98" text-anchor="middle">Skill 卡目录 × N</text>
+  <text class="ts" x="260" y="118">pushy description 防漏触发</text>
+  <text class="ts" x="260" y="134">选中后才加载 SKILL.md 正文</text>
+  <text class="ts" x="260" y="150">scripts 执行时才调</text>
+  <rect x="448" y="80" width="184" height="88" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="540" y="98" text-anchor="middle">MCP 工具目录 × N</text>
+  <text class="ts" x="456" y="118">tools 清单 · inputSchema</text>
+  <text class="ts" x="456" y="134">全限定名 Server:tool</text>
+  <text class="ts" x="456" y="150">bind 即装配</text>
+  <rect x="56" y="180" width="576" height="92" rx="10" fill="#CECBF6" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text class="th" x="66" y="200">能力卡四元组（存在性→可选择性）</text>
+  <text class="ts" x="66" y="220">①id+描述 ②applies_to ③constraints（如"仅集团口径"）④版本@v</text>
+  <text class="ts" x="66" y="238">缺②③→"高分不适用"误选无法结构性排除（ALK-05 硬伤）</text>
+  <text class="ts" x="66" y="256">知识卡与注册表解耦：RDC 管"能不能调到"，能力卡管"该不该用"</text>
+  <rect x="40" y="302" width="600" height="170" rx="12" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text class="th" x="52" y="322">知识层二至四：orchestrator-skill（主 Agent 专属技能包）</text>
+  <rect x="56" y="336" width="184" height="120" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text class="th" x="148" y="354" text-anchor="middle">流程方法（SKILL.md）</text>
+  <text class="ts" x="64" y="374">四步纪律，每步留记录</text>
+  <text class="ts" x="64" y="390">模板可作起点不冒充编排</text>
+  <text class="ts" x="64" y="406">多轮调整：确认前可改</text>
+  <rect x="252" y="336" width="184" height="120" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text class="th" x="344" y="354" text-anchor="middle">专业知识+规范约束</text>
+  <text class="ts" x="260" y="374">domain-brief 澄清用</text>
+  <text class="ts" x="260" y="390">Go 会拒什么+自检清单</text>
+  <text class="ts" x="260" y="406">W01 规约引用</text>
+  <rect x="448" y="336" width="184" height="120" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text class="th" x="540" y="354" text-anchor="middle">案例经验（evals）</text>
+  <text class="ts" x="456" y="374">①完整图+选择记录</text>
+  <text class="ts" x="456" y="390">②重点差异图（有依据）</text>
+  <text class="ts" x="456" y="406">③排除记录 · ALK-05 全覆盖</text>
+  <line x1="340" y1="472" x2="340" y2="512" class="arr" marker-end="url(#a1)"/>
+  <text class="ts" x="355" y="496">任务到达 → 消费知识 → 生成候选图</text>
+  <rect x="40" y="512" width="600" height="180" rx="12" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="52" y="532">候选图生成（主 Agent 智能区间——止于候选）</text>
+  <rect x="56" y="548" width="130" height="120" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="121" y="566" text-anchor="middle">①召回</text>
+  <text class="ts" x="64" y="588">目录匹配·全 unknown→拒</text>
+  <text class="ts" x="64" y="606">留召回记录</text>
+  <line x1="186" y1="608" x2="198" y2="608" class="arr" marker-end="url(#a1)"/>
+  <rect x="200" y="548" width="130" height="120" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="265" y="566" text-anchor="middle">②适用性</text>
+  <text class="ts" x="208" y="588">constraints·高分不适用仍排除</text>
+  <text class="ts" x="208" y="606">留排除理由</text>
+  <line x1="330" y1="608" x2="342" y2="608" class="arr" marker-end="url(#a1)"/>
+  <rect x="344" y="548" width="130" height="120" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="409" y="566" text-anchor="middle">③排序</text>
+  <text class="ts" x="352" y="588">不保证最优保证可解释</text>
+  <text class="ts" x="352" y="606">留排序依据</text>
+  <line x1="474" y1="608" x2="486" y2="608" class="arr" marker-end="url(#a1)"/>
+  <rect x="488" y="548" width="144" height="120" rx="8" fill="#E6F1FB" stroke="#85B7EB" stroke-width="0.5"/>
+  <text class="th" x="560" y="566" text-anchor="middle">④选择组装</text>
+  <text class="ts" x="496" y="588">节点=能力卡@v·边=依赖</text>
+  <text class="ts" x="496" y="606">候选图{digest}+选择记录</text>
+  <line x1="200" y1="692" x2="200" y2="730" class="arr" marker-end="url(#a1)"/>
+  <text class="ts" x="52" y="714">候选图提交</text>
+  <rect x="40" y="730" width="600" height="170" rx="12" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text class="th" x="52" y="750">双重门禁（→接 Go 控制层）</text>
+  <rect x="56" y="764" width="280" height="120" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text class="th" x="196" y="784" text-anchor="middle">门禁一：Go 静态校验</text>
+  <text class="ts" x="66" y="806">schema→能力+版本→依赖→循环→预算</text>
+  <text class="ts" x="66" y="822">不合法→拒+原因→主 Agent 修改</text>
+  <text class="ts" x="66" y="838">模型不得自行放行</text>
+  <rect x="348" y="764" width="280" height="120" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text class="th" x="488" y="784" text-anchor="middle">门禁二：用户确认</text>
+  <text class="ts" x="358" y="806">图卡展示候选图+选择记录</text>
+  <text class="ts" x="358" y="822">CONFIRM{graphDigest}→冻结 T/g</text>
+  <text class="ts" x="358" y="838">改动=版本漂移=拒 → BlueprintScheduler</text>
+  <text class="ts" x="40" y="924">核心闭环：四类知识→四步纪律→双门禁冻结→机械执行 | 选图智能上限由知识配置质量决定</text>
+</svg>

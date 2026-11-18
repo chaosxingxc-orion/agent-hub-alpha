@@ -1,0 +1,47 @@
+{
+ "case": "full-report",
+ "task": {
+  "bank": "cmb",
+  "period": "2025年度",
+  "caliber": "集团合并",
+  "scope": "全部章节"
+ },
+ "selection_record": {
+  "recalled": [
+   "material-agent",
+   "metrics-agent",
+   "finance-analyst",
+   "risk-analyst",
+   "capital-analyst",
+   "writer-agent",
+   "numeric-checker",
+   "citation-checker",
+   "approver",
+   "mcp:w06-compute",
+   "mcp:w06-snapshot"
+  ],
+  "recall_basis": "年报场景全量匹配（applies_to.scenario 含年报）",
+  "excluded": [],
+  "exclusion_basis": "无口径冲突，全保留",
+  "ranked_top": [
+   "finance-analyst（经营类节4节，覆盖最大）",
+   "risk-analyst（1节专精）",
+   "capital-analyst（1节专精）"
+  ],
+  "selected_nodes": [
+   "material@1.0.0",
+   "metrics@1.0.0",
+   "finance@1.0.0",
+   "risk@1.0.0",
+   "capital@1.0.0",
+   "writer@1.0.0(join)",
+   "numeric-checker@0.3.0",
+   "citation-checker@0.3.0",
+   "approver@1.0.0"
+  ],
+  "edges": "material→metrics→(finance∥risk∥capital)→writer→(numeric∥citation)→approver",
+  "budget": "default",
+  "revision_loop": "max_rounds=1"
+ },
+ "expected_graph": "标准全拓扑 9 节点"
+}
