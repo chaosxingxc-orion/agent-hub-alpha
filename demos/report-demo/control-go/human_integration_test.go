@@ -122,3 +122,107 @@ func TestPGHumanReviewDoesNotRewriteCheckerAndRevocationStillWins(t *testing.T) 
 		t.Fatal("withdrawn checker allowed delivery")
 	}
 }
+
+// Simulates the waiting update sent by the worker immediately after the
+// selector discovers that its conditional predecessor has not settled.
+func TestPGHumanSelectorResumesAfterEarlyWaitingUpdate(t *testing.T) {
+	ctx, s, _, cat := integration(t)
+	_, graph := sample(t)
+	graph.Nodes = append(graph.Nodes,
+		Node{ID: "check", Expert: "checker@1", Task: "Initial review", DependsOn: []string{"draft"}},
+		Node{ID: "check-revision", Expert: "checker@1", Task: "Conditional review", DependsOn: []string{"draft"}, Condition: &Condition{Step: "check", Outcome: "REVISE"}},
+		Node{ID: "select", Expert: "select@1", Task: "Select approved report", DependsOn: []string{"check", "check-revision"}},
+	)
+	task, err := s.Propose(ctx, "planner", "human-early-select", graph, "compiler-fixture")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.Admit(ctx, task.ID, task.GraphDigest, "reviewer"); err != nil {
+		t.Fatal(err)
+	}
+	claim, err := s.ClaimRun(ctx, task.ID, "original-worker", "graph")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease := leaseFrom(t, claim)
+	files := Files{Root: t.TempDir()}
+	commit := func(node string, raw []byte) string {
+		t.Helper()
+		resolved, err := s.ResolveNode(ctx, task.ID, node, lease.Owner, lease.Epoch, "", cat, "fixed-source")
+		if err != nil {
+			t.Fatal(err)
+		}
+		permit := resolved.(map[string]any)
+		if permit["status"] != "GRANTED" {
+			t.Fatalf("%s: expected a new permit, got %v", node, permit["status"])
+		}
+		artifact, err := files.Put(raw)
+		if err != nil {
+			t.Fatal(err)
+		}
+		request := CommitRequest{lease.Owner, lease.Epoch, permit["input_digest"].(string), permit["attempt"].(int), artifact}
+		if _, err = s.Commit(ctx, task.ID, node, request, raw, cat, "fixed-source"); err != nil {
+			t.Fatal(err)
+		}
+		return artifact
+	}
+	for _, node := range []string{"extract", "business"} {
+		raw, _ := json.Marshal(map[string]string{"fixture": node})
+		commit(node, raw)
+	}
+	report := commit("draft", []byte(`{"fixture":"draft"}`))
+	digest := "sha256:" + report
+	raw, _ := json.Marshal(map[string]any{"checker_version": "control-fixture/1", "object_digest": digest, "outcome": "HUMAN", "failures": []string{}})
+	check := commit("check", raw)
+	_, err = s.ResolveNode(ctx, task.ID, "select", lease.Owner, lease.Epoch, "", cat, "fixed-source")
+	requireCode(t, err, "WAIT")
+	if _, err = s.MarkWaiting(ctx, task.ID, "select", lease.Owner, lease.Epoch, "UNKNOWN", "WAIT"); err != nil {
+		t.Fatal(err)
+	}
+	paused, err := s.GetTask(ctx, task.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if paused.Status != "WAITING_INPUT" {
+		t.Fatalf("early selector update replaced the human wait: %s", paused.Status)
+	}
+	if _, err = s.Complete(ctx, task.ID, lease.Owner, lease.Epoch); err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.Heartbeat(ctx, task.ID, lease.Owner, lease.Epoch, "graph")
+	requireCode(t, err, "LEASE_EXPIRED")
+	_, err = s.ClaimRun(ctx, task.ID, "early-worker", "graph")
+	requireCode(t, err, "POLICY_REJECTED")
+	if _, err = s.ApproveReport(ctx, task.ID, report, "reviewer"); err == nil {
+		t.Fatal("unreviewed draft was approved")
+	}
+	in := CheckReview{CheckArtifact: check, ObjectDigest: digest, Decision: "ACCEPT", Reason: "Fixture reviewer verified the cited evidence"}
+	if _, err = s.ReviewCheck(ctx, task.ID, "check", in, "reviewer"); err != nil {
+		t.Fatal(err)
+	}
+	// Persist the exact node projection left by older workers. No remote
+	// call was created for this local selector and the human fact is intact.
+	if _, err = s.Pool.Exec(ctx, "UPDATE tasks SET document=jsonb_set(document,'{nodes,select,status}',to_jsonb('UNKNOWN'::text)) WHERE scope=$1 AND id=$2", s.Scope, task.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.SetPause(ctx, task.ID, false); err != nil {
+		t.Fatal(err)
+	}
+	claim, err = s.ClaimRun(ctx, task.ID, "resumed-worker", "graph")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lease = leaseFrom(t, claim)
+	if _, err = s.AuthorizeSkip(ctx, task.ID, "check-revision", lease.Owner, lease.Epoch); err != nil {
+		t.Fatal(err)
+	}
+	commit("select", []byte(`{"fixture":"selected"}`))
+	finished, err := s.Complete(ctx, task.ID, lease.Owner, lease.Epoch)
+	if err != nil || finished.(map[string]string)["status"] != "AWAITING_ACCEPTANCE" {
+		t.Fatalf("resumed run did not finish: %v %v", finished, err)
+	}
+	calls, err := s.Calls(ctx, task.ID, "select")
+	if err != nil || len(calls) != 0 {
+		t.Fatalf("local selector unexpectedly acquired a remote call: %d %v", len(calls), err)
+	}
+}

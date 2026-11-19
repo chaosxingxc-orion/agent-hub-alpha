@@ -255,7 +255,7 @@ func (s *Store) ClaimRun(ctx context.Context, id, owner, domain string) (any, er
 		if t.Pause {
 			return nil, fault("PAUSED", "task paused", 409)
 		}
-		if domain == "graph" && t.Status != "QUEUED" && t.Status != "RUNNING" && t.Status != "WAITING_REMOTE" && t.Status != "WAITING_INPUT" && t.Status != "WAITING_AUTH" {
+		if domain == "graph" && t.Status != "QUEUED" && t.Status != "RUNNING" && t.Status != "WAITING_REMOTE" {
 			return nil, fault("POLICY_REJECTED", "task not executable", 409)
 		}
 		if domain == "graph" {
@@ -395,6 +395,12 @@ func (s *Store) Binding(ctx context.Context, t *Task, node string, c Catalog, ma
 	return b, nil
 }
 
+func (s *Store) nodeHasCall(ctx context.Context, tx pgx.Tx, id, node string) (bool, error) {
+	var exists bool
+	err := tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM remote_calls WHERE scope=$1 AND task_id=$2 AND node_id=$3)", s.Scope, id, node).Scan(&exists)
+	return exists, err
+}
+
 func (s *Store) ResolveNode(ctx context.Context, id, node, owner, epoch, expectedDigest string, c Catalog, materialDigest string) (any, error) {
 	verified, prepareErr := s.prepareReuse(ctx, id, node, c, materialDigest)
 	if prepareErr != nil {
@@ -441,11 +447,11 @@ func (s *Store) ResolveNode(ctx context.Context, id, node, owner, epoch, expecte
 		// A persisted send intent dominates a projected node status, including
 		// INPUT_REQUIRED/AUTH_REQUIRED. Resuming must reconcile that call, never
 		// obtain a fresh attempt that could send the same work a second time.
-		var hasCall bool
-		if err = tx.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM remote_calls WHERE scope=$1 AND task_id=$2 AND node_id=$3)", s.Scope, id, node).Scan(&hasCall); err != nil {
+		hasCall, err := s.nodeHasCall(ctx, tx, id, node)
+		if err != nil {
 			return nil, err
 		}
-		if hasCall || ns.Status == "WAITING_REMOTE" || ns.Status == "UNKNOWN" {
+		if hasCall {
 			// Transfer only the right to reconcile this existing call. The attempt
 			// and remote identity remain fixed; WAIT never grants a new send.
 			ns.OwnerEpoch = epoch

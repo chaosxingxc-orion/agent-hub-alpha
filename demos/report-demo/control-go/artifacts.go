@@ -220,6 +220,19 @@ func (s *Store) MarkWaiting(ctx context.Context, id, node, owner, epoch, status,
 		if ns.Result != nil {
 			return nil, fault("INPUT_CONFLICT", "cannot replace formal result state", 409)
 		}
+		remoteWait := status == "UNKNOWN" || status == "WAITING_REMOTE"
+		if remoteWait {
+			hasCall, err := s.nodeHasCall(ctx, tx, id, node)
+			if err != nil {
+				return nil, err
+			}
+			if !hasCall {
+				// No dispatch intent exists. Keep the current attempt and
+				// leave graph dependency and review state authoritative.
+				ns.Reason = reason
+				return map[string]string{"node_id": node, "status": ns.Status, "reason": reason}, nil
+			}
+		}
 		ns.Status = status
 		ns.Reason = reason
 		if t.Status == "NEEDS_REVIEW" || t.Status == "BLOCKED" {
@@ -233,7 +246,7 @@ func (s *Store) MarkWaiting(ctx context.Context, id, node, owner, epoch, status,
 			// Another parallel member's waiting update cannot regress failure.
 		} else if status == "WAITING_INPUT" || status == "WAITING_AUTH" {
 			t.Status = status
-		} else if status == "UNKNOWN" || status == "WAITING_REMOTE" {
+		} else if remoteWait && t.Status != "WAITING_INPUT" && t.Status != "WAITING_AUTH" {
 			t.Status = "WAITING_REMOTE"
 		}
 		if t.Status == "BLOCKED" {

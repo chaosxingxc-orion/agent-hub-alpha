@@ -56,6 +56,9 @@ final class BoundNodeExecutor implements SubAgentExecutor {
                     "artifact_id", artifact.path("artifact_id").asText()));
             return Json.write(result.path("output"));
         } catch (ControlClient.ControlFailure e) {
+            // An unmet graph dependency or an active attempt is already known
+            // to the controller and does not establish a remote observation.
+            if (e.code.equals("WAIT")) { throw e; }
             String status = waitingStatus(e.code);
             // A waiting update is best effort; a lost permit cannot be used to
             // invent a successful result. Trusted observations have their own API.
@@ -71,7 +74,7 @@ final class BoundNodeExecutor implements SubAgentExecutor {
                 case "AUTH_REQUIRED", "AUTH_MISSING", "AUTH_INVALID", "AUTH_EXPIRED" -> "WAITING_AUTH";
                 case "BINDING_CHANGED", "BUS_BINDING_CHANGED", "DISCOVERY_BINDING_CHANGED", "MODEL_BINDING_CHANGED", "AUTH_DISABLED",
                         "CALLER_NOT_AUTHORIZED", "SCOPE_VIOLATION", "TENANT_SCOPE_VIOLATION" -> "BLOCKED";
-                case "REMOTE_UNKNOWN", "REMOTE_UNRESOLVED", "REMOTE_ASSOCIATION_CONFLICT", "WAIT", "DISCOVERY_UNAVAILABLE", "CONTROL_UNAVAILABLE",
+                case "REMOTE_UNKNOWN", "REMOTE_UNRESOLVED", "REMOTE_ASSOCIATION_CONFLICT", "DISCOVERY_UNAVAILABLE", "CONTROL_UNAVAILABLE", "STORAGE_UNAVAILABLE",
                         "IAM_UNAVAILABLE", "RDC_UNAVAILABLE", "AUDIT_UNAVAILABLE" -> "UNKNOWN";
                 default -> "FAILED";
             };

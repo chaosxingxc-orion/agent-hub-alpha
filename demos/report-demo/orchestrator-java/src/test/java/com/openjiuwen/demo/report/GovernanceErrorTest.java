@@ -1,6 +1,10 @@
 package com.openjiuwen.demo.report;
 
 import static org.junit.jupiter.api.Assertions.*;
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class GovernanceErrorTest {
@@ -22,6 +26,41 @@ class GovernanceErrorTest {
             assertEquals(code, RemoteExpertExecutor.remoteErrorCode(503,
                     Json.MAPPER.createObjectNode().put("code", code)));
             assertEquals("UNKNOWN", BoundNodeExecutor.waitingStatus(code));
+        }
+    }
+
+    @Test void localDependencyWaitDoesNotPostRemoteWaiting() throws Exception {
+        var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        var resolves = new AtomicInteger();
+        var waiting = new AtomicInteger();
+        server.createContext("/", exchange -> {
+            try (exchange) {
+                var path = exchange.getRequestURI().getPath();
+                int status = 200;
+                byte[] body = "{}".getBytes(StandardCharsets.UTF_8);
+                if (path.endsWith("/resolve")) {
+                    resolves.incrementAndGet();
+                    status = 409;
+                    body = "{\"error\":{\"code\":\"WAIT\"}}".getBytes(StandardCharsets.UTF_8);
+                } else if (path.endsWith("/waiting")) {
+                    waiting.incrementAndGet();
+                }
+                exchange.sendResponseHeaders(status, body.length);
+                exchange.getResponseBody().write(body);
+            }
+        });
+        server.start();
+        try {
+            var client = new ControlClient("http://127.0.0.1:" + server.getAddress().getPort(), "test-worker-token");
+            var executor = new BoundNodeExecutor(client, "task", Json.read("{\"id\":\"select\"}"),
+                    "worker", "1", () -> true, null, null);
+            assertEquals("WAIT", assertThrows(ControlClient.ControlFailure.class, () -> executor.execute("", "")).code);
+            assertEquals(1, resolves.get());
+            assertEquals(0, waiting.get());
+            assertEquals("UNKNOWN", BoundNodeExecutor.waitingStatus("STORAGE_UNAVAILABLE"));
+            assertEquals("FAILED", BoundNodeExecutor.waitingStatus("REMOTE_FAILED"));
+        } finally {
+            server.stop(0);
         }
     }
 

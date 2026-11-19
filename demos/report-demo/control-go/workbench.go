@@ -112,7 +112,7 @@ func (s *Server) workbenchRoutes(m *http.ServeMux) {
 					state = "running"
 				case "UNKNOWN":
 					state = "unknown"
-				case "WAITING_REMOTE", "WAITING_INPUT", "WAITING_RECONCILIATION":
+				case "WAITING_REMOTE", "WAITING_INPUT", "WAITING_AUTH", "WAITING_RECONCILIATION":
 					state = "waiting"
 				case "BLOCKED", "FAILED", "NEEDS_REVIEW":
 					state = "failed"
@@ -274,7 +274,7 @@ func (s *Server) workbenchCalls(r *http.Request, t *Task, nodes map[string]map[s
 			if call.RemoteTaskID != "" {
 				linked++
 			}
-			if call.State == "FAILED" || call.Conflicted {
+			if call.State == "FAILED" || call.State == "REJECTED" || call.State == "CANCELED" || call.Conflicted {
 				failed++
 			} else if call.State != "COMPLETED" {
 				unresolved++
