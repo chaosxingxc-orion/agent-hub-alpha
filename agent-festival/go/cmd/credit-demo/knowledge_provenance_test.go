@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -81,6 +82,9 @@ func TestKnowledgeReuseFollowsTheRunsBoundModel(t *testing.T) {
 	if t2.recorded["extract"] || ext2.ReusedFrom != "" {
 		t.Fatalf("a model-b run reused %s, computed on model-a (lookup %+v)", ext2.ReusedFrom, ext2.Lookup)
 	}
+	if !strings.Contains(ext2.Lookup.Reason, "由模型 model-a 产生，本任务绑定模型 model-b") {
+		t.Fatalf("miss reason does not name the models: %q", ext2.Lookup.Reason)
+	}
 	k2 := ext2.Published
 	if k2 == "" {
 		t.Fatal("run 2 published nothing")
@@ -143,5 +147,24 @@ func TestKnowledgeReuseProvenanceIsDurable(t *testing.T) {
 		t.Errorf("persisted lookup has no source digests")
 	} else if m, _ := srcs[0].(map[string]any); m["sha256"] == nil || m["sha256"] == "" {
 		t.Errorf("persisted lookup source without digest: %v", srcs[0])
+	}
+}
+
+// An item published before provenance was recorded cannot show which model
+// produced it; it is not reused, and the reason says so.
+func TestKnowledgeLegacyItemWithoutProvenanceIsNotReused(t *testing.T) {
+	withAnnualReport(t, nil)
+	s, _ := selectionService(t)
+	s.cfg.Model = "model-a"
+	q := arQuery("经营", "资产质量")
+	t1 := runTask(t, s, q, nil)
+	k1 := t1.run.Steps["extract"].Published
+	s.mu.Lock()
+	s.st.Knowledge[k1].Model, s.st.Knowledge[k1].OutputDigest = "", "" // as stored before this change
+	s.mu.Unlock()
+	t2 := runTask(t, s, q, nil)
+	ext := t2.run.Steps["extract"]
+	if t2.recorded["extract"] || ext.ReusedFrom != "" || !strings.Contains(ext.Lookup.Reason, "发布时未记录模型与输出摘要") {
+		t.Fatalf("legacy item: recorded=%v reused_from=%q lookup=%+v", t2.recorded["extract"], ext.ReusedFrom, ext.Lookup)
 	}
 }

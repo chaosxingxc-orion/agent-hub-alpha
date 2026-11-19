@@ -20,6 +20,11 @@ import (
 // revocation either lands before the reuse (miss, with the reason) or after
 // it (the reusing run shows that its source was revoked). Every lookup keeps
 // its outcome and reason on the step.
+//
+// The model in the key is the one the run is bound to (AR-04), not the
+// service's current default. A hit copies the item's provenance onto the
+// step, so the persisted step alone says which result, capability, package,
+// sources, model and output it took (#55 analog).
 
 type KOrigin struct {
 	Run  string `json:"run"`
@@ -34,31 +39,40 @@ type Revocation struct {
 }
 
 type KItem struct {
-	ID          string        `json:"id"`
-	Capability  string        `json:"capability"` // id@version
-	Package     string        `json:"package"`    // id@version the card came from
-	KappaIn     string        `json:"kappa_in"`
-	Sources     []MaterialRef `json:"sources"`
-	Output      string        `json:"output"`
-	Origin      KOrigin       `json:"origin"`
-	CommittedAt string        `json:"committed_at"`
-	Revoked     *Revocation   `json:"revoked,omitempty"`
+	ID           string        `json:"id"`
+	Capability   string        `json:"capability"` // id@version
+	Package      string        `json:"package"`    // id@version the card came from
+	KappaIn      string        `json:"kappa_in"`
+	Sources      []MaterialRef `json:"sources"`
+	Output       string        `json:"output"`
+	Model        string        `json:"model"`         // the model the producing run was bound to
+	OutputDigest string        `json:"output_digest"` // sha of Output when published
+	Origin       KOrigin       `json:"origin"`
+	CommittedAt  string        `json:"committed_at"`
+	Revoked      *Revocation   `json:"revoked,omitempty"`
 }
 
-// Lookup is what a node's knowledge lookup found, kept on the step.
+// Lookup is what a node's knowledge lookup found, kept on the step. On a hit
+// it also carries the reused item's provenance, so the step stays traceable
+// without the item.
 type Lookup struct {
-	Outcome string `json:"outcome"` // hit miss
-	Reason  string `json:"reason"`
-	Item    string `json:"item,omitempty"` // the item reused, or the one the reason is about
-	Source  string `json:"source,omitempty"`
-	KappaIn string `json:"kappa_in"`
-	At      string `json:"at"`
+	Outcome      string        `json:"outcome"` // hit miss
+	Reason       string        `json:"reason"`
+	Item         string        `json:"item,omitempty"` // the item reused, or the one the reason is about
+	Source       string        `json:"source,omitempty"`
+	KappaIn      string        `json:"kappa_in"`
+	At           string        `json:"at"`
+	Capability   string        `json:"capability,omitempty"`
+	Package      string        `json:"package,omitempty"`
+	Sources      []MaterialRef `json:"sources,omitempty"`
+	Model        string        `json:"model,omitempty"`
+	OutputDigest string        `json:"output_digest,omitempty"`
 }
 
 // reuseKey is what a node's result depends on; ok is false when the node's
 // capability is not reusable or the plan declares no sources.
 // Must be called with s.mu held.
-func (s *Service) reuseKey(r *Run, p *Plan, step string) (kappa string, card *CapabilityCard, pkg *ScenarioPackage, sources []MaterialRef, ok bool) {
+func (s *Service) reuseKey(r *Run, p *Plan, step string) (kappa, model string, card *CapabilityCard, pkg *ScenarioPackage, sources []MaterialRef, ok bool) {
 	a := p.agent(step)
 	if pkg = p.scenario(); a == nil || pkg == nil || p.Selection == nil {
 		return
@@ -91,11 +105,12 @@ func (s *Service) reuseKey(r *Run, p *Plan, step string) (kappa string, card *Ca
 			}
 		}
 	}
+	model = s.runModel(r)
 	kappa, err := canonicalHash(map[string]any{
 		"capability": card.ID + "@" + card.Version, "instruction": card.Instruction, "role": a.Role, "task": a.Task,
-		"input": s.jobInput(r, p), "sources": sources, "upstream": upstream, "model": s.cfg.Model,
+		"input": s.jobInput(r, p), "sources": sources, "upstream": upstream, "model": model,
 	})
-	return kappa, card, pkg, sources, err == nil
+	return kappa, model, card, pkg, sources, err == nil
 }
 
 func sameSources(a, b []MaterialRef, digests bool) bool {
@@ -112,7 +127,7 @@ func sameSources(a, b []MaterialRef, digests bool) bool {
 
 // lookupKnowledge finds a reusable item from another run, or says why there
 // is none. Must be called with s.mu held.
-func (s *Service) lookupKnowledge(runID string, card *CapabilityCard, kappa string, sources []MaterialRef) Lookup {
+func (s *Service) lookupKnowledge(runID string, card *CapabilityCard, kappa, model string, sources []MaterialRef) Lookup {
 	capRef := card.ID + "@" + card.Version
 	lk := Lookup{Outcome: "miss", Reason: "没有其他任务消费过这些来源", KappaIn: kappa, At: now()}
 	rank := 0 // how informative the current miss reason is
@@ -127,13 +142,21 @@ func (s *Service) lookupKnowledge(runID string, card *CapabilityCard, kappa stri
 		}
 		sameCap := item.Capability == capRef
 		switch {
+		case sameCap && item.KappaIn == kappa && item.OutputDigest == "":
+			miss(6, item, fmt.Sprintf("已有结果 %s 发布时未记录模型与输出摘要，无法确认与本任务绑定的模型一致，不复用", item.ID))
+		case sameCap && item.KappaIn == kappa && (item.Model != model || item.OutputDigest != sha(item.Output)):
+			miss(6, item, fmt.Sprintf("已有结果 %s 的模型或输出摘要与记录不符，不复用", item.ID))
 		case sameCap && item.KappaIn == kappa && item.Revoked == nil:
-			return Lookup{Outcome: "hit", Reason: "能力版本、输入与来源版本完全一致，可复用", Item: item.ID,
-				Source: item.Origin.Run + "/" + item.Origin.Step, KappaIn: kappa, At: lk.At}
+			return Lookup{Outcome: "hit", Reason: "能力版本、模型、输入与来源版本完全一致，可复用", Item: item.ID,
+				Source: item.Origin.Run + "/" + item.Origin.Step, KappaIn: kappa, At: lk.At,
+				Capability: item.Capability, Package: item.Package, Sources: append([]MaterialRef(nil), item.Sources...),
+				Model: item.Model, OutputDigest: item.OutputDigest}
 		case sameCap && item.KappaIn == kappa:
 			miss(5, item, fmt.Sprintf("原结果 %s 已撤回（%s，%s），不复用", item.ID, item.Revoked.Reason, item.Revoked.By))
 		case sameCap && sameSources(item.Sources, sources, false) && !sameSources(item.Sources, sources, true):
 			miss(4, item, fmt.Sprintf("已有结果 %s 基于同一材料的其他版本（%s），版本不同不复用", item.ID, shortDigest(item.Sources)))
+		case sameCap && sameSources(item.Sources, sources, true) && item.OutputDigest != "" && item.Model != model:
+			miss(4, item, fmt.Sprintf("已有结果 %s 由模型 %s 产生，本任务绑定模型 %s，不复用", item.ID, item.Model, model))
 		case sameCap && sameSources(item.Sources, sources, true):
 			miss(3, item, fmt.Sprintf("已有结果 %s 来源相同，但指令、子任务、任务输入或上游结果不同，不复用", item.ID))
 		case strings.HasPrefix(item.Capability, card.ID+"@") && sameSources(item.Sources, sources, true):
@@ -168,11 +191,11 @@ func (s *Service) knowledgeNewestFirst() []*KItem {
 // this task: on a hit the step is recorded as done with the item's result,
 // in the same transition. Must be called with s.mu held.
 func (s *Service) reuseStep(r *Run, p *Plan, st *StepRec) (bool, error) {
-	kappa, card, _, sources, ok := s.reuseKey(r, p, st.ID)
+	kappa, model, card, _, sources, ok := s.reuseKey(r, p, st.ID)
 	if !ok {
 		return false, nil
 	}
-	lk := s.lookupKnowledge(r.ID, card, kappa, sources)
+	lk := s.lookupKnowledge(r.ID, card, kappa, model, sources)
 	st.Lookup = &lk
 	if lk.Outcome != "hit" {
 		return false, nil
@@ -190,7 +213,7 @@ func (s *Service) reuseStep(r *Run, p *Plan, st *StepRec) (bool, error) {
 // publishStep makes a committed result of a reusable node available to later
 // tasks. Must be called with s.mu held, before the step's save.
 func (s *Service) publishStep(r *Run, p *Plan, st *StepRec) {
-	kappa, card, pkg, sources, ok := s.reuseKey(r, p, st.ID)
+	kappa, model, card, pkg, sources, ok := s.reuseKey(r, p, st.ID)
 	if !ok || st.ReusedFrom != "" {
 		return
 	}
@@ -199,7 +222,8 @@ func (s *Service) publishStep(r *Run, p *Plan, st *StepRec) {
 	}
 	s.st.NextKnowledge++
 	item := &KItem{ID: fmt.Sprintf("K%d", s.st.NextKnowledge), Capability: card.ID + "@" + card.Version, Package: pkg.Ref(),
-		KappaIn: kappa, Sources: sources, Output: st.Output, Origin: KOrigin{Run: r.ID, Plan: p.Key(), Step: st.ID}, CommittedAt: now()}
+		KappaIn: kappa, Sources: sources, Output: st.Output, Model: model, OutputDigest: sha(st.Output),
+		Origin: KOrigin{Run: r.ID, Plan: p.Key(), Step: st.ID}, CommittedAt: now()}
 	s.st.Knowledge[item.ID] = item
 	st.Published = item.ID
 }
