@@ -1,7 +1,7 @@
 """Local native process lifecycle. No model credentials are written to disk.
 
 Run with the isolated WorkSwarm Python. Configuration and PID records live in
-the ignored private directory; stop only processes whose creation time matches.
+the ignored private directory; stop only processes whose recorded identity matches.
 """
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 import psutil
 import requests
 from filelock import FileLock
-from platform_tools import REPO, executable, java, keycloak, workswarm
+from platform_tools import REPO, executable, java, keycloak, matches_process, record_process, workswarm
 
 SOLUTION = Path(os.environ.get("SOLUTION_SOURCE", str(REPO / ".local/sources/agent-solution"))) / "common/agent-bus"
 ROLES = {"report-extractor": 8093, "business-analyst": 8094,
@@ -145,7 +145,7 @@ def manage(args,root: Path) -> None:
         listening=any(c.status==psutil.CONN_LISTEN and c.laddr.port==8180 for c in process.net_connections(kind="tcp"))
         if marker not in cmd or not listening:raise SystemExit("PID is not this workspace's Keycloak listener")
         records=root / "services.json";state=json.loads(records.read_text(encoding="utf-8")) if records.exists() else {}
-        state["keycloak"]={"pid":process.pid,"created":process.create_time(),"health":"http://127.0.0.1:8180/realms/master/.well-known/openid-configuration"};save(records,state)
+        state["keycloak"]={**record_process(process),"health":"http://127.0.0.1:8180/realms/master/.well-known/openid-configuration"};save(records,state)
         print("Verified and adopted existing workspace Keycloak listener")
         return
     if args.action in ("worker-enable", "worker-disable"):
@@ -164,7 +164,7 @@ def manage(args,root: Path) -> None:
         process = None
         try:
             candidate = psutil.Process(record.get("pid", -1))
-            if abs(candidate.create_time() - record.get("created", 0)) < .01:
+            if matches_process(candidate, record):
                 process = candidate
         except (psutil.Error, ValueError):
             pass
@@ -172,7 +172,7 @@ def manage(args,root: Path) -> None:
             print(json.dumps({"service": name, "pid": process.pid if process else None, "running": bool(process)}))
         elif args.action == "stop":
             if record and not process and psutil.pid_exists(record.get("pid", -1)):
-                raise SystemExit(name+": recorded PID exists but creation time differs; inspect ownership before stopping")
+                raise SystemExit(name+": recorded PID exists but process identity differs; inspect ownership before stopping")
             if process:
                 descendants = process.children(recursive=True)
                 for child in reversed(descendants):
@@ -192,7 +192,7 @@ def manage(args,root: Path) -> None:
                 child = subprocess.Popen(cmd, cwd=REPO, env=env, stdout=out, stderr=err,
                                          start_new_session=os.name != "nt",
                                          creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
-            state[name] = {"pid": child.pid, "created": psutil.Process(child.pid).create_time(), "health": health}
+            state[name] = {**record_process(psutil.Process(child.pid)), "health": health}
             save(records, state)
             deadline = time.monotonic() + 55
             ready = False

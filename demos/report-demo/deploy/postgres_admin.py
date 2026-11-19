@@ -12,6 +12,7 @@ from pathlib import Path
 import shlex
 import paramiko
 import psutil
+from platform_tools import matches_process
 
 ACTIVITY="SELECT json_build_object('max_connections',current_setting('max_connections'),'connections',(SELECT json_agg(x) FROM (SELECT datname,usename,application_name,client_addr,state,count(*) AS count,min(backend_start) AS oldest FROM pg_stat_activity GROUP BY datname,usename,application_name,client_addr,state) x))"
 
@@ -28,7 +29,7 @@ def main():
             if row.get('pid'):
                 try:
                     process=psutil.Process(int(row['pid']))
-                    if abs(process.create_time()-row.get('created',0)) >= .01:
+                    if not matches_process(process, row):
                         raise SystemExit('Recorded PID ownership changed; inspect '+name+' before maintenance')
                     if process.is_running():raise SystemExit('Stop this workspace '+name+' before idle-connection maintenance')
                 except psutil.NoSuchProcess:
