@@ -183,6 +183,10 @@ Bus 环境绑定与 HUMAN 操作规则和 Windows 相同，见 [LOCAL-RUN 第6�
 "$py" demos/report-demo/deploy/services.py stop --private-root "$private"
 ```
 
-无服务名时只处理此私有目录记录且创建时间匹配的 PID；不批量 kill 系统 Java/Python。重新启动模型服务需重新提供进程环境，更新源码/模型/预算需重新绑定和新候选。不删除 PG 正式表或 artifacts 来“修复”失败。
+无服务名时只处理此私有目录记录的 PID。Linux 新记录按本次系统启动标识与进程启动时钟核对身份，旧记录仍按进程创建时间核对。若停止命令提示 PID 身份变化，先核对实际进程和端口归属。
+
+编排服务的 /healthz 同时报告编译器健康和 worker_status。若 worker_status 为 stopped 且日志显示 previous members are still active，先隔离或停止旧 JVM，确认旧成员退出后再启动 worker。远端调用按原身份恢复对账。
+
+重新启动模型服务需重新提供进程环境，更新源码、模型或预算需重新绑定并生成新候选。保留 PG 正式表与 artifacts 用于恢复和对账。
 
 W04 PG 和其 artifacts 内容必须配套备份；RDC 数据库、Keycloak data、WorkSwarm home/config/history 分别保存。重建 IdP 会改变主体/秘密，重建 RDC 会丢注册和权限，内存 Runtime 重启可能丢远端 task。已有 W04 备份/离线恢复入口见 Windows 文档第8.1节；整套环境灾难恢复不由单项 W04 恢复测试证明。
