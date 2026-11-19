@@ -1,0 +1,1019 @@
+{
+  "generated_at": "2026-11-19T04:29:19Z",
+  "reference_commit": "d3b2f81494085d5235b28333666a9f12d13b3667",
+  "rule_version": "1.1.0",
+  "rule_sha256": "92cbb5f50961c702ba5d98cff36d68b147c4d00fefa87cddfa16ce2955ed943f",
+  "passed": 10,
+  "gaps": 1,
+  "failed": 0,
+  "errors": 0,
+  "scenarios": [
+    {
+      "id": "happy",
+      "title": "材料齐全，正常授信五万美元",
+      "kind": "正常业务",
+      "purpose": "资产三千五百万美元、近六个月无逾期；观察从模拟判断到真实控制组件再到模拟银行的完整链路。",
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "办理结果",
+          "expected": "completed",
+          "actual": "completed",
+          "passed": true
+        },
+        {
+          "name": "实际授信金额（USD）",
+          "expected": "50000",
+          "actual": "50000",
+          "passed": true
+        },
+        {
+          "name": "项目操作状态",
+          "expected": "completed",
+          "actual": "completed",
+          "passed": true
+        },
+        {
+          "name": "S1 替身调用次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行产生的授信笔数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行提交次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        }
+      ],
+      "trace": [
+        {
+          "layer": "simulated-model",
+          "action": "S1 判断",
+          "detail": "grant: 资产超过三千万美元，近六个月无逾期"
+        },
+        {
+          "layer": "project-core",
+          "action": "登记操作并绑定版本",
+          "detail": "adopted"
+        },
+        {
+          "layer": "project-core",
+          "action": "派发前检查当前权限",
+          "detail": "dispatched: "
+        },
+        {
+          "layer": "simulated-bank",
+          "action": "创建授信并保存回执",
+          "detail": "bank-demo-br-happy"
+        },
+        {
+          "layer": "project-core",
+          "action": "记录操作完成",
+          "detail": "completed"
+        }
+      ],
+      "artifacts": [
+        {
+          "name": "adopt.jsonl",
+          "href": "happy/adopt.jsonl"
+        },
+        {
+          "name": "application.json",
+          "href": "happy/application.json"
+        },
+        {
+          "name": "bank.json",
+          "href": "happy/bank.json"
+        },
+        {
+          "name": "counters.json",
+          "href": "happy/counters.json"
+        },
+        {
+          "name": "result-op-happy.json",
+          "href": "happy/result-op-happy.json"
+        },
+        {
+          "name": "trace.jsonl",
+          "href": "happy/trace.jsonl"
+        }
+      ]
+    },
+    {
+      "id": "retry",
+      "title": "同一申请重发，返回原回执",
+      "kind": "正常重试",
+      "purpose": "模拟客户端重复提交同一个操作；验证原结果复用，模型和银行提交次数均不增加。结果读取由本次 Demo 宿主提供。",
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "重复请求处理",
+          "expected": "reused",
+          "actual": "reused",
+          "passed": true
+        },
+        {
+          "name": "仍为原回执",
+          "expected": "bank-demo-br-retry",
+          "actual": "bank-demo-br-retry",
+          "passed": true
+        },
+        {
+          "name": "S1 替身调用次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行产生的授信笔数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行提交次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        }
+      ],
+      "trace": [
+        {
+          "layer": "simulated-model",
+          "action": "S1 判断",
+          "detail": "grant: 资产超过三千万美元，近六个月无逾期"
+        },
+        {
+          "layer": "project-core",
+          "action": "登记操作并绑定版本",
+          "detail": "adopted"
+        },
+        {
+          "layer": "project-core",
+          "action": "派发前检查当前权限",
+          "detail": "dispatched: "
+        },
+        {
+          "layer": "simulated-bank",
+          "action": "创建授信并保存回执",
+          "detail": "bank-demo-br-retry"
+        },
+        {
+          "layer": "project-core",
+          "action": "记录操作完成",
+          "detail": "completed"
+        },
+        {
+          "layer": "demo-host",
+          "action": "复用原结果",
+          "detail": "同一操作与相同结构化输入；模型和银行提交均不调用"
+        }
+      ],
+      "artifacts": [
+        {
+          "name": "adopt.jsonl",
+          "href": "retry/adopt.jsonl"
+        },
+        {
+          "name": "application.json",
+          "href": "retry/application.json"
+        },
+        {
+          "name": "bank.json",
+          "href": "retry/bank.json"
+        },
+        {
+          "name": "counters.json",
+          "href": "retry/counters.json"
+        },
+        {
+          "name": "result-op-retry.json",
+          "href": "retry/result-op-retry.json"
+        },
+        {
+          "name": "trace.jsonl",
+          "href": "retry/trace.jsonl"
+        }
+      ]
+    },
+    {
+      "id": "conflict",
+      "title": "沿用编号却改了客户，拒绝办理",
+      "kind": "冲突输入",
+      "purpose": "保留操作编号，却把客户换成另一人；验证项目按内容摘要拒绝冲突，原办理结果保持不变。",
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "相同编号不同实质内容",
+          "expected": "conflict",
+          "actual": "conflict",
+          "passed": true
+        },
+        {
+          "name": "原银行回执保持不变",
+          "expected": "bank-demo-br-conflict",
+          "actual": "bank-demo-br-conflict",
+          "passed": true
+        },
+        {
+          "name": "S1 替身调用次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行产生的授信笔数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行提交次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        }
+      ],
+      "trace": [
+        {
+          "layer": "simulated-model",
+          "action": "S1 判断",
+          "detail": "grant: 资产超过三千万美元，近六个月无逾期"
+        },
+        {
+          "layer": "project-core",
+          "action": "登记操作并绑定版本",
+          "detail": "adopted"
+        },
+        {
+          "layer": "project-core",
+          "action": "派发前检查当前权限",
+          "detail": "dispatched: "
+        },
+        {
+          "layer": "simulated-bank",
+          "action": "创建授信并保存回执",
+          "detail": "bank-demo-br-conflict"
+        },
+        {
+          "layer": "project-core",
+          "action": "记录操作完成",
+          "detail": "completed"
+        },
+        {
+          "layer": "project-core",
+          "action": "重复登记检查",
+          "detail": "rejected: operation_id \"op-conflict\" carries payload_digest \"sha256:8a68ef31d99b106d7b969b27c7b32a0e563d6900543855300f28ce7e8dee9269\" but an earlier event recorded \"sha256:006ee24b5b613aac47fb84ae43b8e5a6c2aa40b3fb9d84baac4e7181ef460183\" — changed payload under the same key"
+        }
+      ],
+      "artifacts": [
+        {
+          "name": "adopt.jsonl",
+          "href": "conflict/adopt.jsonl"
+        },
+        {
+          "name": "application.json",
+          "href": "conflict/application.json"
+        },
+        {
+          "name": "bank.json",
+          "href": "conflict/bank.json"
+        },
+        {
+          "name": "counters.json",
+          "href": "conflict/counters.json"
+        },
+        {
+          "name": "result-op-conflict.json",
+          "href": "conflict/result-op-conflict.json"
+        },
+        {
+          "name": "trace.jsonl",
+          "href": "conflict/trace.jsonl"
+        }
+      ]
+    },
+    {
+      "id": "revoked",
+      "title": "判断后权限被撤销，提交被拦截",
+      "kind": "正常权限变更",
+      "purpose": "登记后、派发前撤销执行权限；当前权限由模拟授权提供方传入，实际拦截由项目状态机执行。",
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "执行权限撤销后",
+          "expected": "blocked",
+          "actual": "blocked",
+          "passed": true
+        },
+        {
+          "name": "项目状态未推进至派发",
+          "expected": "adopted",
+          "actual": "adopted",
+          "passed": true
+        },
+        {
+          "name": "持久拒绝记录数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "S1 替身调用次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行产生的授信笔数",
+          "expected": "0",
+          "actual": "0",
+          "passed": true
+        },
+        {
+          "name": "模拟银行提交次数",
+          "expected": "0",
+          "actual": "0",
+          "passed": true
+        }
+      ],
+      "trace": [
+        {
+          "layer": "simulated-model",
+          "action": "S1 判断",
+          "detail": "grant: 资产超过三千万美元，近六个月无逾期"
+        },
+        {
+          "layer": "project-core",
+          "action": "登记操作并绑定版本",
+          "detail": "adopted"
+        },
+        {
+          "layer": "project-core",
+          "action": "派发前检查当前权限",
+          "detail": "rejected: live grant set no longer covers the grants pinned at decision time (revocation check, 14-A4)"
+        }
+      ],
+      "artifacts": [
+        {
+          "name": "adopt.jsonl",
+          "href": "revoked/adopt.jsonl"
+        },
+        {
+          "name": "application.json",
+          "href": "revoked/application.json"
+        },
+        {
+          "name": "counters.json",
+          "href": "revoked/counters.json"
+        },
+        {
+          "name": "trace.jsonl",
+          "href": "revoked/trace.jsonl"
+        }
+      ]
+    },
+    {
+      "id": "lost-reply",
+      "title": "银行已办理但响应丢失，查询后恢复",
+      "kind": "明确的故障注入",
+      "purpose": "模拟银行先持久保存业务效果，再返回响应丢失错误；宿主沿原业务编号查询对账，不重新提交。未模拟真实网络链路。",
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "响应丢失后的状态",
+          "expected": "unresolved",
+          "actual": "unresolved",
+          "passed": true
+        },
+        {
+          "name": "未确认时重试不重新办理",
+          "expected": "in-progress",
+          "actual": "in-progress",
+          "passed": true
+        },
+        {
+          "name": "查询对账后的项目状态",
+          "expected": "completed",
+          "actual": "completed",
+          "passed": true
+        },
+        {
+          "name": "银行查询次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "S1 替身调用次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行产生的授信笔数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行提交次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        }
+      ],
+      "trace": [
+        {
+          "layer": "simulated-model",
+          "action": "S1 判断",
+          "detail": "grant: 资产超过三千万美元，近六个月无逾期"
+        },
+        {
+          "layer": "project-core",
+          "action": "登记操作并绑定版本",
+          "detail": "adopted"
+        },
+        {
+          "layer": "project-core",
+          "action": "派发前检查当前权限",
+          "detail": "dispatched: "
+        },
+        {
+          "layer": "simulated-bank",
+          "action": "银行已办理但模拟响应丢失",
+          "detail": "业务效果已保存；框架状态为结果未知"
+        },
+        {
+          "layer": "project-core",
+          "action": "重复登记检查",
+          "detail": "reused: "
+        },
+        {
+          "layer": "demo-host",
+          "action": "沿原业务编号查询银行",
+          "detail": "bank-demo-br-lost-reply"
+        },
+        {
+          "layer": "project-core",
+          "action": "记录操作完成",
+          "detail": "completed"
+        }
+      ],
+      "artifacts": [
+        {
+          "name": "adopt.jsonl",
+          "href": "lost-reply/adopt.jsonl"
+        },
+        {
+          "name": "application.json",
+          "href": "lost-reply/application.json"
+        },
+        {
+          "name": "bank.json",
+          "href": "lost-reply/bank.json"
+        },
+        {
+          "name": "counters.json",
+          "href": "lost-reply/counters.json"
+        },
+        {
+          "name": "result-op-lost-reply.json",
+          "href": "lost-reply/result-op-lost-reply.json"
+        },
+        {
+          "name": "trace.jsonl",
+          "href": "lost-reply/trace.jsonl"
+        }
+      ]
+    },
+    {
+      "id": "restart",
+      "title": "办理后进程被终止，换进程恢复",
+      "kind": "真实子进程终止",
+      "purpose": "子进程在银行回执已保存、宿主完成记录未保存的确定位置被父进程终止；重新打开文件后查询银行，验证不产生第二笔效果。",
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "子进程被实际终止",
+          "expected": "false",
+          "actual": "false",
+          "passed": true
+        },
+        {
+          "name": "重新打开后保留派发状态",
+          "expected": "dispatched",
+          "actual": "dispatched",
+          "passed": true
+        },
+        {
+          "name": "恢复后重复派发被组件拒绝",
+          "expected": "rejected",
+          "actual": "rejected",
+          "passed": true
+        },
+        {
+          "name": "对账后完成",
+          "expected": "completed",
+          "actual": "completed",
+          "passed": true
+        },
+        {
+          "name": "S1 替身调用次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行产生的授信笔数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行提交次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        }
+      ],
+      "trace": [
+        {
+          "layer": "simulated-model",
+          "action": "S1 判断",
+          "detail": "grant: 资产超过三千万美元，近六个月无逾期"
+        },
+        {
+          "layer": "project-core",
+          "action": "登记操作并绑定版本",
+          "detail": "adopted"
+        },
+        {
+          "layer": "project-core",
+          "action": "派发前检查当前权限",
+          "detail": "dispatched: "
+        },
+        {
+          "layer": "simulated-bank",
+          "action": "创建授信并保存回执",
+          "detail": "bank-demo-br-restart"
+        },
+        {
+          "layer": "demo-host",
+          "action": "实际终止子进程后重新打开状态",
+          "detail": "银行回执文件已存在；宿主尚无完成结果"
+        },
+        {
+          "layer": "demo-host",
+          "action": "沿原业务编号查询银行",
+          "detail": "bank-demo-br-restart"
+        },
+        {
+          "layer": "project-core",
+          "action": "记录操作完成",
+          "detail": "completed"
+        }
+      ],
+      "artifacts": [
+        {
+          "name": "adopt.jsonl",
+          "href": "restart/adopt.jsonl"
+        },
+        {
+          "name": "application.json",
+          "href": "restart/application.json"
+        },
+        {
+          "name": "bank.json",
+          "href": "restart/bank.json"
+        },
+        {
+          "name": "counters.json",
+          "href": "restart/counters.json"
+        },
+        {
+          "name": "result-op-restart.json",
+          "href": "restart/result-op-restart.json"
+        },
+        {
+          "name": "trace.jsonl",
+          "href": "restart/trace.jsonl"
+        }
+      ]
+    },
+    {
+      "id": "evidence",
+      "title": "缺资产材料，先补证再办理",
+      "kind": "正常补证",
+      "purpose": "先返回待补证；模拟 S2 获取固定资料，项目取证日志检查实际记录，再以新证据修订提交。补证路由是 Demo 宿主逻辑。",
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "缺材料时",
+          "expected": "needs-evidence",
+          "actual": "needs-evidence",
+          "passed": true
+        },
+        {
+          "name": "补证前没有银行效果",
+          "expected": "0",
+          "actual": "0",
+          "passed": true
+        },
+        {
+          "name": "项目取证覆盖检查",
+          "expected": "true",
+          "actual": "true",
+          "passed": true
+        },
+        {
+          "name": "补证后的办理结果",
+          "expected": "completed",
+          "actual": "completed",
+          "passed": true
+        },
+        {
+          "name": "S2 资料提供方替身调用",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "S1 替身调用次数",
+          "expected": "2",
+          "actual": "2",
+          "passed": true
+        },
+        {
+          "name": "模拟银行产生的授信笔数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行提交次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        }
+      ],
+      "trace": [
+        {
+          "layer": "simulated-model",
+          "action": "S1 判断",
+          "detail": "needs-evidence: 资产材料缺失，补证后再判断"
+        },
+        {
+          "layer": "project-core",
+          "action": "核对补证调用记录",
+          "detail": "coverage=true"
+        },
+        {
+          "layer": "simulated-model",
+          "action": "S1 判断",
+          "detail": "grant: 资产超过三千万美元，近六个月无逾期"
+        },
+        {
+          "layer": "project-core",
+          "action": "登记操作并绑定版本",
+          "detail": "adopted"
+        },
+        {
+          "layer": "project-core",
+          "action": "派发前检查当前权限",
+          "detail": "dispatched: "
+        },
+        {
+          "layer": "simulated-bank",
+          "action": "创建授信并保存回执",
+          "detail": "bank-demo-br-evidence"
+        },
+        {
+          "layer": "project-core",
+          "action": "记录操作完成",
+          "detail": "completed"
+        }
+      ],
+      "artifacts": [
+        {
+          "name": "adopt.jsonl",
+          "href": "evidence/adopt.jsonl"
+        },
+        {
+          "name": "application.json",
+          "href": "evidence/application.json"
+        },
+        {
+          "name": "asset-source.json",
+          "href": "evidence/asset-source.json"
+        },
+        {
+          "name": "bank.json",
+          "href": "evidence/bank.json"
+        },
+        {
+          "name": "counters.json",
+          "href": "evidence/counters.json"
+        },
+        {
+          "name": "coverage.json",
+          "href": "evidence/coverage.json"
+        },
+        {
+          "name": "evidence.jsonl",
+          "href": "evidence/evidence.jsonl"
+        },
+        {
+          "name": "last-decision.json",
+          "href": "evidence/last-decision.json"
+        },
+        {
+          "name": "result-op-evidence.json",
+          "href": "evidence/result-op-evidence.json"
+        },
+        {
+          "name": "trace.jsonl",
+          "href": "evidence/trace.jsonl"
+        }
+      ]
+    },
+    {
+      "id": "uncovered",
+      "title": "近期短期逾期，规则未覆盖",
+      "kind": "正常业务边界",
+      "purpose": "高资产客户最近一个月内有一次持续一个月的逾期。模拟判断应报告规则未覆盖，由宿主暂停，不能补成批准或拒绝。",
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "业务结果",
+          "expected": "uncovered",
+          "actual": "uncovered",
+          "passed": true
+        },
+        {
+          "name": "S1 替身调用次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行产生的授信笔数",
+          "expected": "0",
+          "actual": "0",
+          "passed": true
+        },
+        {
+          "name": "模拟银行提交次数",
+          "expected": "0",
+          "actual": "0",
+          "passed": true
+        }
+      ],
+      "trace": [
+        {
+          "layer": "simulated-model",
+          "action": "S1 判断",
+          "detail": "uncovered: 近期存在短期逾期：高档批准条件不成立，也未触发长期否决"
+        }
+      ],
+      "artifacts": [
+        {
+          "name": "application.json",
+          "href": "uncovered/application.json"
+        },
+        {
+          "name": "counters.json",
+          "href": "uncovered/counters.json"
+        },
+        {
+          "name": "last-decision.json",
+          "href": "uncovered/last-decision.json"
+        },
+        {
+          "name": "trace.jsonl",
+          "href": "uncovered/trace.jsonl"
+        }
+      ]
+    },
+    {
+      "id": "history-veto",
+      "title": "历史长期逾期，停止授信办理",
+      "kind": "正常业务拒绝",
+      "purpose": "两年前存在持续四个月的逾期，触发历史优先否决。此业务判断由固定规则替身产生，不是框架自动理解了授信制度。",
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "业务结果",
+          "expected": "deny",
+          "actual": "deny",
+          "passed": true
+        },
+        {
+          "name": "S1 替身调用次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行产生的授信笔数",
+          "expected": "0",
+          "actual": "0",
+          "passed": true
+        },
+        {
+          "name": "模拟银行提交次数",
+          "expected": "0",
+          "actual": "0",
+          "passed": true
+        }
+      ],
+      "trace": [
+        {
+          "layer": "simulated-model",
+          "action": "S1 判断",
+          "detail": "deny: 历史存在持续超过三个月的逾期，触发优先否决"
+        }
+      ],
+      "artifacts": [
+        {
+          "name": "application.json",
+          "href": "history-veto/application.json"
+        },
+        {
+          "name": "counters.json",
+          "href": "history-veto/counters.json"
+        },
+        {
+          "name": "last-decision.json",
+          "href": "history-veto/last-decision.json"
+        },
+        {
+          "name": "trace.jsonl",
+          "href": "history-veto/trace.jsonl"
+        }
+      ]
+    },
+    {
+      "id": "revision-gap",
+      "title": "新修订要求替代旧判断，现有组件仍放行旧操作",
+      "kind": "已知系统集成缺口",
+      "purpose": "场景文件明确要求 er-2 替代 er-1，但项目原型缺少接收这份有效修订政策的控制入口。直接观察旧操作仍获许可，不替框架补上该保护。",
+      "status": "GAP",
+      "checks": [
+        {
+          "name": "旧修订派发应被拒绝",
+          "expected": "rejected",
+          "actual": "dispatched",
+          "passed": false
+        },
+        {
+          "name": "旧批准不应产生银行效果",
+          "expected": "0",
+          "actual": "1",
+          "passed": false
+        }
+      ],
+      "trace": [
+        {
+          "layer": "project-core",
+          "action": "检查旧操作能否派发",
+          "detail": "dispatched；当前组件没有消费场景声明的修订替代政策"
+        }
+      ],
+      "artifacts": [
+        {
+          "name": "adopt.jsonl",
+          "href": "revision-gap/adopt.jsonl"
+        },
+        {
+          "name": "bank.json",
+          "href": "revision-gap/bank.json"
+        },
+        {
+          "name": "correction-policy.json",
+          "href": "revision-gap/correction-policy.json"
+        },
+        {
+          "name": "new-decision.json",
+          "href": "revision-gap/new-decision.json"
+        },
+        {
+          "name": "trace.jsonl",
+          "href": "revision-gap/trace.jsonl"
+        }
+      ]
+    },
+    {
+      "id": "replay",
+      "title": "隔离重演控制过程，不新增银行效果",
+      "kind": "历史控制回放",
+      "purpose": "保留真实控制输入和事件，在项目隔离回放器上重新执行；分别检查事件一致与账本规则，模拟银行提交次数不能增加。",
+      "status": "PASS",
+      "checks": [
+        {
+          "name": "事件重演一致",
+          "expected": "match",
+          "actual": "match",
+          "passed": true
+        },
+        {
+          "name": "原记录符合账本规则",
+          "expected": "pass",
+          "actual": "pass",
+          "passed": true
+        },
+        {
+          "name": "S1 替身调用次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行产生的授信笔数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        },
+        {
+          "name": "模拟银行提交次数",
+          "expected": "1",
+          "actual": "1",
+          "passed": true
+        }
+      ],
+      "trace": [
+        {
+          "layer": "simulated-model",
+          "action": "S1 判断",
+          "detail": "grant: 资产超过三千万美元，近六个月无逾期"
+        },
+        {
+          "layer": "project-core",
+          "action": "登记操作并绑定版本",
+          "detail": "adopted"
+        },
+        {
+          "layer": "project-core",
+          "action": "派发前检查当前权限",
+          "detail": "dispatched: "
+        },
+        {
+          "layer": "simulated-bank",
+          "action": "创建授信并保存回执",
+          "detail": "bank-demo-br-replay"
+        },
+        {
+          "layer": "project-core",
+          "action": "记录操作完成",
+          "detail": "completed"
+        },
+        {
+          "layer": "project-core",
+          "action": "在临时隔离状态机上回放",
+          "detail": "fidelity=match conformance=pass；银行调用不在回放路径中"
+        }
+      ],
+      "artifacts": [
+        {
+          "name": "adopt.jsonl",
+          "href": "replay/adopt.jsonl"
+        },
+        {
+          "name": "application.json",
+          "href": "replay/application.json"
+        },
+        {
+          "name": "bank.json",
+          "href": "replay/bank.json"
+        },
+        {
+          "name": "counters.json",
+          "href": "replay/counters.json"
+        },
+        {
+          "name": "replay-case.json",
+          "href": "replay/replay-case.json"
+        },
+        {
+          "name": "replay-report.json",
+          "href": "replay/replay-report.json"
+        },
+        {
+          "name": "result-op-replay.json",
+          "href": "replay/result-op-replay.json"
+        },
+        {
+          "name": "trace.jsonl",
+          "href": "replay/trace.jsonl"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "boundary": "场景要求；现有组件无有效修订提供方入口，未由 Demo 代补保护",
+  "business_request_id": "br-revision-gap",
+  "expected_effective_revision": "er-2",
+  "requirement": "新拒绝修订正式替代旧批准，旧操作不得派发",
+  "supersedes": "er-1"
+}

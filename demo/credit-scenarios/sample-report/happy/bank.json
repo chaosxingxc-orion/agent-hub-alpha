@@ -1,0 +1,16 @@
+{
+  "submit_calls": 1,
+  "query_calls": 0,
+  "created_credit_lines": 1,
+  "receipts": {
+    "br-happy": {
+      "reference": "bank-demo-br-happy",
+      "payload": {
+        "business_request_id": "br-happy",
+        "customer": "customer-demo",
+        "credit_usd": 50000
+      },
+      "payload_digest": "sha256:749b9f2a09cdc3ba73d847544e19dadb3d07d711117cb9633326ef036dddb07f"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "submit_calls": 1,
+  "query_calls": 0,
+  "created_credit_lines": 1,
+  "receipts": {
+    "br-revision-gap": {
+      "reference": "bank-demo-br-revision-gap",
+      "payload": {
+        "business_request_id": "br-revision-gap",
+        "customer": "customer-demo",
+        "credit_usd": 50000
+      },
+      "payload_digest": "sha256:6916ddedd540f0f0c38ac78d8b4968caf8e1f6e96593413409f1e91c77123c53"
+    }
+  }
+}

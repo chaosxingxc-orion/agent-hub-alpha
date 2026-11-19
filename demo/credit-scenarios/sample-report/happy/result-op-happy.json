@@ -1,0 +1,17 @@
+{
+  "command_digest": "sha256:a49873075f3504f1c6902851cafdf1cc4d63339a02eb213ab7f31fa71b1df1ca",
+  "receipt": {
+    "reference": "bank-demo-br-happy",
+    "payload": {
+      "business_request_id": "br-happy",
+      "customer": "customer-demo",
+      "credit_usd": 50000
+    },
+    "payload_digest": "sha256:749b9f2a09cdc3ba73d847544e19dadb3d07d711117cb9633326ef036dddb07f"
+  },
+  "decision": {
+    "kind": "grant",
+    "credit_usd": 50000,
+    "reason": "资产超过三千万美元，近六个月无逾期"
+  }
+}

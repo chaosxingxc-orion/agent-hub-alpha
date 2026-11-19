@@ -1,0 +1,185 @@
+{
+  "case_id": "local-credit-control-replay",
+  "case_version": "0.1.0",
+  "expected": {
+    "conformance": "pass",
+    "fidelity": "match"
+  },
+  "recorded_events": [
+    {
+      "event_type": "adoption",
+      "arbitration_seq": 0,
+      "identity": {
+        "business_request_id": "br-replay",
+        "evaluation_revision": "er-1",
+        "operation_id": "op-replay"
+      },
+      "versions": {
+        "evidence": "evidence-v1",
+        "rule": "1.1.0",
+        "model": "demo-s1-double-v1",
+        "readout": "demo-typed-v1",
+        "policy": "demo-fixed-policy-v1"
+      },
+      "idempotency": {
+        "operation_id": "op-replay",
+        "payload_digest": "sha256:80b9bb02070d0b36b7de82a915b56380c2d6a9cfb66021b15d40ea2e0d94fc67"
+      },
+      "grants_at_decision": [
+        {
+          "kind": "data",
+          "selector": "ledger://credit/demo",
+          "actions": [
+            "read"
+          ],
+          "effect": "none"
+        },
+        {
+          "kind": "tool",
+          "selector": "tool://credit-demo/submit",
+          "actions": [
+            "execute"
+          ],
+          "effect": "irreversible"
+        }
+      ],
+      "outcome": {
+        "status": "adopted",
+        "detail": "adopted by the gate"
+      },
+      "accountability": {
+        "session": "local-credit-demo",
+        "skill": "credit",
+        "role": "demo-employee"
+      }
+    },
+    {
+      "event_type": "effect",
+      "arbitration_seq": 1,
+      "identity": {
+        "business_request_id": "br-replay",
+        "evaluation_revision": "er-1",
+        "operation_id": "op-replay"
+      },
+      "versions": {
+        "evidence": "evidence-v1",
+        "rule": "1.1.0",
+        "model": "demo-s1-double-v1",
+        "readout": "demo-typed-v1",
+        "policy": "demo-fixed-policy-v1"
+      },
+      "idempotency": {
+        "operation_id": "op-replay",
+        "payload_digest": "sha256:80b9bb02070d0b36b7de82a915b56380c2d6a9cfb66021b15d40ea2e0d94fc67"
+      },
+      "outcome": {
+        "status": "dispatched",
+        "detail": "dispatched after the 14-A4 revocation check"
+      },
+      "accountability": {
+        "session": "local-credit-demo",
+        "skill": "credit",
+        "role": "demo-employee"
+      }
+    },
+    {
+      "event_type": "effect",
+      "arbitration_seq": 2,
+      "identity": {
+        "business_request_id": "br-replay",
+        "evaluation_revision": "er-1",
+        "operation_id": "op-replay"
+      },
+      "versions": {
+        "evidence": "evidence-v1",
+        "rule": "1.1.0",
+        "model": "demo-s1-double-v1",
+        "readout": "demo-typed-v1",
+        "policy": "demo-fixed-policy-v1"
+      },
+      "idempotency": {
+        "operation_id": "op-replay",
+        "payload_digest": "sha256:80b9bb02070d0b36b7de82a915b56380c2d6a9cfb66021b15d40ea2e0d94fc67"
+      },
+      "outcome": {
+        "status": "completed",
+        "detail": "completed"
+      },
+      "accountability": {
+        "session": "local-credit-demo",
+        "skill": "credit",
+        "role": "demo-employee"
+      }
+    }
+  ],
+  "steps": [
+    {
+      "op": "adopt",
+      "request": {
+        "adoption_version": "0.1.0",
+        "identity": {
+          "business_request_id": "br-replay",
+          "evaluation_revision": "er-1",
+          "operation_id": "op-replay"
+        },
+        "versions": {
+          "evidence": "evidence-v1",
+          "rule": "1.1.0",
+          "model": "demo-s1-double-v1",
+          "readout": "demo-typed-v1",
+          "policy": "demo-fixed-policy-v1"
+        },
+        "payload_digest": "sha256:80b9bb02070d0b36b7de82a915b56380c2d6a9cfb66021b15d40ea2e0d94fc67",
+        "grants_at_decision": [
+          {
+            "kind": "data",
+            "selector": "ledger://credit/demo",
+            "actions": [
+              "read"
+            ],
+            "effect": "none"
+          },
+          {
+            "kind": "tool",
+            "selector": "tool://credit-demo/submit",
+            "actions": [
+              "execute"
+            ],
+            "effect": "irreversible"
+          }
+        ],
+        "accountability": {
+          "session": "local-credit-demo",
+          "skill": "credit",
+          "role": "demo-employee"
+        }
+      }
+    },
+    {
+      "op": "dispatch",
+      "grants": [
+        {
+          "kind": "data",
+          "selector": "ledger://credit/demo",
+          "actions": [
+            "read"
+          ],
+          "effect": "none"
+        },
+        {
+          "kind": "tool",
+          "selector": "tool://credit-demo/submit",
+          "actions": [
+            "execute"
+          ],
+          "effect": "irreversible"
+        }
+      ],
+      "op_id": "op-replay"
+    },
+    {
+      "op": "mark_completed",
+      "op_id": "op-replay"
+    }
+  ]
+}

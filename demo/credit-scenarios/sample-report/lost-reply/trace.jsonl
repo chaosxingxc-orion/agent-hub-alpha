@@ -1,0 +1,7 @@
+{"layer":"simulated-model","action":"S1 判断","detail":"grant: 资产超过三千万美元，近六个月无逾期"}
+{"layer":"project-core","action":"登记操作并绑定版本","detail":"adopted"}
+{"layer":"project-core","action":"派发前检查当前权限","detail":"dispatched: "}
+{"layer":"simulated-bank","action":"银行已办理但模拟响应丢失","detail":"业务效果已保存；框架状态为结果未知"}
+{"layer":"project-core","action":"重复登记检查","detail":"reused: "}
+{"layer":"demo-host","action":"沿原业务编号查询银行","detail":"bank-demo-br-lost-reply"}
+{"layer":"project-core","action":"记录操作完成","detail":"completed"}

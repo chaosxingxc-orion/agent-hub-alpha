@@ -1,0 +1,18 @@
+{
+  "reference_commit": "d3b2f81494085d5235b28333666a9f12d13b3667",
+  "scenarios": 11,
+  "passed_scenarios": 10,
+  "gap_scenarios": 1,
+  "failed_scenarios": 0,
+  "execution_errors": 0,
+  "assertions": 59,
+  "failed_assertions_in_known_gap": 2,
+  "go_race_packages_passed": 22,
+  "report_links_checked": 67,
+  "missing_links": [],
+  "html_sha256": "94b9a7857bb89d9daea6b4a89e1b52b4e47603f81228e9f90abe792f1781a6dc",
+  "browser_visual_review": "not performed",
+  "models": "deterministic doubles",
+  "bank": "file-backed simulated provider",
+  "openjiuwen_integration": false
+}
