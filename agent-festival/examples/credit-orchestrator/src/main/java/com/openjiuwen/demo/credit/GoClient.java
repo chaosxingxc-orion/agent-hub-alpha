@@ -14,6 +14,7 @@ import java.util.Map;
 
 /** The executor's only line to the authoritative record (credit-demo, Go). */
 final class GoClient {
+    @FunctionalInterface interface Exchange { JsonNode post(String path, Map<String, Object> body, int timeoutSeconds); }
     /** Thrown when the run's lease was taken over or the run stopped: this executor must stop writing. */
     static final class FencedException extends RuntimeException {
         FencedException(String message) {
@@ -60,17 +61,36 @@ final class GoClient {
     private final HttpClient http = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(5)).build();
     private final String base;
+    private final String runtimeCredential;
+    private final Exchange exchange;
 
     GoClient(String base) {
+        this(base, System.getenv());
+    }
+
+    GoClient(String base, Map<String, String> env) {
+        this(base, env, null);
+    }
+
+    GoClient(String base, Map<String, String> env, Exchange exchange) {
         this.base = base;
+        this.exchange = exchange;
+        runtimeCredential = env.getOrDefault("H03_RUNTIME_CREDENTIAL", "");
+        if (!runtimeCredential.isEmpty() && (runtimeCredential.length() < 32 || runtimeCredential.contains("\r") || runtimeCredential.contains("\n")))
+            throw new IllegalArgumentException("Independent Runtime credential required");
+    }
+
+    HttpRequest request(String path, Map<String, Object> body, int timeoutSeconds) throws IOException {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(base + path))
+                .timeout(Duration.ofSeconds(timeoutSeconds)).header("Content-Type", "application/json");
+        if (path.startsWith("/exec/") && !runtimeCredential.isEmpty()) builder.header("X-Hub-Runtime-Credential", runtimeCredential);
+        return builder.POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body))).build();
     }
 
     JsonNode post(String path, Map<String, Object> body, int timeoutSeconds) {
+        if (exchange != null) return exchange.post(path, body, timeoutSeconds);
         try {
-            HttpRequest req = HttpRequest.newBuilder(URI.create(base + path))
-                    .timeout(Duration.ofSeconds(timeoutSeconds))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body))).build();
+            HttpRequest req = request(path, body, timeoutSeconds);
             HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() == 204) {
                 return null;

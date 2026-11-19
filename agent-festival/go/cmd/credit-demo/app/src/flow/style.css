@@ -200,6 +200,12 @@
 .cg-detail.bus .cg-local-execution { padding: 10px; border-radius: 8px; background: #f9fafb; }
 @media (max-width: 640px) { .cg-detail.bus .cg-proof-grid { grid-template-columns: minmax(0, 1fr); } }
 
+.h03-consumption { margin: 8px 14px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; overflow-wrap: anywhere; }
+.h03-consumption h5 { margin: 0 0 8px; }
+.h03-consumption dl { font-size: 11px; }
+.h03-consumption dt { color: var(--muted); }
+.h03-consumption dd { margin: 0 0 6px; }
+.h03-consumption p { color: var(--muted); font-size: 11px; }
 @keyframes cg-in { from { opacity: 0; transform: translateY(6px) scale(.97); } to { opacity: 1; transform: none; } }
 @keyframes cg-fork { from { opacity: 0; transform: translateX(-14px) scale(.96); } to { opacity: 1; transform: none; } }
 @keyframes cg-slide { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }

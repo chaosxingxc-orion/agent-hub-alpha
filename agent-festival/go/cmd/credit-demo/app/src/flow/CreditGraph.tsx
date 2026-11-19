@@ -5,6 +5,7 @@ import { Background, Controls, ReactFlow, useReactFlow, type Node } from "@xyflo
 import { CircleCheck, CircleX, RotateCcw, X } from "lucide-react";
 import { finished, type Graph, type GraphNode, type Options } from "../types";
 import { associationText, busOverviewHTML, executionDetailHTML } from "./bus-detail";
+import { consumptionDetailHTML } from "./h03-consumption";
 import { build, Delays, type Built } from "./layout";
 import { edgeTypes, nodeTypes } from "./nodes";
 
@@ -27,12 +28,24 @@ export function CreditGraph({ g, opts }: { g: Graph; opts: Options }) {
     <div className={`cg m-${mode}${g.run?.stalled ? " m-stalled" : ""}`}>
       <Head g={g} canApprove={canApprove} onApprove={() => setGate((x) => !x)} />
       {gate && canApprove && <Gate g={g} opts={opts} onClose={() => setGate(false)} />}
+      {g.selection && <SelectionOverview g={g} />}
       {g.bus && <BusOverview g={g} onInspect={(id) => setDetail(id)} />}
       <Canvas built={built} empty={!built.nodes.length} blank={!g.nodes.length} onPick={(id) => setDetail((cur) => (cur === id ? undefined : id))} />
       <Foot g={g} />
       {detail && <Detail g={g} id={detail} onClose={() => setDetail(undefined)} />}
     </div>
   );
+}
+
+function SelectionOverview({g}:{g:Graph}) {
+  const selection=g.selection!;
+  const candidates=selection.candidates;
+  const labels:Record<string,string>={selected:"已选用",not_selected:"未选用",excluded:"排除",unknown:"未知"};
+  return <details className="h03-consumption cg-selection"><summary>能力选用 · 已选 {candidates.filter(c=>c.result==="selected").length} / 候选 {candidates.length}</summary>
+    <p>{selection.package} · {selection.id}</p>
+    <ul>{candidates.map((c,i)=><li key={c.capability+":"+i}><b>{c.name||c.capability}</b> · {labels[c.result]||"未知"}{Number.isFinite(c.score)?` · ${c.score}`:""}<p>{c.reason||"未提供选用依据"}</p></li>)}</ul>
+    <p>选择记录 {selection.digest} · {selection.score_source}</p>
+  </details>;
 }
 
 // ---------- header ----------
@@ -222,7 +235,7 @@ function Detail({ g, id, onClose }: { g: Graph; id: string; onClose: () => void 
   }
   const n = g.nodes.find((x) => x.id === id);
   if (!n) return null;
-  if (n.execution || n.remote) return <BusDetail n={n} onClose={onClose} />;
+  if (n.execution || n.remote || n.consumption) return <BusDetail n={n} onClose={onClose} />;
   return (
     <div className="cg-detail">
       <button className="x" onClick={onClose} aria-label="关闭"><X className="ci" /></button>
@@ -273,7 +286,7 @@ function BusOverview({ g, onInspect }: { g: Graph; onInspect: (id: string) => vo
 }
 
 function BusDetail({ n, onClose }: { n: GraphNode; onClose: () => void }) {
-  const ref = useHTML(executionDetailHTML(n), openSections);
+  const ref = useHTML(executionDetailHTML(n) + consumptionDetailHTML(n.consumption), openSections);
   const copy = async (status: HTMLElement | null) => {
     const text = associationText(n);
     try {

@@ -32,26 +32,81 @@ type Graph struct {
 	Live       string           `json:"live,omitempty"` // poll this while something can still change
 	Rev        int64            `json:"rev"`
 	Bus        *GraphBusSummary `json:"bus,omitempty"`
+	Selection  *GraphSelection  `json:"selection,omitempty"`
+}
+
+// GraphSelection shows why the team looks the way it does when it came from
+// a capability selection (ALK-05): every recalled candidate, whether it was
+// selected, excluded or unknown, and on what basis.
+type GraphSelection struct {
+	ID          string           `json:"id"`
+	Digest      string           `json:"digest"` // bound into the plan hash
+	Package     string           `json:"package"`
+	Query       SelectionQuery   `json:"query"`
+	ScoreSource string           `json:"score_source"`
+	Candidates  []GraphCandidate `json:"candidates"`
+	Bindings    []Binding        `json:"bindings"`
+}
+
+type GraphCandidate struct {
+	Capability string  `json:"capability"`
+	Name       string  `json:"name"`
+	Result     string  `json:"result"` // selected not_selected excluded unknown
+	Score      float64 `json:"score"`
+	Reason     string  `json:"reason"`
+	Node       string  `json:"node,omitempty"`
+}
+
+func graphSelection(rec *SelectionRecord, p *Plan) *GraphSelection {
+	gs := &GraphSelection{ID: rec.ID, Digest: rec.Digest, Package: rec.Package.ID + "@" + rec.Package.Version, Query: rec.Query,
+		ScoreSource: rec.ScoreSource, Bindings: rec.Composition.Bindings}
+	basis := map[string]string{}
+	for _, r := range rec.Ranking {
+		basis[r.Capability] = r.Basis
+	}
+	for _, el := range rec.Eligibility {
+		c := GraphCandidate{Capability: el.Capability, Result: el.Result, Score: el.Score}
+		if e := p.expert(el.Capability); e != nil {
+			c.Name = e.Name
+		}
+		switch {
+		case rec.selected(el.Capability):
+			c.Result, c.Reason = "selected", basis[el.Capability]
+			for _, a := range p.Agents {
+				if a.Expert == el.Capability {
+					c.Node = a.ID
+				}
+			}
+		case el.Result == "pass":
+			c.Result, c.Reason = "not_selected", rec.whyNot(el.Capability)
+		default:
+			c.Reason = strings.Join(el.Reasons, "；")
+		}
+		gs.Candidates = append(gs.Candidates, c)
+	}
+	return gs
 }
 
 type GraphNode struct {
-	ID        string         `json:"id"`
-	Name      string         `json:"name"`
-	Kind      string         `json:"kind"` // investigate blackbox judge write effect
-	Role      string         `json:"role,omitempty"`
-	Task      string         `json:"task"`
-	Deps      []string       `json:"deps,omitempty"`
-	When      *RunIf         `json:"when,omitempty"`
-	Effect    string         `json:"effect,omitempty"`
-	Reads     []string       `json:"reads,omitempty"`
-	Contract  string         `json:"contract,omitempty"`
-	Denied    string         `json:"denied,omitempty"`
-	Status    string         `json:"status,omitempty"` // pending running done reused skipped failed
-	Activity  string         `json:"activity,omitempty"`
-	Output    string         `json:"output,omitempty"`
-	Branches  []GraphBranch  `json:"branches,omitempty"`
-	Remote    map[string]any `json:"remote,omitempty"`
-	Execution GraphExecution `json:"execution"`
+	Consumption map[string]any `json:"consumption,omitempty"`
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Kind        string         `json:"kind"` // investigate blackbox judge write effect
+	Role        string         `json:"role,omitempty"`
+	Task        string         `json:"task"`
+	Deps        []string       `json:"deps,omitempty"`
+	When        *RunIf         `json:"when,omitempty"`
+	Effect      string         `json:"effect,omitempty"`
+	Reads       []string       `json:"reads,omitempty"`
+	Contract    string         `json:"contract,omitempty"`
+	Denied      string         `json:"denied,omitempty"`
+	Status      string         `json:"status,omitempty"` // pending running done reused skipped failed
+	Activity    string         `json:"activity,omitempty"`
+	Output      string         `json:"output,omitempty"`
+	Branches    []GraphBranch  `json:"branches,omitempty"`
+	Remote      map[string]any `json:"remote,omitempty"`
+	Execution   GraphExecution `json:"execution"`
+	Chosen      string         `json:"chosen,omitempty"` // why the selection picked this capability
 }
 
 // GraphBranch is one sub-goal a Loop Forest step forked, as the graph draws it.
@@ -78,6 +133,9 @@ type GraphRun struct {
 }
 
 func (s *Service) graph(p *Plan, withVerify bool) (*Graph, error) {
+	if errs := h03BindingErrors(p); len(errs) > 0 {
+		return nil, fmt.Errorf("profile snapshot is invalid: %v", errs)
+	}
 	g := &Graph{Plan: p.ID, Version: p.Version, Case: p.CaseID, Goal: p.Goal, Layers: p.Layers, OK: p.Precheck.OK, Hash: p.Hash}
 	g.Problems = append(append(g.Problems, p.Precheck.NotHeld...), p.Precheck.Rules...)
 	for _, e := range p.Precheck.Errors {
@@ -90,18 +148,24 @@ func (s *Service) graph(p *Plan, withVerify bool) (*Graph, error) {
 	if n := len(s.st.Plans[p.ID]); n > p.Version {
 		g.Superseded = n
 	}
+	pkg := p.scenario()
 	var run *Run
 	if p.RunID != "" {
 		run = s.st.Runs[p.RunID]
+	}
+	if p.Selection != nil {
+		if rec := s.st.Selections[p.Selection.ID]; rec != nil {
+			g.Selection = graphSelection(rec, p)
+		}
 	}
 	for _, st := range p.Steps {
 		a := p.agent(st.Member)
 		if a == nil {
 			continue
 		}
-		e := expertByID(a.Expert)
+		e := p.expert(a.Expert)
 		n := GraphNode{ID: st.ID, Name: e.Name, Kind: e.Kind, Role: a.Role, Task: a.Task, Deps: st.DependsOn, When: st.When,
-			Contract: clip(strings.TrimPrefix(s.cat.Hashes[e.ID], "sha256:"), 12)}
+			Contract: clip(strings.TrimPrefix(p.contractHash(e.ID, s.cat.Hashes), "sha256:"), 12)}
 		n.Execution.Kind = "host"
 		if e.Kind == "blackbox" {
 			n.Execution.Kind = "loop_forest"
@@ -112,9 +176,19 @@ func (s *Service) graph(p *Plan, withVerify bool) (*Graph, error) {
 		if e.effectLevel != "none" {
 			n.Effect = e.effectLevel
 		}
+		if p.ExecutionBinding != nil {
+			n.Consumption = s.h03Consumption(run, p, a.ID)
+		}
+		if g.Selection != nil {
+			for _, c := range g.Selection.Candidates {
+				if c.Capability == e.ID && c.Result == "selected" {
+					n.Chosen = fmt.Sprintf("%.2f · %s", c.Score, c.Reason)
+				}
+			}
+		}
 		for _, r := range e.requires {
 			n.Reads = append(n.Reads, r.selector)
-			if !held(r) {
+			if !pkg.held(r) {
 				n.Denied = "缺少 " + r.selector + " 权限"
 			}
 		}
@@ -140,6 +214,9 @@ func (s *Service) graph(p *Plan, withVerify bool) (*Graph, error) {
 					}
 				}
 			}
+		}
+		if p.ExecutionBinding != nil {
+			n.Output = ""
 		}
 		g.Nodes = append(g.Nodes, n)
 	}

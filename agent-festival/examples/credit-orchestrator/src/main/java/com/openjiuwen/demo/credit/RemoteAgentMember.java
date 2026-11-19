@@ -12,13 +12,26 @@ import java.util.*;
 
 /** Agent Bus A2A 1.0 JSON-RPC adapter; Graph remains the only scheduler. */
 final class RemoteAgentMember implements SubAgentExecutor {
+    @FunctionalInterface interface Gateway { JsonNode call(String method, String id, Map<String,Object> params) throws Exception; }
     private static final ObjectMapper JSON = new ObjectMapper();
     private final GoClient go;
     private final String run,token,step,gateway,credential;
+    private final boolean h03;
+    private final JsonNode nodeContract;
+    private final Gateway probeGateway;
     private Map<String,Object> observation;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build();
     RemoteAgentMember(GoClient go,String run,String token,String step,Map<String,String> env) {
+        this(go,run,token,step,env,false,null);
+    }
+    RemoteAgentMember(GoClient go,String run,String token,String step,Map<String,String> env,boolean h03,JsonNode nodeContract) {
+        this(go,run,token,step,env,h03,nodeContract,null);
+    }
+    RemoteAgentMember(GoClient go,String run,String token,String step,Map<String,String> env,boolean h03,JsonNode nodeContract,Gateway probeGateway) {
         this.go=go; this.run=run; this.token=token; this.step=step;
+        this.probeGateway=probeGateway;
+        this.h03=h03; this.nodeContract=nodeContract==null?null:nodeContract.deepCopy();
+        if (h03 && (this.nodeContract==null || !this.nodeContract.isObject())) throw new IllegalArgumentException("Adopted node contract required");
         gateway=env.getOrDefault("CREDIT_BUS_GATEWAY",""); credential=env.getOrDefault("CREDIT_BUS_TOKEN","");
         if (gateway.isBlank() || credential.isBlank()) throw new IllegalStateException("Agent Bus configuration missing; local fallback forbidden");
     }
@@ -38,6 +51,10 @@ final class RemoteAgentMember implements SubAgentExecutor {
         go.post("/exec/call/update",body,15);
     }
     private JsonNode rpc(String method,String id,Map<String,Object> params) throws Exception {
+        if (probeGateway != null) {
+            observation = new LinkedHashMap<>(Map.of("rpc_id",id,"method",method,"outcome","task_received"));
+            return probeGateway.call(method,id,params);
+        }
         var request=HttpRequest.newBuilder(URI.create(gateway.replaceAll("/$","")+"/a2a"))
             .timeout(Duration.ofSeconds(30)).header("Content-Type","application/json")
             .header("Authorization","Bearer "+credential)
@@ -52,6 +69,8 @@ final class RemoteAgentMember implements SubAgentExecutor {
             var response=http.send(request,HttpResponse.BodyHandlers.ofString());
             observation.put("http_status", response.statusCode());
             JsonNode body=JSON.readTree(response.body());
+            if (h03 && (!body.path("jsonrpc").asText().equals("2.0") || !body.path("id").asText().equals(id)))
+                throw new IllegalStateException("A2A response identity differs");
             if (response.statusCode()!=200 || body.has("error")) {
                 String code=body.path("error").path("data").path("code").asText(body.path("code").asText("A2A_ERROR"));
                 if (!code.matches("[A-Z][A-Z0-9_]{0,63}")) code="A2A_ERROR";
@@ -75,17 +94,29 @@ final class RemoteAgentMember implements SubAgentExecutor {
     }
 
     @Override public String execute(String userInput,String subGoal) {
-        var begin=base();begin.put("input",userInput==null?"":userInput);begin.put("goal",subGoal==null?"":subGoal);
+        var begin=base();
+        if (!h03) { begin.put("input",userInput==null?"":userInput);begin.put("goal",subGoal==null?"":subGoal); }
         JsonNode decision=go.post("/exec/call/begin",begin,30);
         JsonNode call=decision.path("call");
         String action=decision.path("action").asText();
-        if (action.equals("reuse")) return decision.path("output").asText();
+        if (!Set.of("send","query","reuse","unknown").contains(action)) throw new IllegalStateException("Unrecognized call decision; no resend");
+        JsonNode boundInput=h03?H03NodeCodec.input(call,nodeContract,run,step):null;
+        if (action.equals("reuse")) {
+            String recorded=decision.path("output").asText();
+            if (h03) {
+                String prefix="[step:"+step+"]\n";
+                if (!recorded.startsWith(prefix)) throw new IllegalStateException("Recorded node identity differs");
+                H03NodeCodec.output(recorded.substring(prefix.length()),call,boundInput,nodeContract);
+            }
+            return recorded;
+        }
         String taskID=call.path("remote_task_id").asText();
         long seq=call.path("sequence").asLong();
         if (action.equals("unknown")) {
             update(call,taskID,"unknown","派发结果未知，需核对原调用；未重发",++seq);
             throw new IllegalStateException("Remote call unresolved; no resend");
         }
+        if (action.equals("query") && taskID.isBlank()) throw new IllegalStateException("Original task required; no resend");
         JsonNode task;
         try {
             if (action.equals("send")) {
@@ -111,13 +142,23 @@ final class RemoteAgentMember implements SubAgentExecutor {
                 update(call,taskID,"waiting","专业 Agent 执行中，查询原任务",++seq);
                 if (state.equals("TASK_STATE_COMPLETED")) {
                     StringBuilder text=new StringBuilder();
+                    if (h03 && (!task.path("artifacts").isArray() || task.path("artifacts").size()!=1
+                            || !task.path("artifacts").get(0).path("parts").isArray() || task.path("artifacts").get(0).path("parts").size()!=1
+                            || !task.path("artifacts").get(0).path("parts").get(0).path("text").isTextual()))
+                        throw new IllegalStateException("One formal node artifact required");
                     for (JsonNode artifact:task.path("artifacts")) for (JsonNode part:artifact.path("parts")) if(part.has("text")) text.append(part.path("text").asText());
-                    JsonNode artifact=JSON.readTree(text.toString());
+                    JsonNode artifact=h03?H03NodeCodec.parse(text.toString()):JSON.readTree(text.toString());
+                    if (h03) {
+                        H03NodeCodec.keys(artifact,"node_execution_id","input_digest","attempt","output");
+                        if (!artifact.path("attempt").isInt() || !artifact.path("output").isTextual()) throw new IllegalStateException("Typed artifact values required");
+                    }
                     if (!artifact.path("node_execution_id").asText().equals(call.path("node_execution_id").asText())
                         || !artifact.path("input_digest").asText().equals(call.path("input_digest").asText())
                         || artifact.path("attempt").asInt()!=call.path("attempt").asInt()) throw new IllegalStateException("Remote artifact identity mismatch");
+                    String output=artifact.path("output").asText();
+                    if (h03) H03NodeCodec.output(output,call,boundInput,nodeContract);
                     var commit=identity(call);commit.put("remote_task_id",taskID);commit.put("context_id",call.path("context_id").asText());
-                    commit.put("output",artifact.path("output").asText());
+                    commit.put("output",output);
                     return go.post("/exec/call/commit",commit,15).path("output").asText();
                 }
                 if (Set.of("TASK_STATE_FAILED","TASK_STATE_REJECTED","TASK_STATE_CANCELED").contains(state)) {

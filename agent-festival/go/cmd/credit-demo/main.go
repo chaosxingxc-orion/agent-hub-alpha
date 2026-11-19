@@ -23,9 +23,19 @@ func main() {
 	if err != nil {
 		log.Fatal("invalid Builder read-only query configuration")
 	}
+	buildClient, err := builderBuildFromEnv(queryClient)
+	if err != nil {
+		log.Fatal("invalid Builder build configuration")
+	}
+	h03Profile, h03Credential, err := h03FromEnv()
+	if err != nil {
+		log.Fatal("invalid H03 profile configuration")
+	}
 	cfg := Config{
+		H03Profile: h03Profile, H03RuntimeCredential: h03Credential,
 		BuilderHubEnabled:  queryClient != nil,
 		BuilderPublication: publication,
+		BuilderBuild:       buildClient,
 		Addr:               envOr("CREDIT_ADDR", ":8091"),
 		DataDir:            envOr("CREDIT_DATA", "/data"),
 		OrchestratorURL:    envOr("CREDIT_ORCHESTRATOR_URL", "http://orchestrator:8195"),
@@ -38,6 +48,7 @@ func main() {
 		BusRegistryURL:     envOr("CREDIT_RDC_URL", ""),
 		BusRegistryToken:   envOr("RDC_REGISTRY_API_TOKEN", ""),
 		BusTenant:          envOr("CREDIT_BUS_TENANT", "issue16"),
+		ScenarioDir:        envOr("CREDIT_SCENARIO_DIR", ""),
 	}
 	s, err := OpenService(cfg)
 	if err != nil {
@@ -53,6 +64,7 @@ func main() {
 	s.routes(mux)
 	s.builderHubRoutes(mux, queryClient)
 	s.builderPublicationRoutes(mux)
+	s.builderBuildRoutes(mux, buildClient)
 	log.Printf("credit-demo on %s (planner MCP /mcp, member MCP /member-mcp, UI /ui/)", cfg.Addr)
-	log.Fatal(http.ListenAndServe(cfg.Addr, mux))
+	log.Fatal(http.ListenAndServe(cfg.Addr, s.h03ControlHandler(mux)))
 }

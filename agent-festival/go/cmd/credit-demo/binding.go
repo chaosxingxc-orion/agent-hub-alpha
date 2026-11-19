@@ -130,7 +130,7 @@ func (s *Service) runModel(r *Run) string {
 
 func (p *Plan) hasJudge() bool {
 	for _, a := range p.Agents {
-		if e := expertByID(a.Expert); e != nil && e.Kind == "judge" {
+		if e := p.expert(a.Expert); e != nil && e.Kind == "judge" {
 			return true
 		}
 	}
