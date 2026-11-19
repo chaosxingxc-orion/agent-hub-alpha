@@ -1,0 +1,17 @@
+{
+  "command_digest": "sha256:f615d742302f4198024a467b2d45d87a0df7beafd55a6c9657983abad0fe8dec",
+  "receipt": {
+    "reference": "bank-demo-br-retry",
+    "payload": {
+      "business_request_id": "br-retry",
+      "customer": "customer-demo",
+      "credit_usd": 50000
+    },
+    "payload_digest": "sha256:4b939a477be01b16aa8418de042de6aba4ba28cef1b530807e69cfe89e6c0e72"
+  },
+  "decision": {
+    "kind": "grant",
+    "credit_usd": 50000,
+    "reason": "资产超过三千万美元，近六个月无逾期"
+  }
+}

@@ -1,0 +1,16 @@
+PASS  happy           材料齐全，正常授信五万美元
+PASS  retry           同一申请重发，返回原回执
+PASS  conflict        沿用编号却改了客户，拒绝办理
+PASS  revoked         判断后权限被撤销，提交被拦截
+PASS  lost-reply      银行已办理但响应丢失，查询后恢复
+PASS  restart         办理后进程被终止，换进程恢复
+PASS  evidence        缺资产材料，先补证再办理
+PASS  uncovered       近期短期逾期，规则未覆盖
+PASS  history-veto    历史长期逾期，停止授信办理
+GAP   revision-gap    新修订要求替代旧判断，现有组件仍放行旧操作
+      旧修订派发应被拒绝: expected=rejected actual=dispatched
+      旧批准不应产生银行效果: expected=0 actual=1
+PASS  replay          隔离重演控制过程，不新增银行效果
+
+PASS=10 GAP=1 FAIL=0 ERROR=0
+Report: /tmp/agent-hub-credit-verification.e3kTLd/scenarios/report.html

@@ -1,0 +1,16 @@
+{
+  "submit_calls": 1,
+  "query_calls": 0,
+  "created_credit_lines": 1,
+  "receipts": {
+    "br-evidence": {
+      "reference": "bank-demo-br-evidence",
+      "payload": {
+        "business_request_id": "br-evidence",
+        "customer": "customer-demo",
+        "credit_usd": 50000
+      },
+      "payload_digest": "sha256:0db1e52a5d68123f7f7886e1d77f26c256e3ccf4ccb22db7be96f0a2f664e64e"
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{"layer":"simulated-model","action":"S1 判断","detail":"grant: 资产超过三千万美元，近六个月无逾期"}
+{"layer":"project-core","action":"登记操作并绑定版本","detail":"adopted"}
+{"layer":"project-core","action":"派发前检查当前权限","detail":"dispatched: "}
+{"layer":"simulated-bank","action":"创建授信并保存回执","detail":"bank-demo-br-conflict"}
+{"layer":"project-core","action":"记录操作完成","detail":"completed"}
+{"layer":"project-core","action":"重复登记检查","detail":"rejected: operation_id \"op-conflict\" carries payload_digest \"sha256:8a68ef31d99b106d7b969b27c7b32a0e563d6900543855300f28ce7e8dee9269\" but an earlier event recorded \"sha256:006ee24b5b613aac47fb84ae43b8e5a6c2aa40b3fb9d84baac4e7181ef460183\" — changed payload under the same key"}

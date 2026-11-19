@@ -1,0 +1,16 @@
+{
+  "business_request_id": "br-uncovered",
+  "operation_id": "op-uncovered",
+  "revision": "er-1",
+  "evidence_id": "evidence-v1",
+  "customer": "customer-demo",
+  "assets_usd": 35000000,
+  "asset_report_present": true,
+  "reference_time": "2026-11-19T00:00:00Z",
+  "overdue": [
+    {
+      "duration_months": 1,
+      "months_ago": 1
+    }
+  ]
+}

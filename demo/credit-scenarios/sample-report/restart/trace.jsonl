@@ -1,0 +1,7 @@
+{"layer":"simulated-model","action":"S1 判断","detail":"grant: 资产超过三千万美元，近六个月无逾期"}
+{"layer":"project-core","action":"登记操作并绑定版本","detail":"adopted"}
+{"layer":"project-core","action":"派发前检查当前权限","detail":"dispatched: "}
+{"layer":"simulated-bank","action":"创建授信并保存回执","detail":"bank-demo-br-restart"}
+{"layer":"demo-host","action":"实际终止子进程后重新打开状态","detail":"银行回执文件已存在；宿主尚无完成结果"}
+{"layer":"demo-host","action":"沿原业务编号查询银行","detail":"bank-demo-br-restart"}
+{"layer":"project-core","action":"记录操作完成","detail":"completed"}

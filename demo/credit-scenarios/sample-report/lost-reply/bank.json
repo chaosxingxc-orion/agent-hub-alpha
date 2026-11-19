@@ -1,0 +1,16 @@
+{
+  "submit_calls": 1,
+  "query_calls": 1,
+  "created_credit_lines": 1,
+  "receipts": {
+    "br-lost-reply": {
+      "reference": "bank-demo-br-lost-reply",
+      "payload": {
+        "business_request_id": "br-lost-reply",
+        "customer": "customer-demo",
+        "credit_usd": 50000
+      },
+      "payload_digest": "sha256:4f3c923ca3e7113a30af65fc673ffba73a748f2370365696627989761169b64c"
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "submit_calls": 1,
+  "query_calls": 0,
+  "created_credit_lines": 1,
+  "receipts": {
+    "br-conflict": {
+      "reference": "bank-demo-br-conflict",
+      "payload": {
+        "business_request_id": "br-conflict",
+        "customer": "customer-demo",
+        "credit_usd": 50000
+      },
+      "payload_digest": "sha256:09bf81cd6979ecd49426c2429920a5e36e54b1184d7725fad9b31ef4af0cd8d8"
+    }
+  }
+}

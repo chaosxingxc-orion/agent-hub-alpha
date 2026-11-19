@@ -1,0 +1,16 @@
+{
+  "submit_calls": 1,
+  "query_calls": 0,
+  "created_credit_lines": 1,
+  "receipts": {
+    "br-replay": {
+      "reference": "bank-demo-br-replay",
+      "payload": {
+        "business_request_id": "br-replay",
+        "customer": "customer-demo",
+        "credit_usd": 50000
+      },
+      "payload_digest": "sha256:f82fd56844644695fb7fb7cb216b32bc76644a8d1f8b5799524010aa340be1c0"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "command_digest": "sha256:a7df23b8b29463f3015a26b5fa804fd7472e913356bfdf8f763cc99848136781",
+  "receipt": {
+    "reference": "bank-demo-br-lost-reply",
+    "payload": {
+      "business_request_id": "br-lost-reply",
+      "customer": "customer-demo",
+      "credit_usd": 50000
+    },
+    "payload_digest": "sha256:4f3c923ca3e7113a30af65fc673ffba73a748f2370365696627989761169b64c"
+  },
+  "decision": {
+    "kind": "grant",
+    "credit_usd": 50000,
+    "reason": "资产超过三千万美元，近六个月无逾期"
+  }
+}
