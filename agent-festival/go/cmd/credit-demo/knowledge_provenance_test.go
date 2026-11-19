@@ -168,3 +168,35 @@ func TestKnowledgeLegacyItemWithoutProvenanceIsNotReused(t *testing.T) {
 		t.Fatalf("legacy item: recorded=%v reused_from=%q lookup=%+v", t2.recorded["extract"], ext.ReusedFrom, ext.Lookup)
 	}
 }
+
+// The reviewer's isolation case (#34, 6973163409): a task adopted under
+// model A executes after the service restarted with model B. Its result is
+// published as an A result: a new B task does not consume it, a new A task does.
+func TestKnowledgeOldTaskPublishesUnderItsBoundModelAfterRestart(t *testing.T) {
+	withAnnualReport(t, nil)
+	s, _ := selectionService(t)
+	q := arQuery("经营", "资产质量")
+	s.cfg.Model = "model-a"
+	r1 := proposeApprove(t, s, q)
+	s.cfg.Model = "model-b" // restart with model B before the A task runs
+	t1 := stepsOn(t, s, r1, "model-a")
+	k1 := t1.run.Steps["extract"].Published
+	if k1 == "" {
+		t.Fatal("the old task published nothing")
+	}
+	s.mu.Lock()
+	model := s.st.Knowledge[k1].Model
+	s.mu.Unlock()
+	if model != "model-a" {
+		t.Fatalf("old A task published its result as %q", model)
+	}
+	tb := runTask(t, s, q, nil) // a new task, bound to model B
+	if ext := tb.run.Steps["extract"]; tb.recorded["extract"] || ext.ReusedFrom != "" {
+		t.Fatalf("a model-B task consumed the A result %s (lookup %+v)", ext.ReusedFrom, ext.Lookup)
+	}
+	s.cfg.Model = "model-a"
+	ta := runTask(t, s, q, nil) // a new task, bound to model A
+	if got := ta.run.Steps["extract"].ReusedFrom; got != k1 {
+		t.Fatalf("a model-A task reused %q, want %q", got, k1)
+	}
+}
