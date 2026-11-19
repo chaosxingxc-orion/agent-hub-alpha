@@ -29,7 +29,13 @@ final class DemoWorker implements Runnable {
             try {
                 for (JsonNode id : control.get("/v1/executions/pending")) {
                     try { execute(control.post("/v1/tasks/" + id.asText() + "/claim", Map.of("owner", owner, "domain", "graph"))); }
-                    catch (ControlClient.ControlFailure e) { System.err.println("worker task remains pending: " + e.code); }
+                    catch (ControlClient.ControlFailure e) {
+                        if (e.code.equals("IN_FLIGHT_UNKNOWN")) {
+                            System.err.println("worker stopped: previous members are still active; isolate or restart this process before resuming");
+                            return;
+                        }
+                        System.err.println("worker task remains pending: " + e.code);
+                    }
                 }
                 Thread.sleep(1500);
             } catch (InterruptedException e) { Thread.currentThread().interrupt(); }

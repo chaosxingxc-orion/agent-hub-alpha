@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.util.Map;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicReference;
 
 /** Compiler starts independently; the worker (when enabled) backs off waiting for Go. */
 public final class Main {
@@ -24,8 +25,11 @@ public final class Main {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 8195), 0);
         server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
         AdmittedGraphCompiler compiler = new AdmittedGraphCompiler();
+        boolean workerEnabled = config.path("worker_enabled").asBoolean(false);
+        AtomicReference<String> workerStatus = new AtomicReference<>(workerEnabled ? "starting" : "disabled");
         server.createContext("/healthz", exchange -> {
-            byte[] body = Json.write(Map.of("status", "ok", "compiler_version", "report-compiler/1")).getBytes(StandardCharsets.UTF_8);
+            byte[] body = Json.write(Map.of("status", "ok", "compiler_version", "report-compiler/1",
+                    "worker_status", workerStatus.get())).getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().set("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, body.length); exchange.getResponseBody().write(body); exchange.close();
         });
@@ -53,8 +57,13 @@ public final class Main {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> server.stop(1)));
         server.start();
         System.out.println("report compiler listening at 127.0.0.1:8195");
-        if (config.path("worker_enabled").asBoolean(false)) {
-            Thread worker = new Thread(new DemoWorker(config), "report-worker");
+        if (workerEnabled) {
+            DemoWorker demoWorker = new DemoWorker(config);
+            Thread worker = new Thread(() -> {
+                workerStatus.set("running");
+                try { demoWorker.run(); }
+                finally { workerStatus.set("stopped"); }
+            }, "report-worker");
             worker.setDaemon(true);
             Runtime.getRuntime().addShutdownHook(new Thread(worker::interrupt));
             worker.start();
