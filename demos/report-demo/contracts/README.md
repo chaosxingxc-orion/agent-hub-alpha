@@ -50,6 +50,8 @@ mvn -s .local/maven-settings.xml -f demos/report-demo/orchestrator-java/pom.xml 
 | C06 可信观察/核对 | worker `POST /v1/calls/{c}/observations`，查询同 c | [observation](observation.schema.json)；认证主体/source + event_id 幂等、context/remote task 绑定；旧 epoch 失权不丢可信迟到事实；观察不等于正式结果 |
 | C07 查询/干预 | MCP `get_plan/run_status/verify_run`；`GET /v1/tasks/{T}`、`events?after=N`、`calls`；受信用户 pause/resume | [task](task.schema.json)；generation/epoch/cursor 字符串、事件按数据库数值序号排序；继续先核对原任务/许可/远端身份，不盲重发 |
 
+`GET /v1/workbench/plans` 的列表行和 `GET /v1/workbench/tasks/{T}` 的编排图可含 `blocked_reason: {code, message}`。只有权威任务状态为 `BLOCKED` 或 `NEEDS_REVIEW` 时提供。客户端按 `code` 识别原因，显示 Go 给出的短说明，继续操作由服务端状态和授权决定。
+
 C05 主流程发布器提供已检查本地 JSON 报告的可读取交付事实；它不包含银行付款。显式启用的 [验证报告](../VERIFICATION.md) 用真实 PG/HTTP 验证稳定 b、派发许可、迟到观察和网络窗口；默认不注册，也不会把计数器效果写成主任务 DELIVERED。
 
 新增 [effect-intent](effect-intent.schema.json) 与 [effect-observation](effect-observation.schema.json)，加上发送决策共 13 份实际 DTO schema。测试效果 C05 由可信用户确认，C06 由固定提供方的受信 HTTP 客户端记录；旧 b 恢复只查询，记录观察不要求过期租约。完整 E/旁路覆盖仍以实际验收证据为准。

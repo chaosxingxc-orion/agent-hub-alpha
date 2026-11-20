@@ -10,6 +10,7 @@ export interface GraphNode {
   execution?: ExecutionBinding; remote?: RemoteExecution;
 }
 export interface Check { name: string; ok: boolean; detail: string; items?: string[] }
+export interface BlockedReason { code: string; message: string }
 export interface Graph {
   plan: string; version: number; case: string; goal: string; layers: string[][]; nodes: GraphNode[];
   ok: boolean; problems?: string[]; hash: string; approve?: string; confirm?: string; superseded?: number;
@@ -18,6 +19,7 @@ export interface Graph {
   selection?: {id:string;digest:string;eligibility:unknown[];ranking:unknown[];selection:string[];composition:unknown};
   reports?: {node:string;artifact_id:string;digest:string;output:unknown;check_outcome:string;can_approve:boolean}[];
   task_status?: string; delivery_receipts?: unknown[];
+  blocked_reason?: BlockedReason;
   human_review?: {url:string;checks:{node:string;check_artifact:string;object_digest:string}[]};
   live?: string;
   bus?: BusSummary;

@@ -5,13 +5,13 @@ import { createRoot } from "react-dom/client";
 import { ReactFlowProvider } from "@xyflow/react";
 import { CreditGraph } from "../flow/CreditGraph";
 import { ensureStyle } from "../flow/styles";
-import type { Graph, Options } from "../types";
+import type { BlockedReason, Graph, Options } from "../types";
 import { newer } from "../order";
 import { Gateway, type GatewayError } from "./gateway";
 import pageCss from "./page.css";
 import { HumanReviewNotice } from "./HumanReviewNotice";
 
-interface PlanRow { plan: string; version: number; case: string; goal: string; ok: boolean; run?: string; run_status?: string }
+interface PlanRow { plan: string; version: number; case: string; goal: string; ok: boolean; run?: string; run_status?: string; blocked_reason?: BlockedReason }
 type Pick = { plan: string; v: number };
 
 const gw = new Gateway();
@@ -192,6 +192,7 @@ function App() {
                 <button key={p.plan} className={`wb-item${pick?.plan === p.plan ? " on" : ""}`} onClick={() => choose(p)}>
                   <div className="wb-row"><b>{p.plan} v{p.version}</b><span className={`chip ${tone}`}><i />{text}</span></div>
                   <div className="wb-goal" title={p.goal}>{p.goal}</div>
+                  {p.blocked_reason && <div className="wb-goal" title={p.blocked_reason.message}>{p.blocked_reason.code} · {p.blocked_reason.message}</div>}
                 </button>
               );
             })}
@@ -199,7 +200,9 @@ function App() {
       <main className="wb-main">
         {err && <div className="wb-err">{err}</div>}
         {notice && notice.run === g?.run?.id && <div className="wb-notice" role="status">{notice.run}：{notice.message}</div>}
-        {g?.run?.status === "blocked" && <div className="wb-blocked" role="status">{g.run.id} 任务受阻。请由维护人员核对绑定版本与配置；此处不能按普通等待任务恢复。</div>}
+        {g?.run?.status === "blocked" && <div className="wb-blocked" role="status">
+          {g.blocked_reason ? `${g.blocked_reason.code} · ${g.blocked_reason.message}` : "任务受阻。请由维护人员核对执行记录。"}
+        </div>}
         {g?.run?.status === "waiting" && <ResumeControl key={`resume:${g.run.id}`} run={g.run.id} onAccepted={() => setNonce((n) => n + 1)}
           onMessage={(message) => {
             const run = g.run!.id;

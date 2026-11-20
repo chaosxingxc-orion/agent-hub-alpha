@@ -32,6 +32,36 @@ func workbenchStatus(t *Task) string {
 		return "running"
 	}
 }
+
+// Worker reason text is input. Publish only codes with a fixed explanation.
+var blockedMessages = map[string]string{
+	"BINDING_CHANGED":           "任务绑定的版本或配置已变化。请维护人员核对后重新确认候选任务。",
+	"MODEL_BINDING_CHANGED":     "任务绑定的模型配置已变化。请维护人员核对后重新确认候选任务。",
+	"BUS_BINDING_CHANGED":       "任务绑定的 Agent Bus 环境已变化。请维护人员核对环境。",
+	"DISCOVERY_BINDING_CHANGED": "发现的远端能力与已确认配置不一致。请维护人员核对能力版本。",
+	"AUTH_DISABLED":             "当前执行身份已停用。请维护人员核对授权配置。",
+	"CALLER_NOT_AUTHORIZED":     "当前执行身份无权继续此任务。请维护人员核对授权配置。",
+	"SCOPE_VIOLATION":           "当前执行身份超出允许的任务范围。请维护人员核对授权。",
+	"TENANT_SCOPE_VIOLATION":    "当前执行身份的租户与任务不符。请维护人员核对授权。",
+}
+
+func workbenchBlockedReason(t *Task) map[string]string {
+	switch t.Status {
+	case "NEEDS_REVIEW":
+		return map[string]string{"code": "REVIEW_REQUIRED", "message": "当前结果需要重新核验。请维护人员核对审阅和产物记录。"}
+	case "BLOCKED":
+		for _, node := range t.Graph.Nodes {
+			state := t.Nodes[node.ID]
+			if state != nil && state.Status == "BLOCKED" && blockedMessages[state.Reason] != "" {
+				return map[string]string{"code": state.Reason, "message": blockedMessages[state.Reason]}
+			}
+		}
+		return map[string]string{"code": "BLOCKED", "message": "任务已停止。请维护人员核对执行记录。"}
+	default:
+		return nil
+	}
+}
+
 func (s *Server) workbenchRoutes(m *http.ServeMux) {
 	m.HandleFunc("GET /v1/workbench/plans", s.wrap([]string{"operator", "user"}, func(w http.ResponseWriter, r *http.Request) (any, error) {
 		rows, err := s.Store.Pool.Query(r.Context(), "SELECT id FROM tasks WHERE scope=$1 ORDER BY updated_at DESC,id LIMIT 30", s.Store.Scope)
@@ -61,6 +91,9 @@ func (s *Server) workbenchRoutes(m *http.ServeMux) {
 			if t.Status != "AWAITING_APPROVAL" {
 				row["run"] = id
 				row["run_status"] = workbenchStatus(t)
+			}
+			if reason := workbenchBlockedReason(t); reason != nil {
+				row["blocked_reason"] = reason
 			}
 			plans = append(plans, row)
 		}
@@ -117,6 +150,9 @@ func (s *Server) workbenchRoutes(m *http.ServeMux) {
 				case "BLOCKED", "FAILED", "NEEDS_REVIEW":
 					state = "failed"
 				}
+				if ns.Status == "BLOCKED" {
+					reason = blockedMessages[ns.Reason]
+				}
 			}
 			node := map[string]any{"id": n.ID, "name": cap.Name, "kind": cap.Kind, "role": n.Role, "task": n.Task, "deps": n.DependsOn, "status": state, "activity": reason, "contract": n.Expert}
 			if n.Condition != nil {
@@ -141,6 +177,9 @@ func (s *Server) workbenchRoutes(m *http.ServeMux) {
 			out["approve"] = "plugin"
 		} else {
 			out["run"] = map[string]any{"id": t.ID, "status": workbenchStatus(t), "leases": 1, "url": "", "decision": t.Status}
+		}
+		if reason := workbenchBlockedReason(t); reason != nil {
+			out["blocked_reason"] = reason
 		}
 		if ref := t.Graph.Selection; ref != nil {
 			rec, err := s.Store.selectionRecord(r.Context(), s.Store.Pool, ref)

@@ -28,3 +28,20 @@ func TestWorkbenchHumanReviewUsesTrustedTaskPageAndCurrentCheck(t *testing.T) {
 		t.Fatal("PASS offered unnecessary manual review")
 	}
 }
+
+func TestWorkbenchBlockedReasonHidesUnrecognizedWorkerText(t *testing.T) {
+	task := &Task{Status: "BLOCKED", Graph: Graph{Nodes: []Node{{ID: "member"}}}, Nodes: map[string]*NodeState{
+		"member": {Status: "BLOCKED", Reason: "private provider error"},
+	}}
+	if reason := workbenchBlockedReason(task); reason["code"] != "BLOCKED" || reason["message"] == "" || reason["message"] == task.Nodes["member"].Reason {
+		t.Fatalf("expected a generic explanation, got %v", reason)
+	}
+	task.Status = "NEEDS_REVIEW"
+	if reason := workbenchBlockedReason(task); reason["code"] != "REVIEW_REQUIRED" {
+		t.Fatalf("review reason lost: %v", reason)
+	}
+	task.Status = "RUNNING"
+	if workbenchBlockedReason(task) != nil {
+		t.Fatal("active task projected as blocked")
+	}
+}

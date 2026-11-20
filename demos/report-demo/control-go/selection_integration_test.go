@@ -1,8 +1,11 @@
 package main
 
 import (
-	"github.com/openjiuwen/agent-festival/go/cmd/report-demo/selection"
+	"encoding/json"
+	"net/http/httptest"
 	"testing"
+
+	"github.com/openjiuwen/agent-festival/go/cmd/report-demo/selection"
 )
 
 func selectionQuery(c Catalog, material string, quality bool) selection.SelectionQuery {
@@ -118,13 +121,34 @@ func TestPGSelectionReferenceCannotBeReplacedAtAdmission(t *testing.T) {
 }
 
 func TestPGBlockedTaskCannotUseOrdinaryResume(t *testing.T) {
-	ctx, s, _, _, _, task, permit, _ := commitFixture(t)
+	ctx, s, cfg, cat, material, task, permit, _ := commitFixture(t)
 	if _, err := s.MarkWaiting(ctx, task.ID, "extract", permit.Owner, permit.Epoch, "BLOCKED", "MODEL_BINDING_CHANGED"); err != nil {
 		t.Fatal(err)
 	}
 	after, err := s.GetTask(ctx, task.ID)
 	if err != nil || after.Status != "BLOCKED" {
 		t.Fatal("blocked projection lost", err)
+	}
+	router := (&Server{Store: s, Config: cfg, Catalog: cat, Material: material}).Routes()
+	read := func(path string) map[string]any {
+		t.Helper()
+		request := httptest.NewRequest("GET", path, nil)
+		request.Header.Set("Authorization", "Bearer "+cfg.Tokens["operator"])
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+		var body map[string]any
+		if response.Code != 200 || json.Unmarshal(response.Body.Bytes(), &body) != nil {
+			t.Fatalf("%s returned %d", path, response.Code)
+		}
+		return body
+	}
+	graph := read("/v1/workbench/tasks/" + task.ID)
+	list := read("/v1/workbench/plans")["plans"].([]any)
+	for _, view := range []map[string]any{graph, list[0].(map[string]any)} {
+		reason, ok := view["blocked_reason"].(map[string]any)
+		if !ok || reason["code"] != "MODEL_BINDING_CHANGED" || reason["message"] != blockedMessages["MODEL_BINDING_CHANGED"] {
+			t.Fatalf("missing authoritative reason: %v", reason)
+		}
 	}
 	_, err = s.SetPause(ctx, task.ID, false)
 	requireCode(t, err, "BINDING_CHANGED")
