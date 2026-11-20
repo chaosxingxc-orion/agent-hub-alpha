@@ -1,0 +1,140 @@
+x-agent: &agent
+  image: agent-hub-issue16/professional:bus-v1
+  build:
+    context: ../../../..
+    dockerfile: go/cmd/credit-demo/deploy/Dockerfile.agent
+    args:
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-}
+  mem_limit: 420m
+  restart: unless-stopped
+  healthcheck:
+    test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/.well-known/agent-card.json',timeout=5)"]
+    interval: 10s
+    timeout: 8s
+    start_period: 45s
+    retries: 20
+  env_file:
+    - path: ${AHA_SECRETS_FILE:-${HOME}/.config/aha-swarm/secrets.env}
+      required: false
+x-agent-env: &agent-env
+  SWARM_API_BASE: ${SWARM_API_BASE:-}
+  SWARM_API_KEY: ${SWARM_API_KEY:-}
+  SWARM_MODEL_NAME: ${SWARM_MODEL_NAME:-}
+  CREDIT_URL: http://credit:8091
+  OPENJIUWEN_SERVICE_VERSION: "1.0.1"
+services:
+  credit:
+    image: agent-hub-issue16/credit:bus-v1
+    environment:
+      CREDIT_RDC_URL: http://rdc:8092
+      RDC_REGISTRY_API_TOKEN: ${RDC_REGISTRY_API_TOKEN:?Bus credentials required}
+      CREDIT_BUS_TENANT: issue16
+  orchestrator:
+    image: agent-hub-issue16/orchestrator:bus-v1
+    environment:
+      CREDIT_BUS_GATEWAY: http://gateway:8080
+      CREDIT_BUS_TOKEN: ${CREDIT_BUS_TOKEN:?Bus credentials required}
+    mem_limit: 512m
+  bus-db:
+    image: postgres:15-alpine@sha256:09e4f20b14ddb3dfe3a0c825b206032aaf8f28300ba2070c0b60fc1c10c6abc7
+    environment:
+      POSTGRES_DB: agent_rdc
+      POSTGRES_USER: agent_rdc
+      POSTGRES_PASSWORD: ${RDC_DB_PASSWORD:?Bus credentials required}
+    volumes:
+      - rdc-data:/var/lib/postgresql/data
+    mem_limit: 192m
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U agent_rdc -d agent_rdc]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  rdc:
+    image: agent-hub-issue16/rdc:bf702bc
+    build:
+      context: ../../../..
+      dockerfile: go/cmd/credit-demo/deploy/Dockerfile.bus
+      target: rdc
+      additional_contexts:
+        solution-src: ${DEMO_CACHE}/sources/agent-solution
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+    environment:
+      RDC_DB_PASSWORD: ${RDC_DB_PASSWORD:?Bus credentials required}
+      RDC_ROUTE_HANDLE_SECRET: ${RDC_ROUTE_HANDLE_SECRET:?Bus credentials required}
+      RDC_REGISTRY_API_TOKEN: ${RDC_REGISTRY_API_TOKEN:?Bus credentials required}
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/config/rdc.yml
+    volumes:
+      - ./bus/rdc.yml:/config/rdc.yml:ro
+    mem_limit: 420m
+    restart: unless-stopped
+    depends_on:
+      bus-db:
+        condition: service_healthy
+    healthcheck:
+      test: [CMD, python, -c, "import os,urllib.request; q=urllib.request.Request('http://127.0.0.1:8092/v2/agents',headers={'Authorization':'Bearer '+os.environ['RDC_REGISTRY_API_TOKEN'],'X-Tenant-ID':'issue16'}); urllib.request.urlopen(q,timeout=5)"]
+      interval: 10s
+      timeout: 8s
+      start_period: 45s
+      retries: 20
+  gateway:
+    image: agent-hub-issue16/gateway:bf702bc
+    volumes:
+      - ./bus/health_gateway.py:/health_gateway.py:ro
+    build:
+      context: ../../../..
+      dockerfile: go/cmd/credit-demo/deploy/Dockerfile.bus
+      target: gateway
+      additional_contexts:
+        solution-src: ${DEMO_CACHE}/sources/agent-solution
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+    environment:
+      GATEWAY_PATH_MODE: direct
+      GATEWAY_RDC_V2_BASE_URL: http://rdc:8092
+      GATEWAY_RDC_TOKEN: ${RDC_REGISTRY_API_TOKEN:?Bus credentials required}
+      GATEWAY_RDC_TENANT_ID: issue16
+      GATEWAY_TEST_CREDENTIAL_TOKEN: ${CREDIT_BUS_TOKEN:?Bus credentials required}
+      GATEWAY_TEST_CREDENTIAL_PRINCIPALID: issue16-runtime
+      GATEWAY_TEST_CREDENTIAL_TENANTID: issue16
+    mem_limit: 320m
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, python, /health_gateway.py]
+      interval: 10s
+      timeout: 8s
+      start_period: 30s
+      retries: 15
+    depends_on:
+      rdc:
+        condition: service_healthy
+  material-agent:
+    <<: *agent
+    environment:
+      <<: *agent-env
+      AGENT_SERVICE_ID: credit-material
+      AGENT_ROLE: 资料整理与证据提取
+      AGENT_PUBLIC_URL: http://material-agent:8090
+  analysis-agent:
+    <<: *agent
+    environment:
+      <<: *agent-env
+      AGENT_SERVICE_ID: credit-analysis
+      AGENT_ROLE: 独立分析与依据说明
+      AGENT_PUBLIC_URL: http://analysis-agent:8090
+  writer-agent:
+    <<: *agent
+    environment:
+      <<: *agent-env
+      AGENT_SERVICE_ID: credit-writer
+      AGENT_ROLE: 根据上游证据撰写报告
+      AGENT_PUBLIC_URL: http://writer-agent:8090
+volumes:
+  rdc-data:

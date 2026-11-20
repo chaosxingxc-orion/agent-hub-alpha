@@ -1,0 +1,120 @@
+name: agent-hub-issue16
+x-model-environment: &model-environment
+  SWARM_API_BASE: ${SWARM_API_BASE:-}
+  SWARM_API_KEY: ${SWARM_API_KEY:-}
+  SWARM_MODEL_NAME: ${SWARM_MODEL_NAME:-}
+  SWARM_ENDPOINT_PROFILE: ${SWARM_ENDPOINT_PROFILE:-dashscope}
+services:
+  credit:
+    image: agent-hub-issue16/credit:46980e8-local
+    build:
+      context: ../../../..
+      dockerfile: go/cmd/credit-demo/deploy/Dockerfile.credit
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+        GOPROXY: ${GOPROXY:-https://goproxy.cn,direct}
+      additional_contexts:
+        tools: ${DEMO_CACHE}/tools
+    environment:
+      CREDIT_ORCHESTRATOR_URL: http://orchestrator:8195
+      CREDIT_MEMBER_MCP_URL: http://credit:8091/member-mcp
+      CREDIT_MODEL: ${SWARM_MODEL_NAME:-qwen-plus}
+      CREDIT_LEASE_SECONDS: 20
+      CREDIT_DEMO_PASSWORD: ${CREDIT_DEMO_PASSWORD:-demo}
+      CREDIT_SCENARIO_DIR: /opt/aha/run/credit/scenarios
+    volumes:
+      - credit-data:/data
+    ports:
+      - "127.0.0.1:${CREDIT_PORT:-5191}:8091"
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8091/healthz',timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    mem_limit: 256m
+    restart: unless-stopped
+  orchestrator:
+    image: agent-hub-issue16/orchestrator:46980e8-local
+    build:
+      context: ../../../..
+      dockerfile: go/cmd/credit-demo/deploy/Dockerfile.orchestrator
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+      additional_contexts:
+        solution-src: ${DEMO_CACHE}/sources/agent-solution
+    env_file:
+      - path: ${AHA_SECRETS_FILE:-${HOME}/.config/aha-swarm/secrets.env}
+        required: false
+    environment:
+      <<: *model-environment
+      CREDIT_URL: http://credit:8091
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8195/healthz',timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    depends_on:
+      credit:
+        condition: service_healthy
+    mem_limit: 1200m
+    restart: unless-stopped
+  swarm:
+    profiles: [ui]
+    image: agent-hub-issue16/workswarm:1142e5fb3-local
+    build:
+      context: .
+      dockerfile: Dockerfile.workswarm
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+      additional_contexts:
+        swarm-src: ${DEMO_CACHE}/sources/workswarm
+        tools: ${DEMO_CACHE}/tools
+    env_file:
+      - path: ${AHA_SECRETS_FILE:-${HOME}/.config/aha-swarm/secrets.env}
+        required: false
+    environment:
+      <<: *model-environment
+      FRONTEND_HOST: 0.0.0.0
+      CREDIT_MCP_URL: http://credit:8091/mcp
+      CREDIT_INTERNAL_URL: http://credit:8091
+    volumes:
+      - swarm-home:/root/.jiuwenswarm
+      - ./configure.py:/usr/local/bin/aha-configure.py:ro
+      - ../workbench-plugin:/root/.jiuwenswarm/domain/application_plugins/credit-workbench:ro
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5173/',timeout=5)"]
+      interval: 10s
+      timeout: 8s
+      retries: 18
+      start_period: 60s
+    depends_on:
+      credit:
+        condition: service_healthy
+      orchestrator:
+        condition: service_healthy
+    mem_limit: 2g
+    restart: unless-stopped
+  front:
+    profiles: [ui]
+    image: nginx:alpine
+    volumes:
+      - ./front:/etc/nginx/conf.d:ro
+    ports:
+      - "127.0.0.1:${CREDIT_SWARM_PORT:-5192}:80"
+    depends_on:
+      swarm:
+        condition: service_healthy
+      credit:
+        condition: service_healthy
+    mem_limit: 96m
+    restart: unless-stopped
+volumes:
+  credit-data:
+  swarm-home:

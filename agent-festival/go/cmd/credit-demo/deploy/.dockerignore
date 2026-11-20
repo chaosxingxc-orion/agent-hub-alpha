@@ -1,0 +1,5 @@
+credit/
+__pycache__/
+*.env
+.env*
+*.log

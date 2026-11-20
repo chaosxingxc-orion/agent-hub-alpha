@@ -1,0 +1,168 @@
+{
+  "scope": "Agent Bus / RDC UI evidence, synthetic credit data; W06 excluded",
+  "parent_commit": "b62ba06e9473a67ab17d38a952639e06f0fc78a8",
+  "branch": "feat/issue16-agent-bus",
+  "cache_path": "~/.cache/agent-hub-alpha/issue16/evidence/agent-bus-ui",
+  "run": "R18",
+  "preview": "P22/v1",
+  "historical": [
+    "R10",
+    "R11"
+  ],
+  "unresolved": "R16",
+  "checks": {
+    "go_race": "23 top-level tests passed in this session; output recorded in tool transcript",
+    "go_test_and_vet": "passed in final credit image build",
+    "typescript_and_frontend_tests": "passed: 5 tests",
+    "normal_run": {
+      "real_roles": 3,
+      "remote_nodes": 5,
+      "parallel_analysis": true,
+      "isolated_contexts": true,
+      "correlated_artifacts": true,
+      "model_attempts": {
+        "bureau": 2,
+        "financial": 1,
+        "industry": 2,
+        "intake": 2,
+        "report": 1
+      },
+      "discovery_snapshot": true,
+      "gateway_receipts": true,
+      "planned_vs_actual": true,
+      "no_private_projection": true
+    },
+    "unknown_query": {
+      "http200_protocol_error": true,
+      "no_resend": true,
+      "no_model_increment": true,
+      "no_discovery_backfill": true
+    },
+    "browser": {
+      "checks": [
+        "new RDC snapshot, Gateway receipt, candidate label, clipboard",
+        "keyboard open/close and expanded details survive live polling",
+        "legacy observations remain absent",
+        "reused artifact retains original invocation",
+        "390px mobile layout without horizontal overflow"
+      ],
+      "errors": []
+    },
+    "browser_states": {
+      "checks": [
+        "unapproved plan shows binding without dispatch",
+        "real HTTP200 protocol error stays unresolved; pending nodes inspectable",
+        "MCP card handshake, automatic height and changed-data refresh preserve expanded identifiers"
+      ],
+      "errors": []
+    },
+    "served_bundle_matches_build": true,
+    "credential_scan": "passed"
+  },
+  "deployed_images": {
+    "agent-hub-issue16-credit-1": "sha256:1e61e959f69472f8a4bfb7bdd44695158edf03292b99b3599684ef5ee3d29913",
+    "agent-hub-issue16-orchestrator-1": "sha256:d1c919940d8b6bc3271a8176d8442db753f8214c14baf29aa216d7e112d14c8b",
+    "agent-hub-issue16-gateway-1": "sha256:cede78ff227339f99fd7cc009effc8d85a506a0075669b671806c8cbcc109363",
+    "agent-hub-issue16-bus-db-1": "sha256:c1dd58d6cec8e67cb85b2c8fd200fa870697269c5024e59627095326a8254ae2",
+    "agent-hub-issue16-analysis-agent-1": "sha256:145d50009cfae342d7c6ac1079436a56f14d544e17ace260ed3fdfa0f25fcbaa",
+    "agent-hub-issue16-material-agent-1": "sha256:145d50009cfae342d7c6ac1079436a56f14d544e17ace260ed3fdfa0f25fcbaa",
+    "agent-hub-issue16-writer-agent-1": "sha256:145d50009cfae342d7c6ac1079436a56f14d544e17ace260ed3fdfa0f25fcbaa",
+    "agent-hub-issue16-rdc-1": "sha256:43b7156bc96b760e7fc6e38c7da6bc50e0e7b13e59729f19abe9fb520e382226",
+    "agent-hub-issue16-front-1": "sha256:7bc5ba2f958a043e123135f456af857350673b64eaddcf811698239f3a53d6e6",
+    "agent-hub-issue16-swarm-1": "sha256:4d3fbed091c5fb6386183317b3810cf3bb64a3febeac9bbe9baa81bf452fb69a"
+  },
+  "source_sha256": {
+    "agent-festival/examples/credit-orchestrator/src/main/java/com/openjiuwen/demo/credit/RemoteAgentMember.java": "be6795e0e2ce4e58e7fea6d9e5fd9cf196bbcd3e0ba112380c9a42f4683122c5",
+    "agent-festival/go/cmd/credit-demo/app/dist/graph-app.html": "bd3f26762ccc2f27e3a69f957cd93e8c4a3a9c8931172dedc14c69de00f42a39",
+    "agent-festival/go/cmd/credit-demo/app/package.json": "519aa9a954d2ebfb128ba5561d64fa67697d490b12586fce044dbf27d3674634",
+    "agent-festival/go/cmd/credit-demo/app/src/bus-detail.ts": "f94282d9942729a757002d3ed22f28c87c36a305c12d48306f0356603f00ffbf",
+    "agent-festival/go/cmd/credit-demo/app/src/graph.ts": "3f0fd34f605da7b562a9bb69361ed6468c83c05f45e9a36cb7fc4545c243c8d1",
+    "agent-festival/go/cmd/credit-demo/app/src/style.ts": "f5fb71092b88f9f4a366b4697d834279e1be181e084a7c5dd440ddebfbbd72bb",
+    "agent-festival/go/cmd/credit-demo/app/test/bus-detail.test.mjs": "05d74ba5e427eecbeeade39b240d82f1dd41ac58958d1915bdee5f5cabcbd5b2",
+    "agent-festival/go/cmd/credit-demo/bus.go": "3c48ea2b4da1720a51e24faa3a7266395cfaa225dbc4a7c5bcd313de88bf8605",
+    "agent-festival/go/cmd/credit-demo/bus_observation.go": "f6c6028c3c072f1bab1673e0d9537ce833b9c5a11925943b9901fd31c62c2c07",
+    "agent-festival/go/cmd/credit-demo/bus_observation_test.go": "4dcbc4de68faf4942af798ed9aad11d0f7c8071e4ff0d0e0ef747402d031a138",
+    "agent-festival/go/cmd/credit-demo/bus_test.go": "e0fee64e407b2aaa9c3d8496ba6b5ed9537b89f3fddf4d5be22aa2c244caffe9",
+    "agent-festival/go/cmd/credit-demo/deploy/smoke_bus_ui.py": "cc257eeeeb5f9c52ae9aa467e7f640738cdc55eb0ecc0085b7743611e19ede19",
+    "agent-festival/go/cmd/credit-demo/graph.go": "1a467e899fc60a857b19e2bc021318476e07e14df51e456e684d94ce1616acf2",
+    "agent-festival/go/cmd/credit-demo/graph_bus.go": "9479b5d35ee841d825fd0e297d553867ff4ed6a61988e969129e330472fd4595",
+    "agent-festival/go/cmd/credit-demo/web/graph.js": "9fc0bfc450e151709280318055ee96bbfca602b0019569d706b2c06851b34f32"
+  },
+  "artifacts": {
+    "browser-check.mjs": {
+      "sha256": "317f1efadfa09a5ce28810a840af679cc4d9861f97857f2b0bead694d5399bc7",
+      "bytes": 3733
+    },
+    "browser-initial-failures.json": {
+      "sha256": "a2c0adbe104e1f14f4afbf9d046609132bb5fd410453f866a09b8f96a7ab466b",
+      "bytes": 441
+    },
+    "browser-states.json": {
+      "sha256": "9eb938bc7b3b5a3b6510fec547ce26d45248e0f198a2d3b29e74ae3c1b772f9a",
+      "bytes": 268
+    },
+    "browser-states.mjs": {
+      "sha256": "3377eccdbf1df6093efbc95e0eea2823242ad2795e2b193a2bcb2026c442542c",
+      "bytes": 4820
+    },
+    "browser.json": {
+      "sha256": "c6c78579dd52863ce73b0eecfde639f8eae22d965899f2f77498ba0ff9b26a04",
+      "bytes": 321
+    },
+    "build-assets.log": {
+      "sha256": "95cfd1fc59cfa2b6382c82f02c80c03103fb23698e28b324af18ce30d5c00bd6",
+      "bytes": 1193
+    },
+    "build-credit.log": {
+      "sha256": "41cf9d3eab186502543be1ea1e012a9ad4ff97afe7e44fcd1eded91672ed79ac",
+      "bytes": 3258
+    },
+    "build-java.log": {
+      "sha256": "227a2b76d78418e50462e0705b6e9b62016efa1db5af4a8ceb398b81604010ee",
+      "bytes": 31889
+    },
+    "desktop-detail.png": {
+      "sha256": "461a07012c265c64043bb2f18745c6e74791d136503a28395cc14e0542d4eab6",
+      "bytes": 238683
+    },
+    "embedded-card.png": {
+      "sha256": "009934275ae562dea87dcd2d8ff25d5c13d1e3a914fe6b795a0d6b810a68cc57",
+      "bytes": 189399
+    },
+    "frontend-tests.log": {
+      "sha256": "c6aa0d6493c7a35309a05996afd3908136dc019ff77fdc27e8b055c2d00de8ee",
+      "bytes": 1254
+    },
+    "integration-1794405858.json": {
+      "sha256": "21138068551840a8dd65587708b1e3376892bd4cc6d8a990123f5cead2239695",
+      "bytes": 1894446
+    },
+    "integration.log": {
+      "sha256": "d939bf3328c6f0b11d6939c13719719890a87c51f60edebac3899cc7be0cdc2b",
+      "bytes": 2350
+    },
+    "mobile-detail.png": {
+      "sha256": "b57b2028352d52a9d74961700742372115f3c141485be6c5c2a9e258325c01e1",
+      "bytes": 115569
+    },
+    "planned.png": {
+      "sha256": "0b80fe9c445654062fd7b8d4f9a34d8ed1b5a0e5f04f9cf71e024ccc831357e1",
+      "bytes": 171416
+    },
+    "unknown-query.json": {
+      "sha256": "48f89ecf1a94e8b0f958410f5418755676b697cd1e00b247a3521ec6b6f77962",
+      "bytes": 8871
+    },
+    "unknown.png": {
+      "sha256": "4070cc7a2f1ac076940f903927c38b56563a061b6ca2c0b279020cde9f533cb1",
+      "bytes": 101761
+    }
+  },
+  "limits": [
+    "Gateway timings are Java caller observations, not Gateway server spans",
+    "RDC candidates are historical snapshots; executing instance is not collected",
+    "MCP embedded-card browser coverage uses a host protocol fixture",
+    "First two browser navigations timed out before pausing WorkSwarm; excluded from passed runs",
+    "R18 ran before the final presentation-only adjustment; final served bundle was separately verified by browser"
+  ]
+}
