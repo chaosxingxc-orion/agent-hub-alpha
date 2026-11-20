@@ -503,7 +503,7 @@ func (s *Service) ModelCall(in CallCommand) error {
 	if bound := s.runModel(r); in.Model != bound {
 		reason := modelMismatch(bound, "远端 "+in.ServiceID, in.Model)
 		st.Call.Reason = reason
-		s.blockRun(r, reason)
+		s.blockRun(r, BlockReason{Code: "MODEL_BINDING_MISMATCH", Note: clip(reason, 200)}, reason)
 		if err := s.save(); err != nil {
 			return err
 		}
