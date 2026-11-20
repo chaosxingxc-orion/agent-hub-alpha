@@ -76,7 +76,11 @@ func (s *Store) BeginCall(ctx context.Context, id, node, owner, epoch string, ro
 		var cap Capability
 		for _, n := range t.Graph.Nodes {
 			if n.ID == node {
+				if err := checkExecutionCondition(t, n.Condition); err != nil {
+					return nil, err
+				}
 				cap, _ = c.Get(n.Expert)
+				break
 			}
 		}
 		if cap.AgentID == "" || !cap.Enabled {

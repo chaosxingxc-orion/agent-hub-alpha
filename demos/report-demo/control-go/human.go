@@ -84,6 +84,9 @@ func (s *Store) ReviewCheck(ctx context.Context, id, node string, in CheckReview
 		ns.Review = &in
 		if in.Decision == "REJECT" {
 			t.Status = "NEEDS_REVIEW"
+			if _, err := tx.Exec(ctx, "UPDATE run_leases SET status='RELEASED' WHERE scope=$1 AND task_id=$2 AND domain='graph' AND status='ACTIVE'", s.Scope, t.ID); err != nil {
+				return nil, err
+			}
 		} else {
 			t.Status = "WAITING_INPUT"
 		}

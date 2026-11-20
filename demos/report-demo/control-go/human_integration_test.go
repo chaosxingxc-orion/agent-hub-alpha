@@ -8,8 +8,7 @@ import (
 
 func TestPGHumanReviewDoesNotRewriteCheckerAndRevocationStillWins(t *testing.T) {
 	ctx, s, cfg, cat := integration(t)
-	_, g := sample(t)
-	g.Nodes = append(g.Nodes, Node{ID: "check", Expert: "checker@1", Role: "program", Task: "isolated checker fixture", DependsOn: []string{"draft"}})
+	_, g := reportSample(t)
 	task, err := s.Propose(ctx, "planner", "human-path", g, "compiler-fixture")
 	if err != nil {
 		t.Fatal(err)
@@ -24,7 +23,7 @@ func TestPGHumanReviewDoesNotRewriteCheckerAndRevocationStillWins(t *testing.T) 
 	lease := leaseFrom(t, v)
 	files := Files{Root: t.TempDir()}
 	var report, check, digest string
-	for _, node := range g.Nodes {
+	for _, node := range g.Nodes[:len(g.Nodes)-1] {
 		v, err = s.ResolveNode(ctx, task.ID, node.ID, lease.Owner, lease.Epoch, "", cat, "fixed-source")
 		if err != nil {
 			t.Fatal(err)
@@ -51,6 +50,8 @@ func TestPGHumanReviewDoesNotRewriteCheckerAndRevocationStillWins(t *testing.T) 
 			check = artifact
 		}
 	}
+	_, err = s.ResolveNode(ctx, task.ID, "select", lease.Owner, lease.Epoch, "", cat, "fixed-source")
+	requireCode(t, err, "WAIT")
 	completion, err := s.Complete(ctx, task.ID, lease.Owner, lease.Epoch)
 	if err != nil {
 		t.Fatal(err)
@@ -106,6 +107,20 @@ func TestPGHumanReviewDoesNotRewriteCheckerAndRevocationStillWins(t *testing.T) 
 		t.Fatal(err)
 	}
 	lease = leaseFrom(t, v)
+	v, err = s.ResolveNode(ctx, task.ID, "select", lease.Owner, lease.Epoch, "", cat, "fixed-source")
+	if err != nil {
+		t.Fatal(err)
+	}
+	permit := v.(map[string]any)
+	selected, _ := json.Marshal(map[string]string{"artifact_digest": digest})
+	selection, err := files.Put(selected)
+	if err != nil {
+		t.Fatal(err)
+	}
+	request := CommitRequest{lease.Owner, lease.Epoch, permit["input_digest"].(string), permit["attempt"].(int), selection}
+	if _, err = s.Commit(ctx, task.ID, "select", request, selected, cat, "fixed-source"); err != nil {
+		t.Fatal(err)
+	}
 	if _, err = s.Complete(ctx, task.ID, lease.Owner, lease.Epoch); err != nil {
 		t.Fatal(err)
 	}
@@ -126,13 +141,26 @@ func TestPGHumanReviewDoesNotRewriteCheckerAndRevocationStillWins(t *testing.T) 
 // Simulates the waiting update sent by the worker immediately after the
 // selector discovers that its conditional predecessor has not settled.
 func TestPGHumanSelectorResumesAfterEarlyWaitingUpdate(t *testing.T) {
+	for _, decision := range []string{"ACCEPT", "REVISE", "REJECT"} {
+		t.Run(decision, func(t *testing.T) {
+			verifyHumanBranch(t, decision)
+		})
+	}
+}
+
+func verifyHumanBranch(t *testing.T, decision string) {
+	t.Helper()
 	ctx, s, _, cat := integration(t)
 	_, graph := sample(t)
 	graph.Nodes = append(graph.Nodes,
 		Node{ID: "check", Expert: "checker@1", Task: "Initial review", DependsOn: []string{"draft"}},
-		Node{ID: "check-revision", Expert: "checker@1", Task: "Conditional review", DependsOn: []string{"draft"}, Condition: &Condition{Step: "check", Outcome: "REVISE"}},
+		Node{ID: "revision", Expert: "writer@1", Task: "Revise only when requested", DependsOn: []string{"draft", "check"}, Condition: &Condition{Step: "check", Outcome: "REVISE"}},
+		Node{ID: "check-revision", Expert: "checker@1", Task: "Check revised report", DependsOn: []string{"revision", "check"}, Condition: &Condition{Step: "check", Outcome: "REVISE"}},
 		Node{ID: "select", Expert: "select@1", Task: "Select approved report", DependsOn: []string{"check", "check-revision"}},
 	)
+	if err := ValidateReportGraph(graph, cat); err != nil {
+		t.Fatal(err)
+	}
 	task, err := s.Propose(ctx, "planner", "human-early-select", graph, "compiler-fixture")
 	if err != nil {
 		t.Fatal(err)
@@ -176,6 +204,8 @@ func TestPGHumanSelectorResumesAfterEarlyWaitingUpdate(t *testing.T) {
 	check := commit("check", raw)
 	_, err = s.ResolveNode(ctx, task.ID, "select", lease.Owner, lease.Epoch, "", cat, "fixed-source")
 	requireCode(t, err, "WAIT")
+	_, err = s.ResolveNode(ctx, task.ID, "revision", lease.Owner, lease.Epoch, "", cat, "fixed-source")
+	requireCode(t, err, "WAIT")
 	if _, err = s.MarkWaiting(ctx, task.ID, "select", lease.Owner, lease.Epoch, "UNKNOWN", "WAIT"); err != nil {
 		t.Fatal(err)
 	}
@@ -186,24 +216,49 @@ func TestPGHumanSelectorResumesAfterEarlyWaitingUpdate(t *testing.T) {
 	if paused.Status != "WAITING_INPUT" {
 		t.Fatalf("early selector update replaced the human wait: %s", paused.Status)
 	}
-	if _, err = s.Complete(ctx, task.ID, lease.Owner, lease.Epoch); err != nil {
-		t.Fatal(err)
+	// REJECT also covers a reviewer acting before the worker closes its lease.
+	if decision != "REJECT" {
+		if _, err = s.Complete(ctx, task.ID, lease.Owner, lease.Epoch); err != nil {
+			t.Fatal(err)
+		}
+		_, err = s.Heartbeat(ctx, task.ID, lease.Owner, lease.Epoch, "graph")
+		requireCode(t, err, "LEASE_EXPIRED")
+		_, err = s.ClaimRun(ctx, task.ID, "early-worker", "graph")
+		requireCode(t, err, "POLICY_REJECTED")
 	}
-	_, err = s.Heartbeat(ctx, task.ID, lease.Owner, lease.Epoch, "graph")
-	requireCode(t, err, "LEASE_EXPIRED")
-	_, err = s.ClaimRun(ctx, task.ID, "early-worker", "graph")
-	requireCode(t, err, "POLICY_REJECTED")
 	if _, err = s.ApproveReport(ctx, task.ID, report, "reviewer"); err == nil {
 		t.Fatal("unreviewed draft was approved")
 	}
-	in := CheckReview{CheckArtifact: check, ObjectDigest: digest, Decision: "ACCEPT", Reason: "Fixture reviewer verified the cited evidence"}
+	in := CheckReview{CheckArtifact: check, ObjectDigest: digest, Decision: decision, Reason: "Fixture reviewer verified the cited evidence"}
+	wrong := in
+	wrong.ObjectDigest = "sha256:another-report"
+	_, err = s.ReviewCheck(ctx, task.ID, "check", wrong, "reviewer")
+	requireCode(t, err, "INPUT_CONFLICT")
 	if _, err = s.ReviewCheck(ctx, task.ID, "check", in, "reviewer"); err != nil {
 		t.Fatal(err)
 	}
-	// Persist the exact node projection left by older workers. No remote
-	// call was created for this local selector and the human fact is intact.
-	if _, err = s.Pool.Exec(ctx, "UPDATE tasks SET document=jsonb_set(document,'{nodes,select,status}',to_jsonb('UNKNOWN'::text)) WHERE scope=$1 AND id=$2", s.Scope, task.ID); err != nil {
-		t.Fatal(err)
+	if decision == "REJECT" {
+		_, err = s.Heartbeat(ctx, task.ID, lease.Owner, lease.Epoch, "graph")
+		requireCode(t, err, "LEASE_EXPIRED")
+		if _, err = s.SetPause(ctx, task.ID, false); err != nil {
+			t.Fatal(err)
+		}
+		_, err = s.ClaimRun(ctx, task.ID, "resumed-worker", "graph")
+		requireCode(t, err, "POLICY_REJECTED")
+		state, err := s.GetTask(ctx, task.ID)
+		if err != nil || state.Status != "NEEDS_REVIEW" || state.Nodes["check"].Review == nil || state.Nodes["check"].Review.Reason != in.Reason {
+			t.Fatal("rejection did not block the original graph or preserve the review", err)
+		}
+		if _, err = s.ApproveReport(ctx, task.ID, report, "reviewer"); err == nil {
+			t.Fatal("rejected report was approved")
+		}
+		return
+	}
+	if decision == "ACCEPT" {
+		// Preserve the historical local UNKNOWN selector case.
+		if _, err = s.Pool.Exec(ctx, "UPDATE tasks SET document=jsonb_set(document,'{nodes,select,status}',to_jsonb('UNKNOWN'::text)) WHERE scope=$1 AND id=$2", s.Scope, task.ID); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if _, err = s.SetPause(ctx, task.ID, false); err != nil {
 		t.Fatal(err)
@@ -213,13 +268,41 @@ func TestPGHumanSelectorResumesAfterEarlyWaitingUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 	lease = leaseFrom(t, claim)
-	if _, err = s.AuthorizeSkip(ctx, task.ID, "check-revision", lease.Owner, lease.Epoch); err != nil {
-		t.Fatal(err)
+	if decision == "REVISE" {
+		_, err = s.AuthorizeSkip(ctx, task.ID, "revision", lease.Owner, lease.Epoch)
+		requireCode(t, err, "POLICY_REJECTED")
+		state, err := s.GetTask(ctx, task.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		binding, err := s.Binding(ctx, state, "revision", cat, "fixed-source")
+		if err != nil || len(binding.Reviews) != 1 || binding.Reviews[0].Decision != "REVISE" || binding.Reviews[0].ObjectDigest != digest {
+			t.Fatal("revision did not consume the authorized review of the original draft", err)
+		}
+		revised := commit("revision", []byte(`{"fixture":"revised draft"}`))
+		rechecked, _ := json.Marshal(map[string]any{"checker_version": "control-fixture/1", "object_digest": "sha256:" + revised, "outcome": "PASS", "failures": []string{}})
+		checkArtifact := commit("check-revision", rechecked)
+		stale := in
+		stale.CheckArtifact = checkArtifact
+		_, err = s.ReviewCheck(ctx, task.ID, "check-revision", stale, "reviewer")
+		requireCode(t, err, "INPUT_CONFLICT")
+		report = revised
+	} else {
+		_, err = s.ResolveNode(ctx, task.ID, "revision", lease.Owner, lease.Epoch, "", cat, "fixed-source")
+		requireCode(t, err, "POLICY_REJECTED")
+		for _, node := range []string{"revision", "check-revision"} {
+			if _, err = s.AuthorizeSkip(ctx, task.ID, node, lease.Owner, lease.Epoch); err != nil {
+				t.Fatal(err)
+			}
+		}
 	}
 	commit("select", []byte(`{"fixture":"selected"}`))
 	finished, err := s.Complete(ctx, task.ID, lease.Owner, lease.Epoch)
 	if err != nil || finished.(map[string]string)["status"] != "AWAITING_ACCEPTANCE" {
 		t.Fatalf("resumed run did not finish: %v %v", finished, err)
+	}
+	if _, err = s.ApproveReport(ctx, task.ID, report, "reviewer"); err != nil {
+		t.Fatal(err)
 	}
 	calls, err := s.Calls(ctx, task.ID, "select")
 	if err != nil || len(calls) != 0 {

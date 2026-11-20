@@ -345,6 +345,21 @@ func (s *Store) Admit(ctx context.Context, id, digest, principal string) (any, e
 	})
 }
 
+func checkExecutionCondition(t *Task, condition *Condition) error {
+	if condition == nil {
+		return nil
+	}
+	outcome := effectiveCheck(t.Nodes[condition.Step])
+	switch outcome {
+	case "UNKNOWN", "HUMAN":
+		return fault("WAIT", "condition requires a resolved check", 409)
+	case condition.Outcome:
+		return nil
+	default:
+		return fault("POLICY_REJECTED", "admitted execution condition does not hold", 422)
+	}
+}
+
 func (s *Store) Binding(ctx context.Context, t *Task, node string, c Catalog, materialDigest string) (Binding, error) {
 	if err := s.checkBusBinding(t); err != nil {
 		return Binding{}, err
@@ -361,6 +376,9 @@ func (s *Store) Binding(ctx context.Context, t *Task, node string, c Catalog, ma
 	}
 	if n == nil {
 		return Binding{}, fault("NOT_FOUND", "node not in admitted graph", 404)
+	}
+	if err := checkExecutionCondition(t, n.Condition); err != nil {
+		return Binding{}, err
 	}
 	cap, ok := c.Get(n.Expert)
 	if !ok || !cap.Enabled {
@@ -396,6 +414,9 @@ func (s *Store) Binding(ctx context.Context, t *Task, node string, c Catalog, ma
 		}
 		if !ns.Result.Valid {
 			return Binding{}, fault("INVALIDATED", "upstream result withdrawn", 409)
+		}
+		if cap.Kind == "select" && effectiveCheck(ns) == "HUMAN" {
+			return Binding{}, fault("WAIT", "report check awaits human review", 409)
 		}
 		b.Upstream = append(b.Upstream, *ns.Result)
 		if ns.Review != nil {
