@@ -1,6 +1,6 @@
 {
  "note": "本包 results/ 为路径/文档名打码拷贝；判定/声明/计数/文件内容哈希与原始运行一致。",
- "masked_gt_sha256": "a7cee1102d219ac2dbbd664fac466a5fcfca99d27377a7d7e632beb37253f7a1",
+ "masked_gt_sha256": "a7dbdd914db0549586192cdc9f497dbdfda1bc353da22532223ddc709b93d84b",
  "original_gt_hash_chain": [
   "c3c8f093(R1)",
   "74de6c9a(R3)",
@@ -8,9 +8,11 @@
  ],
  "masked_vs_original": "上列为原始环境各版正副本哈希；本包 JSON 为打码拷贝，其自身哈希见 masked_gt_sha256 字段——两者不可互替。",
  "campaign_archive_anchor": "战役档案私档 commit 链（仓名从略；哈希桥 575dcdf/d044ede 后继）",
- "gate_final_sha256": "cbce7b9b1059b1258ae56d20bd28a838bbf47cccfd08c1d583205f4ddc16ce28",
+ "gate_final_sha256": "281f99aa1480445f89d34b763b285c0014b0279ac44dd58a09fd4b6489f4cf1e",
  "gate_published_variant_sha256": "a74105ad02560d8201bda3895a31bcbd901804cc769d59aba1fce5b7a837d15f",
  "gate_published_variant_note": "包内 v2.7.1 副本的私有仓名注释已通用化——见 MANIFEST 勘误节",
  "public_repo_anchor_v2.6": "8817d87c09df9eec9610e0cb28eb43b648740dc7 agent-festival/tools/claim_gate.py sha256=6b9ec46c3873eae3bb03c73343c1b7fc7b29961486c32ba923fc4403b786645e（公仓 v2.6 血统锚，与交接书声明一致；现 main 436570b 已前进至 v2.7.1 sha256=95cd0dc7500dab673cad5fafe78e0fcccb02542e0caecf62dc59c5b56763180f，本 MR 直接基线）",
- "generated": "2026-11-18T08:44:17+00:00"
+ "generated": "2026-11-18T08:44:17+00:00",
+ "remediation_note": "2026-11-19 终轮：闸重生成至 223 钉（外环 M 修复＋前缀族＋总/间隙/二支全角/前缀空白四钉），GT 随之重算；每-gate sha256 记录与盘上实态逐一对齐（FAM-IDEM 幂等钉同步落地）。",
+ "v271_lineage_note": "m4（148号复审）：GT 旧记录曾记 ab4a6cb5（战役档案原始 v2.7.1 的 sha256），而包内 v2.7.1 副本实为 a74105ad0256……（脱敏发布变体——注释通用化改动，判定逐格一致，等价可复算）。本次复审重跑已把 GT 的每-gate sha256 记录对齐到包内实态（现记录 = a74105ad…，即 gates/claim-gate-v2.7.1.py 的实际字节哈希）；ab4a6cb5 与 a74105ad 的关系自此写明：同一判定器的两种文本载体，非两个血统。"
 }

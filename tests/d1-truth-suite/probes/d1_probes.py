@@ -262,6 +262,32 @@ def main():
     check("FAM-PERSIST-GT", gt_doc["corpus"]["sha256"] == sha(SB / "seeds" / "d1-corpus-full.md"),
           "正副本记录之语料 hash 与盘上一致")
 
+    # —— FAM-GT-MIRROR（R7' 外环 M-rt2 守恒钉）：重算 doc ↔ 正本 GT 逐字段镜像 ——
+    # GT 的段级 verdict/claims/三代 totals 明细此前零对账（篡改+重签 sidecar+同步
+    # provenance 可全绿，假真值随包出站）。此处以仪器侧重算结果为真源全字段比对；
+    # 豁免集＝环境元数据 {generated_utc, python}（实测重算与 GT 的唯一合法差异），
+    # runner/semantics/suite 版本面不等值即红。
+    def _mirror_diffs(a, b, path=""):
+        diffs = []
+        if path == ".generated_utc" or path.endswith(".python") or path.endswith(".path"):
+            return diffs  # 环境元数据豁免：跑次时间戳/解释器版本/布局相对路径（隔离布局实测差异面，
+            #  V0 软链布局下 corpus.path='d1-corpus-full.md' vs 真树 'seeds/…'——非真值字段）
+        if isinstance(a, dict) and isinstance(b, dict):
+            for k in set(a) | set(b):
+                diffs += _mirror_diffs(a.get(k), b.get(k), f"{path}.{k}")
+        elif isinstance(a, list) and isinstance(b, list):
+            if len(a) != len(b):
+                diffs.append(f"{path}: len {len(a)}≠{len(b)}")
+            else:
+                for i, (x, y) in enumerate(zip(a, b)):
+                    diffs += _mirror_diffs(x, y, f"{path}[{i}]")
+        elif a != b:
+            diffs.append(f"{path}: {a!r}≠{b!r}")
+        return diffs
+    _mdiffs = _mirror_diffs(doc, gt_doc)
+    check("FAM-GT-MIRROR", not _mdiffs,
+          f"重算↔GT 逐字段等值（豁免 generated_utc/python/path；首异: {_mdiffs[:2] or '无'}）")
+
     # —— FAM-WARN 闸转义门 ——
     rc = subprocess.run([sys.executable, "-W", "error::SyntaxWarning", "-m", "py_compile", str(GATE_WARN)],
                         capture_output=True, text=True)

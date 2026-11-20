@@ -73,6 +73,15 @@ CLAIM_RE = re.compile(
 )
 
 
+def _rel(p):
+    """出站卫生（m1 扩展，148号复审 2026-11-18）：包内路径一律记相对形态，
+    防沙箱绝对路径泄漏进 tracked GT。包外路径降为首文件名。"""
+    try:
+        return str(pathlib.Path(p).resolve().relative_to(SB.resolve()))
+    except ValueError:
+        return pathlib.Path(p).name
+
+
 def sha256(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
@@ -162,7 +171,7 @@ def parse_claims(stdout, mod, body_lines):
 
 
 def score_gate(gname, gpath):
-    rec = {"name": gname, "path": str(gpath), "exists": gpath.exists(), "segments": []}
+    rec = {"name": gname, "path": _rel(gpath), "exists": gpath.exists(), "segments": []}
     if not rec["exists"]:
         return rec
     rec["sha256"] = sha256(gpath)
@@ -207,9 +216,11 @@ def score_gate(gname, gpath):
 
 
 def main():
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    write_results = "--write-results" in sys.argv[1:]
     gates = DEFAULT_GATES
-    if len(sys.argv) > 1:
-        gates = [(pathlib.Path(a).stem, pathlib.Path(a)) for a in sys.argv[1:]]
+    if args:
+        gates = [(pathlib.Path(a).stem, pathlib.Path(a)) for a in args]
 
     print("=" * 78)
     print(f"D1 十事件真值套件 v1.2 · 声明级跑分（四代×48 格；注记剥离＋段D2 白名单探针）")
@@ -241,24 +252,35 @@ def main():
         "runner": RUNNER_VERSION,
         "generated_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "python": sys.version,
-        "corpus": {"path": str(CORPUS), "sha256": sha256(CORPUS), "n_segments": len(list(segments()))},
+        "corpus": {"path": _rel(CORPUS), "sha256": sha256(CORPUS), "n_segments": len(list(segments()))},
         "expect": {k: {"should_hit": v[0], "note": v[1]} for k, v in EXPECT.items()},
         "semantics": "段级二值判定（hits>0），声明级明细见 segments[].claims；"
                      "E01-E03/E05 域外事件期望放行非漏检，归坐标闸管辖；"
                      "其中 E01 在 v2.6/v2.7.1 各产 1 FP（CN 叙事数词『两个』，簇⑤形），已计入 precision。",
         "gates": gate_recs,
     }
-    RESULTS_DIR.mkdir(exist_ok=True)
-    spath = RESULTS_DIR / SCORES_NAME
+    # 持久化目标（m1 修复，148号复审 2026-11-18）：默认写 scratch，防克隆形态
+    # 一跑就把 tracked 的 results/*.json 弄脏（主线 worktree 起点即脏即此故）。
+    # 显式更新正副本：--write-results；调用方也可用 D1_RESULTS 指定目录
+    # （d1_probes / run-mutants / final-review-battery 均如此，互不影响）。
+    if "D1_RESULTS" in os.environ:
+        res_dir = pathlib.Path(os.environ["D1_RESULTS"])
+    elif write_results:
+        res_dir = RESULTS_DIR
+    else:
+        res_dir = SB / "_probe_results"
+        print("（m1：结果写 scratch _probe_results/；更新 tracked 正副本请加 --write-results）")
+    res_dir.mkdir(exist_ok=True, parents=True)
+    spath = res_dir / SCORES_NAME
     spath.write_text(json.dumps(doc, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     digest = sha256(spath)
-    cpath = RESULTS_DIR / (SCORES_NAME + ".sha256")
+    cpath = res_dir / (SCORES_NAME + ".sha256")
     cpath.write_text(f"{digest}  {SCORES_NAME}\n", encoding="utf-8")
 
     print("\n" + "=" * 78)
     print(f"真值已持久化：{spath}")
     print(f"校验文件　　：{cpath}")
-    print(f"验证：cd {RESULTS_DIR} && sha256sum -c {SCORES_NAME}.sha256")
+    print(f"验证：cd {res_dir} && sha256sum -c {SCORES_NAME}.sha256")
     return 0
 
 

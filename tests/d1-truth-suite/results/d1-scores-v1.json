@@ -1,10 +1,10 @@
 {
  "suite": "D1-ten-event-v1",
  "runner": "d1-runner-full.py v1.2（R3 收编：四代×48 格＋REDCOUNT 归属档）",
- "generated_utc": "2026-11-17T15:57:55+00:00",
- "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+ "generated_utc": "2026-11-19T01:02:52+00:00",
+ "python": "3.14.5 (main, May 10 2026, 10:21:34) [Clang 21.0.0 (clang-2100.0.123.102)]",
  "corpus": {
-  "path": "/campaign-root/seeds/d1-corpus-full.md",
+  "path": "seeds/d1-corpus-full.md",
   "sha256": "a6745c8a6f84c83979427bd908686bd344ca66870889fa5fc0b09be7aef9771c",
   "n_segments": 12
  },
@@ -62,7 +62,7 @@
  "gates": [
   {
    "name": "v1.8",
-   "path": "/campaign-root/gates/claim-gate-v1.8.py",
+   "path": "gates/claim-gate-v1.8.py",
    "exists": true,
    "segments": [
     {
@@ -219,7 +219,7 @@
   },
   {
    "name": "v2.6",
-   "path": "/campaign-root/gates/claim-gate-v2.6.py",
+   "path": "gates/claim-gate-v2.6.py",
    "exists": true,
    "segments": [
     {
@@ -388,7 +388,7 @@
   },
   {
    "name": "v2.7.1",
-   "path": "/campaign-root/gates/claim-gate-v2.7.1.py",
+   "path": "gates/claim-gate-v2.7.1.py",
    "exists": true,
    "segments": [
     {
@@ -548,7 +548,7 @@
      "verdict": "TN"
     }
    ],
-   "sha256": "ab4a6cb52236b1c33730db3b2ba44920b78cb1453e73e71fccefed330f75acdf",
+   "sha256": "a74105ad02560d8201bda3895a31bcbd901804cc769d59aba1fce5b7a837d15f",
    "module_loaded": true,
    "window": 8,
    "has_progress": true,
@@ -564,7 +564,7 @@
   },
   {
    "name": "v2.7.2",
-   "path": "/campaign-root/gates/claim-gate-v2.7.2.py",
+   "path": "gates/claim-gate-v2.7.2.py",
    "exists": true,
    "segments": [
     {
@@ -729,7 +729,7 @@
      "verdict": "TN"
     }
    ],
-   "sha256": "cbce7b9b1059b1258ae56d20bd28a838bbf47cccfd08c1d583205f4ddc16ce28",
+   "sha256": "281f99aa1480445f89d34b763b285c0014b0279ac44dd58a09fd4b6489f4cf1e",
    "module_loaded": true,
    "window": 8,
    "has_progress": true,

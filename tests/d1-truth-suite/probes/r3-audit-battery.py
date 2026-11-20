@@ -31,9 +31,27 @@ HIST_SHA = {  # 账本史实锚（源：R1 跑分 stdout 三代 sha 前 12 位�
     "v2.7.1": "ab4a6cb52236",
 }
 _ph = SB / "results" / "package-hashes.json"   # 公开包哈希桥（export-package 生成）：包内
-if _ph.exists():                               # v2.7.1 副本经私有仓名通用化，发布态哈希由桥
-    HIST_SHA.update(                           # 文件接管——V10 腿两端自适应，零代码分叉
-        json.loads(_ph.read_text(encoding="utf-8")).get("gate_sha_prefix", {}))
+_BR_ALLOWED = {"v2.7.1"}                        # 桥键集白名单（R7' 外环 M-rt1）：桥只许接管
+if _ph.exists():                               # v2.7.1（exporter 只写一键）——越界键=数据面
+    _br_all = json.loads(_ph.read_text(encoding="utf-8")).get("gate_sha_prefix", {})  # 试图接管
+    BAD_BRIDGE_KEYS = set(_br_all) - _BR_ALLOWED   # 硬编码史锚（v1.8/v2.6），V10 必红
+    HIST_SHA.update({k: v for k, v in _br_all.items() if k in _BR_ALLOWED})
+else:
+    BAD_BRIDGE_KEYS = set()
+
+_V271_ARCHIVE_PREFIX = "ab4a6cb52236"   # 档案原始载体前缀（单写位：载体集/前缀分派/
+_V271_VARIANT_PREFIX = "a74105ad0256"   # 模式标签共用；三轮 MINOR-1 勘误——此前三写位，
+V271_CARRIERS = {  # v2.7.1 同一判定器的两种文本载体（provenance v271_lineage_note）：
+    _V271_ARCHIVE_PREFIX: "原始载体（战役档案原样标本）",   # 非 two lineage；R7 修复：
+    _V271_VARIANT_PREFIX: "脱敏变体（公开包）",             # 档案形态（无桥）按集判
+}
+_V271_VARIANT_SHA256 = "a74105ad02560d8201bda3895a31bcbd901804cc769d59aba1fce5b7a837d15f"
+# 变体载体盘身份钉（R7 内环二轮勘误接线；**独立字面量，勿从本前缀派生**——派生会使
+# 锚头部错字时第8态前提同错而真空不红）：GT 侧防伪尾的真机制是前缀分派——非档案
+# 原始前缀的 GT 只能与盘全等（同前缀伪尾必红，实测曾存活面：GT 末位翻转+重签
+# sidecar → 11/11）。本锚锁**盘侧**：盘上 v2.7.1 若为变体载体，全 sha 必须等于此值
+# （错一字/文件被静默重生成 → V10 红，见 _v10self 第8态）。档案原始载体全 sha 本包
+# 无真源（原始文件只在战役档案环境），GT 侧对其只能前缀锚——已披露的分辨极限。
 
 
 from datetime import datetime, timezone
@@ -194,23 +212,69 @@ bad = [f"L{k} {n} 期望{'报' if w else '不报'} 实反" for k, (w, n) in exp.
        if (k in flagged) != w]
 say(not bad, "V8/V9-forms", f"12 形全表 {'ALL MATCH' if not bad else bad}")
 
-# ---- V10 冻结面＋历史锚（内环修复③）----
+# ---- V10 冻结面＋历史锚（内环修复③；R7 修复：判据函数化+负对照内建防形态回归）----
 doc = json.loads((SB / "results" / "d1-scores-v1.json").read_text(encoding="utf-8"))
 gmap = {g["name"]: g for g in doc["gates"]}
-# v2.7.1 盘↔JSON 等值：战役档案=原样标本；公开包=变体副本，等值对象换成桥文件（自洽仍闭环）
-if _ph.exists():
-    _br = json.loads(_ph.read_text(encoding="utf-8")).get("gate_sha_prefix", {})
-    ok_disk = all(sha(SB / "gates" / f"claim-gate-{n}.py") == gmap[n]["sha256"] for n in ("v1.8", "v2.6"))
-    ok_disk &= sha(SB / "gates" / "claim-gate-v2.7.1.py")[:12] == _br.get("v2.7.1")
-else:
-    ok_disk = all(sha(SB / "gates" / f"claim-gate-{n}.py") == gmap[n]["sha256"] for n in ("v1.8", "v2.6", "v2.7.1"))
-ok_hist = all(sha(SB / "gates" / f"claim-gate-{n}.py").startswith(p) for n, p in HIST_SHA.items())
+
+
+def _v10(disk, gt, bridge):
+    """V10 判据（纯函数，盘读取在外）：disk/gt＝{name: 全 sha}；bridge＝桥 dict（包
+    形态）或 None（档案形态）。v2.7.1 双载体（V271_CARRIERS）：档案形态下 GT=档案
+    原始载体记录（ab4a6cb5 前缀锚——全 sha 本包无真源）时载体级分叉按 lineage note
+    收；GT 若非档案原始前缀则只能与盘全等（同前缀伪尾必红）。盘侧变体文件的全 sha
+    由 _V271_VARIANT_SHA256 盘身份钉另锁（_v10self 第8态，不在本函数内）。"""
+    ok_disk = all(disk[n] == gt[n] for n in ("v1.8", "v2.6", "v2.7.2"))
+    d271, g271 = disk["v2.7.1"], gt["v2.7.1"]
+    if bridge is not None:                     # 包形态：四代全等＋盘↔桥前缀（M-2 钉保持）
+        ok_disk &= (d271 == g271 and d271[:12] == bridge.get("v2.7.1")
+                    and set(bridge) <= _BR_ALLOWED)   # M-rt1 钉：桥越界键必红
+        hist = {**HIST_SHA, **bridge}
+        ok_hist = all(disk[n].startswith(p) for n, p in hist.items())
+    else:                                      # 档案形态：v2.7.1 按载体判（F2 收紧）
+        ok_disk &= (d271 == g271               # 等值（同载体树）
+                    # GT=档案原始载体记录（前缀锚，全 sha 无本机真源）＋盘∈载体集：
+                    or (g271[:12] == _V271_ARCHIVE_PREFIX and d271[:12] in V271_CARRIERS))
+        ok_hist = (all(disk[n].startswith(p) for n, p in HIST_SHA.items() if n != "v2.7.1")
+                   and d271[:12] in V271_CARRIERS)
+    return ok_disk, ok_hist
+
+
+_disk = {n: sha(SB / "gates" / f"claim-gate-{n}.py") for n in ("v1.8", "v2.6", "v2.7.1", "v2.7.2")}
+_gt = {n: gmap[n]["sha256"] for n in _disk}
+_br = json.loads(_ph.read_text(encoding="utf-8")).get("gate_sha_prefix", {}) if _ph.exists() else None
+ok_disk, ok_hist = _v10(_disk, _gt, _br)
+# V10-self 负对照（R7 守恒钉，2026-11-19）：判据函数对第三值必须红、对合法载体
+# 分叉必须收——弱化/收窄判据（如把 else 分支改回单一账本值）即此处转绿打红本腿。
+_BAD = "f" * 64
+_TAIL = "0" * 52
+_v10self = (not all(_v10({**_disk, "v2.7.1": _BAD}, _gt, None))            # 盘第三值→必有一红
+            and not _v10(_disk, {**_gt, "v2.7.1": _BAD}, None)[0]          # GT 第三值→盘↔JSON 红
+            and not _v10(_disk, {**_gt, "v2.7.2": _BAD}, _br)[0]           # 包形态 GT 漂移→红（M-2 同钉）
+            # F2 钉·形态无关化（三轮 MINOR-3）：GT=变体前缀+假尾→必红（盘=变体即同前缀
+            # 伪尾、盘=档案则 GT 走严格分支）——回退前缀类接受域的弱化在此转绿
+            and not _v10(_disk, {**_gt, "v2.7.1": _V271_VARIANT_PREFIX + _TAIL}, None)[0]
+            # F5 同面钉①：GT=盘=同第三值→ok_hist 必红——删档案载体腿的弱化在此转绿
+            and not _v10({**_disk, "v2.7.1": _BAD}, {**_gt, "v2.7.1": _BAD}, None)[1]
+            # F5 同面钉②：盘 v1.8 史锚漂移→ok_hist 必红——删史锚循环的弱化在此转绿
+            and not _v10({**_disk, "v1.8": _BAD}, _gt, None)[1]
+            # 第8态·盘身份钉（二轮勘误接线）：盘上若为变体载体，全 sha 必须等于硬锚
+            # _V271_VARIANT_SHA256——锚错一字/变体文件被静默重生成 → V10 红（档案盘不辖）
+            and (_disk["v2.7.1"][:12] != _V271_VARIANT_PREFIX or _disk["v2.7.1"] == _V271_VARIANT_SHA256)
+            # 末态·形态无关化：GT=档案前缀→收（盘=变体即载体分叉；盘=档案即同前缀锚）
+            and all(_v10(_disk, {**_gt, "v2.7.1": _V271_ARCHIVE_PREFIX + _TAIL}, None))
+            # 第9态·桥键集钉（M-rt1）：桥含越界键（如伪造 v1.8 史锚接管）→必红——
+            # 实测曾存活面：桥+GT+sidecar+provenance 协同伪造后老代标本换行为缺陷件全绿
+            and not _v10(_disk, _gt, {**(_br or {}), "v1.8": "1b76c79f3ee5"})[0])
 ok_tot = gmap["v2.7.2"]["totals"] == {"tp": 6, "fp": 0, "tn": 6, "fn": 0,
                                       "precision": 1.0, "recall": 1.0, "f1": 1.0}
 rc9 = subprocess.run(["sha256sum", "-c", "d1-scores-v1.json.sha256"], cwd=SB / "results",
                      capture_output=True, text=True).returncode
-say(ok_disk and ok_hist and ok_tot and rc9 == 0, "V10-冻结面+历史锚",
-    f"盘↔JSON 一致={ok_disk}，盘↔账本史面前缀={ok_hist}（HIST_SHA 三枚），v2.7.2 总分={ok_tot}，-c rc={rc9}")
+_v271_mode = ("全等" if _disk["v2.7.1"] == _gt["v2.7.1"]
+              else ("档案GT前缀锚（分叉收）" if _br is None and _gt["v2.7.1"][:12] == _V271_ARCHIVE_PREFIX
+                    else "严格全等"))
+say(ok_disk and ok_hist and ok_tot and rc9 == 0 and _v10self, "V10-冻结面+历史锚",
+    f"盘↔JSON={ok_disk}（v2.7.1 判定模式={_v271_mode}），盘↔账本史面前缀={ok_hist}（HIST_SHA 三枚），"
+    f"v2.7.2 总分={ok_tot}，-c rc={rc9}，负对照9态={_v10self}")
 
 print(f"\nR3-AUDIT-BATTERY v1.2: {11 - len(FAILS)}/11 PASS" + (f" | FAILS={FAILS}" if FAILS else " — 全绿"))
 _recl.write(f"SUMMARY: {11 - len(FAILS)}/11 PASS {FAILS or '全绿'}\n")

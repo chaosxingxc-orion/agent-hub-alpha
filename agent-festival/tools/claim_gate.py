@@ -122,7 +122,7 @@ reopen a CLOSED form):
   CLOSED in v2.0 (build-bit #2, two tiers) —
     (a) the Chinese-numeral blind spot: 一二三四五六七八九十百 (plus 零〇两
         and multi-char runs like 二十一/两百) entered the COUNTING DIGIT SLOT
-        only, sharing the unchanged 21-member units group, so census derives
+        only, sharing the unchanged 23-member units group, so census derives
         21/21 exactly as before (P-Ⅰ shared-group rule: a second units group
         would silently un-pin half the census; P-Ⅲ: exemptions were taken on
         the numeral/lookbehind side, NEVER by touching the unit table);
@@ -188,7 +188,7 @@ reopen a CLOSED form):
         group — (?!(?<=个)[月日年点时分秒]) — a 个-unit directly followed by a
         time noun is not a count. The guard lives OUTSIDE the units capture
         group so the single-trailing-capture invariant (P-Ⅰ) and the shared
-        21-member UNITS stay byte-unchanged; UNITS derivation is now the
+        23-member UNITS stay byte-unchanged; UNITS derivation is now the
         last plain capture group (robust to trailing assertions) and census
         anchors locate units position-independently. Discrimination is
         bidirectional (CLAUDE.md rule 2): 「三个月/3个月」 False ∧ 「三个新文件/
@@ -605,7 +605,7 @@ reopen a CLOSED form):
     reach the executor), and the presence-form limit: an unrelated nearby command (git status) satisfies the window; the unit
     table itself is a closed set — units outside it (e.g. 「N 批」「N 步」,
     and the v2.0 example 「三档」) escape by definition; extending it requires a selftest case per new unit
-    (P-Ⅲ: a unit-set change would flip census 21 → 22 and break the pinned
+    (P-Ⅲ: a unit-set change would flip census 23 → 24 and break the pinned
     23-member acceptance, so 档/批/步 stay out and CN-C3 pins 三档 as False);
     the 万/千 numeral residuals (v2.0 digit class = 零〇一二三四五六七八九十百千两):
     「三万条」 and the mixed form 「20万条」 escape by design (1 real carrier
@@ -807,7 +807,7 @@ COUNTING = re.compile(
     # keep working unchanged. 万 and 廿/卅 are deliberately NOT in the class
     # (recorded escaping face, 1 measured carrier).
     r"(?<!初)(?<!初 )(?<![零〇一二两三四五六七八九十百千])"
-    r"(?:\d+|[零〇一二两三四五六七八九十百千两]+)"
+    r"(?:[0-9]+|[零〇一二两三四五六七八九十百千两]+)"
     r"\s*(处|件|条|项|次|类|组|波|枚|篇|包|个|轮|行|测试|函数|删除|新增|新提交|提交|PASS|样本|用例)"
     # v2.1 M2: the duration guard — a 个-unit DIRECTLY followed by a
     # time noun (三个月/3个月/两个日…) is a duration reading, not a closure
@@ -816,7 +816,7 @@ COUNTING = re.compile(
     # (P-Ⅰ): (?<=个) fires only when the unit that matched was 个, so every
     # other unit (行/件/条…) is untouched — 「共十二行」 still flags. The guard
     # sits AFTER the capture group; UNITS derivation takes the last plain
-    # group, the frozen 21-member census expectation pins the set.
+    # group, the frozen 23-member census expectation pins the set.
     r"(?!(?<=个)[月日年点时分秒])"
 )  # lookbehind kills label/range/ordinal/slash-list noise (R74 条款 / 1-3 条 / 第 3 项 / 3/7 项);
    # v1.3 (R76 M-2): unit family extended — 项/次/类/组/波/枚/篇/包/个/PASS were a whole
@@ -825,7 +825,7 @@ COUNTING = re.compile(
    # set and the dead 个X/处差异/条PASS branches retired (换结构: unreachable branches made
    # inexpressible) — the gate's own motivating disease form "12 测试全绿" (56号, actual 11)
    # now matches; v2.0: digit slot only — the units group text is byte-unchanged.
-TRIPLE = re.compile(r"\b[MDA]\s*=\s*\d+")
+TRIPLE = re.compile(r"\b[MDA]\s*=\s*[0-9]+")
 # v2.7 (adjudication-chamber item 2; v2.7.1 remediation): completion-state
 # progress claims — 「3/5 已改」「已清偿 3/7 项」「5/8 项已完成」— were an
 # escaping family recorded OPEN since v1.8: the numerator dies on unit
@@ -842,10 +842,33 @@ TRIPLE = re.compile(r"\b[MDA]\s*=\s*\d+")
 # M/D short forms (「11/26 已改」) DO enter as legitimate progress readings
 # — pinned as current behaviour. 已<verb> without a fraction stays clean
 # (pinned).
+# v2.7.2 (D3 收编; consistency-0 / M2 of the two-chamber review): the
+# optional unit slot used to be a hand-written single-char class
+# [项件处条个] — a mirror of the unit table that could not reach 18 of the
+# 23 live units (样本/用例 included), so 「3/5 用例已完成」 judged clean
+# while its re-ordering 「已完成 3/5 用例」 flagged (two answers for one
+# assertion). The slot now DERIVES from UNITS (P-Ⅰ), and an optional 均/都
+# adverb slot closes the 「5/8 项均已改」 escape.
+#
+# UNITS is DERIVED from COUNTING's own alternation (R76 iter-7 M-3: a
+# hand-maintained mirror is a second truth source — regex ⊃ mirror drifts
+# SILENT GREEN; deriving makes the fifth-write-site form inexpressible).
+# The derivation takes the LAST plain capture group (a body that starts with
+# neither ( nor ? — assertions excluded) instead of anchoring at the pattern
+# end, because the duration guard may trail the units group as a zero-width
+# assertion. P-Ⅰ holds in the strengthened form: the units alternation is
+# the last PLAIN group; if a future edit appends a second plain alternation
+# group, the census count pin (23) goes red on drift instead of silently
+# iterating the wrong group.
+# (Definition MOVED UP here from below the selftest table, 2026-11-18 —
+# PROGRESS needs it at module-evaluation time; the derivation law is
+# unchanged and still has exactly one site.)
+_plain_groups = re.findall(r"\(([^()?][^()]*)\)", COUNTING.pattern)
+UNITS = _plain_groups[-1].split("|")
 _PROGRESS_VERBS = ("改", "修", "回填", "清偿", "处置", "完成", "落地")
 PROGRESS = re.compile(
-    r"(?<![A-Za-z0-9-/.])\d{1,3}\s*/\s*\d{1,3}\s*(?:[项件处条个]\s*)?已(?:" + "|".join(_PROGRESS_VERBS) + r")"
-    r"|已(?:" + "|".join(_PROGRESS_VERBS) + r")[^0-9\n]{0,4}\d{1,3}\s*/\s*\d{1,3}(?![\d/])"
+    r"(?<![A-Za-z0-9-/.])[0-9]{1,3}\s*/\s*[0-9]{1,3}\s*(?:(?:" + "|".join(UNITS) + r")\s*)?(?:[均都]\s*)?已(?:" + "|".join(_PROGRESS_VERBS) + r")"
+    r"|已(?:" + "|".join(_PROGRESS_VERBS) + r")[^0-9\n]{0,4}[0-9]{1,3}\s*/\s*[0-9]{1,3}(?![0-9/])"
 )
 
 # v2.7.2 (R3 收编; D3 T1; E06 「红 N」 family): battery state-color count
@@ -884,8 +907,12 @@ PROGRESS = re.compile(
 #      JOINED the class after the red-team LIVE-FIRE (attack2.md hits
 #      「全红 2 连」「幼儿园红 3 班」, 2026-11-16 — demonstrated FP forms, not
 #      speculative widening), pinned D3-G12/G13 below;
-#   ④ ASCII digits only — the CN twin 「红五」 is a REGISTERED zero-carrier
-#      residual (v2.0 digit-slot law: extend on carriers, not before).
+#   ④ ASCII digits only — enforced AT THE CLASS: [0-9] (m2 fix, 148号
+#      复审 2026-11-18 — the old backslash-d was Unicode-aware and flagged
+#      the full-width form 「红４」, contradicting this very line; pinned
+#      both ways D3-G14/G15). The CN twin 「红五」 is a REGISTERED
+#      zero-carrier residual (v2.0 digit-slot law: extend on carriers,
+#      not before).
 #   ⑤ REGISTERED zero-carrier residuals (red-team live-fire 2026-11-16,
 #      receipts: docs/receipts/attack2.md (bundled) — these DO fire today,
 #      no corpus carriers yet; extension waits for carriers + per-member
@@ -897,7 +924,7 @@ PROGRESS = re.compile(
 # different senses (黑名单/黄牌) and stay out until carriers appear.
 _REDCOLORS = ("红", "绿")
 REDCOUNT = re.compile(
-    r"(?<![A-Za-z0-9-/.])(?:" + "|".join(_REDCOLORS) + r")\s*\d+(?!\s*[号队楼线路军班连])"
+    r"(?<![A-Za-z0-9-/.])(?:" + "|".join(_REDCOLORS) + r")\s*[0-9]+(?!\s*[号队楼线路军班连])"
 )
 # v2.6.1 (engineering-chamber bugfix): the two CMD branches below were
 # hand-maintained mirrors that silently diverged — the backtick branch lacked
@@ -973,7 +1000,16 @@ def find_claim(line: str):
         # pinned): a true zero-count reading 「本批新增零样本。」 is swallowed
         # with the term (recorded adjudication), and the spaced variant
         # 「零 样本」 is not the collocation and still flags.
-        if m.group(0).endswith("零样本"):
+        # v2.7.2 (D3 收编; item ③ of the main-line follow-up): the guard was
+        # `endswith("零样本")`, which also swallowed TRUE counts — 「一百零样
+        # 本」 was silenced as if it were the zero-shot term. Narrowed to the
+        # EXACT collocation via lstrip() (same normalisation the 两+个 skip
+        # below uses — COUNTING's prefix group absorbs leading whitespace into
+        # group(0), so the term mid-sentence arrives as ' 零样本'). The term
+        # skip, the spaced variant flag, and the recorded 「本批新增零样本。」
+        # adjudication all stay as pinned.
+        # 前缀族修复（外环 M 同轮，2026-11-19）：(恰|共|总)? 前缀不属于术语。
+        if re.fullmatch(r"(?:恰|共|总)?\s*零样本", m.group(0).lstrip()):
             pos = m.end()
             continue
         # v2.7.2 skip (third code-level skip): the bare 两+个 frame is
@@ -1076,6 +1112,22 @@ SELFTEST = [
     ("11/26 已改。", True),                                    # v2.7.1 date-face registration: M/D short forms DO enter as legitimate progress readings; the guard's claim is narrowed to year-leading forms — pinned as current behaviour so a future narrowing/widening flips
     ("本批新增零样本。", False),                               # v2.7.1 零样本 boundary, REGISTERED: the term guard swallows the true zero-count reading (「新增零项。」 flags — recorded adjudication, not hidden)
     ("零 样本（空格变体）。", True),                            # v2.7.1 零样本 boundary, REGISTERED: the spaced variant is not the collocation and still flags as a claim — current behaviour, pinned
+    # ---- v2.7.2 D3 follow-up pins (unit-slot single-source + adverb slot +
+    # zero-sample narrowing). BIDIRECTIONAL: deleting the UNITS derivation
+    # flips the first two; deleting the adverb slot flips the 均/都 pair;
+    # restoring the old endswith() guard flips 一百零样本. ----
+    ("3/5 用例已完成。", True),                               # v2.7.2: the unit slot DERIVES from UNITS (样本/用例 now reachable — 18 of 23 units were structurally out); red pre-fix, deleting the derivation flips this
+    ("3/5 行已改。", True),                                    # v2.7.2: single-char unit outside the retired [项件处条个] mirror (行) — same fix's second victim
+    ("5/8 项均已改。", True),                                  # v2.7.2: adverb insertion (均) between unit and 已 — was recorded by neither adjacent order; deleting the 均/都 slot flips this and the next case
+    ("3/7 项都已改。", True),                                  # v2.7.2: adverb 都 twin
+    ("一百零样本。", True),                                    # v2.7.2: the 零样本 guard is narrowed to the EXACT collocation — a real count 「一百零样本」 was swallowed by the old endswith() test
+    (" 零样本实验组结论如下。", False),                          # v2.7.2: leading-space term form stays skipped (lstrip normalisation, same law as the 两+个 skip) — a bare `== "零样本"` without lstrip would regress this
+    ("3/7 项 已清偿。", True),
+    ("5/8 项 已改。", True),
+    ("共零样本。", False),
+    ("恰零样本。", False),
+    ("总零样本。", False),   # v2.7.2-R6b (内环 P-Ⅲ): third prefix member — deleting 总 flips this
+    ("共 零样本。", False),  # v2.7.2-R6b: prefix-to-term gap — deleting the gap \s* flips this
     # ---- v2.7.2 REDCOUNT pins (E06 「红 N」 family). BIDIRECTIONAL by
     # mandate (rule 2, the 零样本 precedent): deleting REDCOUNT flips every
     # D3-E* True; deleting/widening each named guard flips exactly its D3-G*
@@ -1095,7 +1147,12 @@ SELFTEST = [
     ("红 1 军番号。", False),                                    # D3-G9: member 军 (unit)
     ("全红 2 连演习明日开始。", False),                            # D3-G12: member 连 — red-team live-fire form, joined per obligation-②
     ("幼儿园红 3 班作品展出。", False),                            # D3-G13: member 班 — red-team live-fire form, joined per obligation-②
-    ("坐标x红 5。", False),                                     # D3-G10: lookbehind-② pin — deleting (?<![A-Za-z0-9-/.]) flips True
+    ("坐标x红 5。", False),
+    ("红４。", False),
+    ("红4。", True),
+    ("本批共 ４ 个文件。", False),
+    ("进度：３/５ 已改。", False),
+    ("汇总 M=１１。", False),                                     # D3-G10: lookbehind-② pin — deleting (?<![A-Za-z0-9-/.]) flips True
     ("红 4 FAIL（复算：`grep -c FAIL /tmp/r4.log` = 4）。", False),  # D3-G11: the CMD-window twin of D3-E2 — 「红 4」+SAME-LINE grep evidence PASSES
     ("git status\n本批共 9 项新增。", False),            # OPEN: presence-form (unrelated cmd satisfies)
     ("汇总 M = 11、D = 151。", True),                    # CLOSED v1.2: spaced triple
@@ -1194,21 +1251,14 @@ SELFTEST = [
     ("共两个包。", True),                                      # D3-K4: closure-prefix rescue rides group(1) consumption — fullmatch can never hold
     ("两百个样本。", True),                                    # D3-K5: compound run 两百 never fullmatches — the 200-count stays a claim
     ("维持三个星期不变。", True),                                # D3-K6: M2-F's relocated mandate — 三+个+星期 still depends on the frozen duration class
+    ("已清偿 ３/5。", False),                                  # v2.7.2-R6c (终轮 bearing-3): PROGRESS second arm full-width — reverting [0-9] to the unicode-aware digit class here flips this
+    ("共 两个包。", True),                                      # v2.7.2-R6c (终轮 bearing-4): COUNTING prefix-to-numeral whitespace — deleting that blank-run silently routes it into the bare-两+个 skip
 ]
 
 
-# UNITS is DERIVED from COUNTING's own alternation (R76 iter-7 M-3: a
-# hand-maintained mirror is a second truth source — regex ⊃ mirror drifts
-# SILENT GREEN; deriving makes the fifth-write-site form inexpressible).
-# v2.1 M2: the derivation takes the LAST plain capture group (a body that
-# starts with neither ( nor ? — assertions excluded) instead of anchoring at
-# the pattern end, because the duration guard may trail the units group as
-# a zero-width assertion. P-Ⅰ still holds in the strengthened form: the
-# units alternation is the last PLAIN group; if a future edit appends a
-# second plain alternation group, the census count pin (23) goes red on
-# drift instead of silently iterating the wrong group.
-_plain_groups = re.findall(r"\(([^()?][^()]*)\)", COUNTING.pattern)
-UNITS = _plain_groups[-1].split("|")
+# UNITS is defined ABOVE (moved up 2026-11-18 so PROGRESS can use it at
+# module-evaluation time; single site, derivation law unchanged — LAST plain
+# capture group of COUNTING).
 
 
 # ---------------------------------------------------------------------------

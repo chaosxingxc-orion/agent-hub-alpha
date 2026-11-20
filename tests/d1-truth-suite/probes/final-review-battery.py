@@ -12,6 +12,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import tempfile
 from datetime import datetime, timezone
 
 SB = pathlib.Path(__file__).resolve().parent.parent
@@ -20,8 +21,12 @@ if not (PKG / "results" / "provenance.json").exists():
     PKG = SB
 FAST = "--fast" in sys.argv
 FAILS = []
-LOGDIR = SB / "_final_review"
-LOGDIR.mkdir(exist_ok=True)
+# m1 同族修复（148号复审 2026-11-18）：收据日志默认写系统临时目录，不落包内——
+# 否则包形态直跑时 D4「MANIFEST 账实等值」会把电池自己的日志数成第 26 个文件。
+# 战役归档需要持久收据时用 D1_REVIEW_LOG 显式指定目录。
+LOGDIR = pathlib.Path(os.environ.get(
+    "D1_REVIEW_LOG", pathlib.Path(tempfile.gettempdir()) / "_d1_final_review"))
+LOGDIR.mkdir(parents=True, exist_ok=True)
 LOG = open(LOGDIR / "final-receipt.log", "a", encoding="utf-8")
 LOG.write(f"\n===== final-review-battery {'FAST' if FAST else 'FULL'} @ "
           f"{datetime.now(timezone.utc).isoformat(timespec='seconds')}\n")
@@ -46,12 +51,43 @@ def run(cmd, cwd=PKG, timeout=900):
                           env=dict(os.environ, D1_RESULTS=str(LOGDIR / "res")))
 
 
-files = [p for p in PKG.rglob("*") if p.is_file() and "__pycache__" not in str(p)]
+# M-a 修复（终轮补跑 CONFIRMED MAJOR，2026-11-19）：scratch 名单单源。
+# 包文档化的快速复现（README:14/16/17）会生成 _probe_results/ _mut/ _battery_work/，
+# 旧 D1 正则与 D4 全树对账把它们判为「随包污染」——假红拒绝合法工作树。
+# 名单与 .gitignore 保持同源（此处集中一份，三处使用：files 过滤、D1 正则、D7 copytree）。
+SCRATCH_DIRS = ("_probe_results/", "_mut/", "_mut_r2/", "_battery_work/", "_final_review/")
+SCRATCH_NAMES = ("_probe_results", "_mut", "_mut_r2", "_battery_work", "_final_review")
+
+
+def _is_scratch(rel: str) -> bool:
+    return (rel.startswith(SCRATCH_DIRS) or "__pycache__/" in (rel + "/")
+            or rel.endswith(".pyc") or rel.startswith("seeds/truth-doc-"))
+
+
+# 文件域＝**被跟踪的文件**（终审 M-1 修复，2026-11-19）：发布物 = git tracked 集合。
+# 旧实现把 scratch 从全树里过滤后，D1 的断言按构造恒为空（恒真探针），且 D2/D3/W1
+# 共用同一 filtered 集合 → 对 scratch 路径下的私有指向/代号/谱系字样全部失明
+# （实测：在 scratch 目录写入含本地账号路径的内容 → 9/9 全绿）。改为 tracked 域后：
+# scratch 天然不在域内（D1 语义「发布物不含 scratch」成立且非恒真——被跟踪的 scratch
+# 仍会红），而 D2/D3/W1 对 tracked 全量扫描、不失明。
+_tracked = subprocess.run(["git", "-C", str(PKG), "ls-files"],
+                          capture_output=True, text=True).stdout.split()
+_has_tracked = bool(_tracked)
+if _has_tracked:
+    # 发布物域＝tracked（scratch untracked → 天然域外，不发布）
+    files = [PKG / rel for rel in _tracked if (PKG / rel).is_file()]
+else:
+    # 未提交工作树：无发布物域可判。域＝全树减 scratch（scratch 不发布）。
+    files = [p for p in PKG.rglob("*")
+             if p.is_file() and not _is_scratch(str(p.relative_to(PKG)))]
 texts = {str(p.relative_to(PKG)): p.read_text(encoding="utf-8", errors="ignore") for p in files}
 
 # ---------- D 组：披露复检 ----------
-bad = [f for f in texts if re.search(r"_probe_results|_mut/|_battery_work|__pycache__|\.pyc$", f)]
-say(not bad, "D1-scratch零随包", f"scratch 形态文件={bad or '无'}；树内 {len(texts)} 文件")
+# D1 在 tracked 域上仍会抓「被跟踪的 scratch」（真发布污染）；scratch 未被跟踪则不在域内。
+bad = [f for f in texts if _is_scratch(f)]
+say(not bad, "D1-scratch零随包",
+    (f"scratch 形态文件={bad or '无'}；tracked 域 {len(texts)} 文件" if _has_tracked
+     else f"工作树未提交（无 tracked 域）——D1 按设计无从判，域={len(texts)} 文件（已减 scratch）"))
 dang = [str(p.relative_to(PKG)) for p in PKG.rglob("*") if p.is_symlink() and not p.exists()]
 say(not dang, "D1b-悬空软链", f"悬空链接={dang or '无'}")
 
@@ -85,6 +121,53 @@ listed = set(re.findall(r"^- `([^`]+)`", mf.split("## 不收录")[0], re.M))
 actual = set(texts) - {"MANIFEST.md"}
 say(listed == actual, "D4-MANIFEST账实等值",
     f"清单{len(listed)} vs 实树{len(actual)}，差={sorted(listed ^ actual)[:6]}")
+
+# ---- D7（review-loop 终轮 bearing-2，2026-11-19；R7 修复：unlink+负对照臂防恒真）----
+# build-v272 声称"包形态可字节同重建"——真验＝复制包到 tempdir、**先删产物**、
+# 跑装配器、断言重建文件存在且与出站闸逐字节同。R6 实弹：不删产物时 no-op
+# builder 也 PASS（copytree 把旧产物带进临时树）——"幂等 281f99aa"声称当时
+# 无任何随包探针在锁。双臂：负对照臂注入 no-op builder，同一判据必须红得出
+# （守恒钉内建——删掉 unlink 或弱化判据，负臂即转绿打红本腿）。
+import shutil as _sh
+_ref = hashlib.sha256((PKG / "gates" / "claim-gate-v2.7.2.py").read_bytes()).hexdigest()
+
+
+def _d7_arm(builder_text):
+    """单臂：临时树里删产物后跑（可选注入的）装配器，返回 (判据, 完成进程)。"""
+    _w = pathlib.Path(tempfile.mkdtemp(prefix="d7-"))
+    try:
+        _pkg = _w / "pkg"
+        _sh.copytree(PKG, _pkg, ignore=_sh.ignore_patterns(
+            "__pycache__", "_probe_results", "_mut", "_mut_r2", "_battery_work", "_final_review"))
+        _out = _pkg / "gates" / "claim-gate-v2.7.2.py"
+        _out.unlink()                            # 关键：产物先删，逼装配器真重建
+        if builder_text is not None:             # 负对照臂：换 no-op 装配器
+            (_pkg / "probes" / "build-v272.py").write_text(builder_text, encoding="utf-8")
+        _rb = subprocess.run([sys.executable, "-I", "probes/build-v272.py"],
+                             cwd=str(_pkg), capture_output=True, text=True, timeout=300)
+        return (_rb.returncode == 0 and _out.exists()
+                and hashlib.sha256(_out.read_bytes()).hexdigest() == _ref), _rb
+    finally:
+        _sh.rmtree(_w, ignore_errors=True)
+
+
+_ok_pos, _rb_pos = _d7_arm(None)
+_ok_neg, _rb_neg = _d7_arm('print("no-op negative control")\nimport sys\nsys.exit(0)\n')
+# 错内容负臂（R7 内环 F1 修复）：产物存在、rc=0、但 sha≠原件——锁「重建等值」谓词；
+# 弱化判据（删 sha 比较）时 no-op 臂转绿抓不住，此臂专堵该缝（同判据必须红）。
+_ok_bad, _rb_bad = _d7_arm(
+    'import pathlib, sys\n'
+    'p = pathlib.Path("gates/claim-gate-v2.7.2.py")\n'
+    'p.parent.mkdir(parents=True, exist_ok=True)\n'
+    'p.write_bytes(b"corrupted negative control payload\\n")\n'
+    'print("corrupt negative control")\nsys.exit(0)\n')
+say(_ok_pos and not _ok_neg and not _ok_bad
+    # 二轮勘误（r3 家法「崩溃不是红」同律）：两支负 builder 必须**成功跑完**（rc=0），
+    # 其红才算有效红——负臂 builder 源码被碎（rc≠0）时判据同样 False，无此哨兵会
+    # 把崩溃当有效红，F1 弱化+碎臂组合即可无声失活本腿。
+    and _rb_neg.returncode == 0 and _rb_bad.returncode == 0, "D7-装配器幂等",
+    f"正臂 rc={_rb_pos.returncode} 重建等值={_ok_pos}；负臂 no-op 判红={not _ok_neg}（rc={_rb_neg.returncode}）；"
+    f"负臂错内容判红={not _ok_bad}（rc={_rb_bad.returncode}）")
 
 ph = json.loads((PKG / "results/package-hashes.json").read_text()) if (PKG / "results/package-hashes.json").exists() else {}
 pv = json.loads((PKG / "results/provenance.json").read_text())
