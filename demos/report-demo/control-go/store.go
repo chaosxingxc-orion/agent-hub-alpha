@@ -113,6 +113,10 @@ func (s *Store) lockAuthority(ctx context.Context, tx pgx.Tx) error {
 	return err
 }
 
+// Existing receipts can record a retry's command identity without applying
+// the underlying task transition or appending another effect audit event.
+type existingReceipt struct{ value any }
+
 func (s *Store) mutate(ctx context.Context, id, kind string, fn func(pgx.Tx, *Task) (any, error)) (any, error) {
 	tx, err := s.Pool.Begin(ctx)
 	if err != nil {
@@ -137,6 +141,12 @@ func (s *Store) mutate(ctx context.Context, id, kind string, fn func(pgx.Tx, *Ta
 	out, err := fn(tx, &t)
 	if err != nil {
 		return nil, err
+	}
+	if receipt, ok := out.(existingReceipt); ok {
+		if err = tx.Commit(ctx); err != nil {
+			return nil, err
+		}
+		return receipt.value, nil
 	}
 	g, err := strconv.ParseUint(t.Generation, 10, 64)
 	if err != nil {

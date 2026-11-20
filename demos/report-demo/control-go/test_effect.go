@@ -68,13 +68,13 @@ type EffectObservation struct {
 }
 
 func (s *Store) getTestEffect(ctx context.Context, tx pgx.Tx, b string) (*EffectIntent, error) {
+	var digest string
 	var raw []byte
 	var err error
-	query := "SELECT receipt FROM delivery_intents WHERE scope=$1 AND id=$2"
 	if tx == nil {
-		err = s.Pool.QueryRow(ctx, query, s.Scope, b).Scan(&raw)
+		err = s.Pool.QueryRow(ctx, deliveryCommandSQL, s.Scope, b).Scan(&digest, &raw)
 	} else {
-		err = tx.QueryRow(ctx, query, s.Scope, b).Scan(&raw)
+		err = tx.QueryRow(ctx, deliveryCommandSQL, s.Scope, b).Scan(&digest, &raw)
 	}
 	if err != nil {
 		return nil, err

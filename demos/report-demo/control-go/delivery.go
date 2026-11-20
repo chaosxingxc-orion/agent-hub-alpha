@@ -10,6 +10,9 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+const deliveryCommandSQL = `SELECT payload_digest,receipt FROM delivery_intents WHERE scope=$1 AND id=$2
+	UNION ALL SELECT payload_digest,receipt FROM commands WHERE scope=$1 AND principal='' AND kind='report-delivery-alias' AND key=$2 LIMIT 1`
+
 // Approval binds the exact report bytes and a qualified PASS check. Reading
 // that immutable object later is not another publish action.
 func (s *Store) ApproveReport(ctx context.Context, id, artifact, principal string) (any, error) {
@@ -39,7 +42,16 @@ func (s *Store) ApproveReport(ctx context.Context, id, artifact, principal strin
 		if !passed {
 			return nil, fault("CHECK_REQUIRED", "matching PASS check required", 409)
 		}
-		receipt := newID("approval-")
+		var receipt string
+		err = tx.QueryRow(ctx, `SELECT id FROM approvals WHERE scope=$1 AND task_id=$2 AND action='deliver' AND object_digest=$3
+			AND principal=$4 AND expires_at>clock_timestamp() ORDER BY expires_at,id LIMIT 1`, s.Scope, id, digest, principal).Scan(&receipt)
+		if err == nil {
+			return existingReceipt{map[string]string{"approval_id": receipt, "artifact_id": artifact, "artifact_digest": digest, "task_id": id}}, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
+		receipt = newID("approval-")
 		_, err = tx.Exec(ctx, "INSERT INTO approvals(scope,id,task_id,action,object_digest,principal,expires_at) VALUES($1,$2,$3,'deliver',$4,$5,clock_timestamp()+interval '1 hour')", s.Scope, receipt, id, digest, principal)
 		return map[string]string{"approval_id": receipt, "artifact_id": artifact, "artifact_digest": digest, "task_id": id}, err
 	})
@@ -89,12 +101,26 @@ func (s *Store) Deliver(ctx context.Context, id, artifact, b, principal string) 
 		}
 		var previous string
 		var receipt []byte
-		err = tx.QueryRow(ctx, "SELECT payload_digest,receipt FROM delivery_intents WHERE scope=$1 AND id=$2", s.Scope, b).Scan(&previous, &receipt)
+		err = tx.QueryRow(ctx, deliveryCommandSQL, s.Scope, b).Scan(&previous, &receipt)
 		if err == nil {
 			if previous != payload {
 				return nil, fault("INPUT_CONFLICT", "delivery identity changed payload", 409)
 			}
-			return json.RawMessage(receipt), nil
+			return existingReceipt{json.RawMessage(receipt)}, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
+		// A second command for the same publication gets the original receipt.
+		// Remember its payload so it cannot later be used for another report.
+		err = tx.QueryRow(ctx, `SELECT receipt FROM delivery_intents
+			WHERE scope=$1 AND task_id=$2 AND payload_digest=$3 AND state='DELIVERED' ORDER BY owner_epoch,id LIMIT 1`, s.Scope, id, payload).Scan(&receipt)
+		if err == nil {
+			if _, err = tx.Exec(ctx, `INSERT INTO commands(scope,principal,kind,key,payload_digest,receipt)
+				VALUES($1,'','report-delivery-alias',$2,$3,$4)`, s.Scope, b, payload, receipt); err != nil {
+				return nil, err
+			}
+			return existingReceipt{json.RawMessage(receipt)}, nil
 		}
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return nil, err
