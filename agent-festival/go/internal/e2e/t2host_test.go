@@ -82,29 +82,151 @@ func newResultStore(dir string) (*resultStore, error) {
 		}
 		return nil, err
 	}
+	// Loud-on-unrepresentable (same doctrine as the adopt-side request guards):
+	// a top-level non-object leaves a nil map that panics on the next put, and
+	// an entry of null decodes to a ZERO-VALUED record (Receipt "") that the
+	// dedup guard then locks forever — both are corruption, not empty state.
 	if err := json.Unmarshal(raw, &rs.data); err != nil {
 		return nil, fmt.Errorf("[T2.RESULT_STORE] corrupt result store: %v", err)
+	}
+	if rs.data == nil {
+		return nil, fmt.Errorf("[T2.RESULT_STORE] corrupt result store: top-level value is not a JSON object")
+	}
+	for opID, rec := range rs.data {
+		if err := validateStoredResult(opID, rec); err != nil {
+			return nil, fmt.Errorf("[T2.RESULT_STORE] corrupt result store: %w", err)
+		}
 	}
 	return rs, nil
 }
 
+// validateStoredResult is the single "representable record" gate, consumed by
+// BOTH the open path and the write path: a record the open path would reject
+// (no receipt) must not be writable in the first place, otherwise one bad put
+// makes the whole store unopenable after a restart.
+func validateStoredResult(opID string, r storedResult) error {
+	if r.Receipt == "" {
+		return fmt.Errorf("[T2.RESULT_STORE] opID %q: empty receipt — a record the open path rejects cannot be persisted", opID)
+	}
+	return nil
+}
+
 // put stores a result under opID. Batch-0 #2 (commit-side o-key dedup):
 // CommittedResults(o)≤1 is now an explicit guard — a second put for an
-// already-committed opID with a different digest returns ErrAlreadyCommitted
+// already-committed opID with a different RECEIPT returns ErrAlreadyCommitted
 // instead of silently overwriting (the schema's "conforming by construction"
 // depends on adoption ⊆ ledger; the store enforces it at the commit point).
+// Scope note: this guard keys on the receipt only. The input-binding face
+// (same o with a different κ must conflict) is NOT enforced here: the entry
+// layer checks κ before calling the store, and the receipt-only key here is
+// the remaining RV-02 gap, tracked separately.
+//
+// Publish-after-persist (external audit GC#28 / GH#51; the reviewer's
+// B0-RV-03): the previous order assigned into rs.data BEFORE writing the
+// file, so a failed write left the new value visible in memory while the
+// file did not have it — a phantom committed result that a reader (and
+// queryForReconciliation) would serve, which vanished on restart. Now the
+// candidate map is persisted first and published only after the durable file
+// has been replaced: put returning nil means the value is visible in memory
+// AND in the file; put returning an error means nothing changed.
+//
+// Premises of that equivalence: ONE live store per directory (a second
+// instance in the same directory keeps its own map and whole-file replace
+// clobbers the other's writes — cross-instance consistency is R9-F5 in the
+// campaign minor ledger, tracked separately, not claimed here), and the
+// statement covers the stored record
+// map — BOTH the read faces' results and the put argument alias the stored
+// Facts/References arrays, so every storedResult slice must be treated as
+// immutable by callers (defensive copies are a separate item). Keys are
+// expected to be valid UTF-8: a non-UTF-8 key is not representable in the
+// JSON file and comes back different after a restart.
+//
+// Scope of the guarantee: visible-file atomicity via same-directory rename.
+// There is NO fsync, so this is not a crash/power-loss durability claim
+// (tracked separately, GH#11). Two consequences worth stating: (a) rename
+// needs write permission on the DIRECTORY, so making this file read-only no
+// longer blocks a put — protect the directory instead (a read-only file also
+// stops nothing that a same-directory replace would do); (b) a process that
+// dies between the rename and the in-memory publish leaves the file ahead of
+// the caller's knowledge, which is an unknown — never a phantom success.
 func (rs *resultStore) put(opID string, r storedResult) error {
 	rs.mu.Lock()
 	defer rs.mu.Unlock()
-	if prev, ok := rs.data[opID]; ok && prev.Receipt != r.Receipt {
-		return fmt.Errorf("ErrAlreadyCommitted: opID %q already has a committed result with digest %q (CommittedResults(o)≤1; new digest %q rejected — same-material retry should use serve, new-material should use a new op)", opID, prev.Receipt, r.Receipt)
+	if err := validateStoredResult(opID, r); err != nil {
+		return err
 	}
-	rs.data[opID] = r
-	raw, err := json.MarshalIndent(rs.data, "", "  ")
+	if prev, ok := rs.data[opID]; ok && prev.Receipt != r.Receipt {
+		return fmt.Errorf("ErrAlreadyCommitted: opID %q already has a committed result with receipt %q (CommittedResults(o)≤1; new receipt %q rejected — same-material retry should use serve, new-material should use a new op)", opID, prev.Receipt, r.Receipt)
+	}
+	next := make(map[string]storedResult, len(rs.data)+1)
+	for k, v := range rs.data {
+		next[k] = v
+	}
+	next[opID] = r
+	raw, err := json.MarshalIndent(next, "", "  ")
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(rs.path, raw, 0o600)
+	if err := replaceFileAtomic(rs.path, raw); err != nil {
+		return err
+	}
+	rs.data = next
+	return nil
+}
+
+// replaceFileAtomic replaces path with raw through a same-directory temp file
+// and a rename, so a failed or partially completed write can never truncate
+// the previous contents (the evidlog/adopt twin doctrine: whole-file replace,
+// existing file's exact permission bits, owner-only 0600 for a first write).
+// No fsync: visible atomicity only.
+//
+// Residue discipline: every path that RETURNS AN ERROR attempts to remove its
+// temp file (best-effort: a failing os.Remove is not surfaced).
+// A process killed between the write and the rename can still leave a hidden
+// ".t2-results.json*" file behind — nothing scans for it, and it is never read
+// (the open reads only the store path). Symlinks and hard links: a whole-file
+// replace swaps the link entry itself rather than following it, and other hard
+// links keep pointing at the old inode (the previous direct write followed a
+// symlink and wrote through every link); the store path is expected to be a
+// regular, singly-linked file.
+func replaceFileAtomic(path string, raw []byte) error {
+	dir, base := filepath.Split(path)
+	if dir == "" {
+		dir = "." // keep the temp beside the store: Split returns "" for a bare name
+	}
+	tmp, err := os.CreateTemp(dir, "."+base+".*")
+	if err != nil {
+		return err
+	}
+	renamed := false
+	defer func() {
+		if !renamed {
+			tmp.Close()
+			os.Remove(tmp.Name()) // no hidden residue on any failure path
+		}
+	}()
+	if _, err := tmp.Write(raw); err != nil {
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	mode, err := os.Stat(path)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	perm := os.FileMode(0o600)
+	if err == nil {
+		perm = mode.Mode().Perm()
+	}
+	if err := os.Chmod(tmp.Name(), perm); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp.Name(), path); err != nil {
+		return err
+	}
+	renamed = true
+	return nil
 }
 
 func (rs *resultStore) get(opID string) (storedResult, bool) {
@@ -483,7 +605,7 @@ func (h *t2Host) reopen() *t2Host {
 // records the real one. R12' review found this MAJOR; this is the fix).
 func requestForT2(op, revision, evidence, digest, brID string) *adopt.Request {
 	return &adopt.Request{
-		AdoptionVersion: "0.2.0",
+		AdoptionVersion:  "0.2.0",
 		Identity:         ledger.Identity{BusinessRequestID: brID, EvaluationRevision: revision, OperationID: op},
 		Versions:         ledger.Versions{Evidence: evidence, Rule: "rule-credit-v1", Model: "s1-standin", Readout: "r-1", Policy: "p-1"},
 		PayloadDigest:    digest,
