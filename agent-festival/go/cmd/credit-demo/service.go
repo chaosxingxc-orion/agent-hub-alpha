@@ -53,6 +53,9 @@ type StepRec struct {
 	Branches   []Branch    `json:"branches,omitempty"`
 	Activity   string      `json:"activity,omitempty"` // what the step is doing right now, for the live graph
 	Call       *RemoteCall `json:"remote_call,omitempty"`
+	Lookup     *Lookup     `json:"knowledge_lookup,omitempty"` // cross-task reuse lookup before the step ran
+	ReusedFrom string      `json:"reused_from,omitempty"`      // knowledge item whose result this step reused
+	Published  string      `json:"published,omitempty"`        // knowledge item this step's result became
 }
 
 // Branch is one sub-goal a black-box (Loop Forest) step forked at run time.
@@ -105,6 +108,9 @@ type State struct {
 	// Selections are the capability selection records plans were proposed from.
 	Selections    map[string]*SelectionRecord `json:"selections,omitempty"`
 	NextSelection int                         `json:"next_selection,omitempty"`
+	// Knowledge are the reusable node results published for later tasks.
+	Knowledge     map[string]*KItem `json:"knowledge,omitempty"`
+	NextKnowledge int               `json:"next_knowledge,omitempty"`
 	// Rev counts saved changes. It is persisted, so it only grows, even across
 	// restarts: a front end drops any snapshot older than one it has shown.
 	Rev int64 `json:"rev"`
@@ -567,24 +573,29 @@ func (s *Service) LeaseAs(worker, executorModel string) (*Job, error) {
 			}
 			members[a.ID] = m
 		}
-		input := fmt.Sprintf("案件号：%s。任务：%s", r.CaseID, p.Goal)
-		if p.Selection != nil {
-			if rec := s.st.Selections[p.Selection.ID]; rec != nil {
-				q := rec.Query
-				period := q.Period
-				if q.ComparePeriod != "" {
-					period += "（对比 " + q.ComparePeriod + "）"
-				}
-				input = fmt.Sprintf("主体：%s。口径：%s。期间：%s。材料：%s。交付模板：%s。任务：%s",
-					q.Entity, q.Basis, period, strings.Join(q.Materials, "、"), q.Deliverable, p.Goal)
-			}
-		}
 		return &Job{RunID: r.ID, Token: r.Token, Epoch: r.Epoch, Mode: "graph", Team: p.Team, SpecDigest: p.SpecDigest,
-			UserInput: input,
+			UserInput: s.jobInput(r, p),
 			Members:   members, MemberMCPURL: s.cfg.MemberMCPURL, LeaseSeconds: s.cfg.LeaseSeconds, GraphRevision: p.Key(),
 			Model: executorModel}, nil
 	}
 	return nil, nil
+}
+
+// jobInput is the task input the executor gives the team. Must be called
+// with s.mu held.
+func (s *Service) jobInput(r *Run, p *Plan) string {
+	if p.Selection != nil {
+		if rec := s.st.Selections[p.Selection.ID]; rec != nil {
+			q := rec.Query
+			period := q.Period
+			if q.ComparePeriod != "" {
+				period += "（对比 " + q.ComparePeriod + "）"
+			}
+			return fmt.Sprintf("主体：%s。口径：%s。期间：%s。材料：%s。交付模板：%s。任务：%s",
+				q.Entity, q.Basis, period, strings.Join(q.Materials, "、"), q.Deliverable, p.Goal)
+		}
+	}
+	return fmt.Sprintf("案件号：%s。任务：%s", r.CaseID, p.Goal)
 }
 
 // errModelBinding: an executor is about to run a model other than the run's
@@ -672,11 +683,20 @@ func (s *Service) StepGet(runID, token, step string) (bool, string, error) {
 	if !ok {
 		return false, "", fmt.Errorf("step %q is not in the approved plan", step)
 	}
-	if _, remote := s.st.Plans[r.PlanID][r.PlanVersion-1].BusBindings[step]; remote {
+	p := s.st.Plans[r.PlanID][r.PlanVersion-1]
+	if _, remote := p.BusBindings[step]; remote {
 		return false, "", fmt.Errorf("remote node requires input-bound call endpoint")
 	}
 	if st.Status == "done" {
 		st.Reused++
+		if err := s.save(); err != nil {
+			return false, "", err
+		}
+		return true, st.Output, nil
+	}
+	if reused, err := s.reuseStep(r, p, st); err != nil {
+		return false, "", err
+	} else if reused {
 		if err := s.save(); err != nil {
 			return false, "", err
 		}
@@ -729,10 +749,12 @@ func (s *Service) StepPut(runID, token, step, output string) error {
 	if st.Call != nil {
 		return fmt.Errorf("remote result requires the call commit endpoint")
 	}
-	if _, remote := s.st.Plans[r.PlanID][r.PlanVersion-1].BusBindings[step]; remote {
+	p := s.st.Plans[r.PlanID][r.PlanVersion-1]
+	if _, remote := p.BusBindings[step]; remote {
 		return fmt.Errorf("remote result requires the call commit endpoint")
 	}
 	st.Status, st.Output, st.FinishedAt = "done", output, now()
+	s.publishStep(r, p, st)
 	return s.save()
 }
 

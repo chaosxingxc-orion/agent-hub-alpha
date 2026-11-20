@@ -51,7 +51,8 @@
       },
       "input": {"schema": "material-ref"},
       "output": {"schema": "indicator-set", "provides": ["operating_income", "net_profit_attributable", "net_interest_margin", "cost_income_ratio", "npl_balance", "npl_ratio", "provision_coverage", "cet1_advanced"]},
-      "limits": ["只读快照，不联网", "页码按 PR #21 的规则：正文印刷页 = PDF 页 - 1"]
+      "limits": ["只读快照，不联网", "页码按 PR #21 的规则：正文印刷页 = PDF 页 - 1"],
+      "reusable": true
     },
     {
       "id": "ar.operating-analyst", "version": "1.0.0", "node": "operating",
