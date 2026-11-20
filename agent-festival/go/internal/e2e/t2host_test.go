@@ -33,6 +33,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -70,6 +71,26 @@ type resultStore struct {
 	data map[string]storedResult // keyed by operation_id
 }
 
+// cloneStored returns a record whose slice fields own their backing arrays.
+// The store is the single owner of its records: callers may keep, edit or
+// reuse whatever slices they handed in or received, and neither the store's
+// memory nor the durable file can be changed from the outside (external audit
+// GC#27: a caller mutating the returned Facts changed history, and the next
+// put persisted the mutation).
+//
+// slices.Clone preserves the nil/empty distinction (nil stays nil, an empty
+// slice stays empty) — the durable form distinguishes null from [] and a
+// restart must reproduce the same value. Any future aliasing field (slice,
+// array, map, pointer, interface) must be copied here and registered in the
+// pin's allow-list: TestStoredResultCloneCoversAllFields fails both when a
+// field is unregistered and when it is registered but not actually copied.
+// Plain value fields (string, numbers, bool) need no copy and pass.
+func cloneStored(r storedResult) storedResult {
+	r.Facts = slices.Clone(r.Facts)
+	r.References = slices.Clone(r.References)
+	return r
+}
+
 func newResultStore(dir string) (*resultStore, error) {
 	rs := &resultStore{
 		path: filepath.Join(dir, "t2-results.json"),
@@ -99,7 +120,7 @@ func (rs *resultStore) put(opID string, r storedResult) error {
 	if prev, ok := rs.data[opID]; ok && prev.Receipt != r.Receipt {
 		return fmt.Errorf("ErrAlreadyCommitted: opID %q already has a committed result with digest %q (CommittedResults(o)≤1; new digest %q rejected — same-material retry should use serve, new-material should use a new op)", opID, prev.Receipt, r.Receipt)
 	}
-	rs.data[opID] = r
+	rs.data[opID] = cloneStored(r)
 	raw, err := json.MarshalIndent(rs.data, "", "  ")
 	if err != nil {
 		return err
@@ -111,7 +132,7 @@ func (rs *resultStore) get(opID string) (storedResult, bool) {
 	rs.mu.Lock()
 	defer rs.mu.Unlock()
 	r, ok := rs.data[opID]
-	return r, ok
+	return cloneStored(r), ok
 }
 
 // queryForReconciliation is the batch-0 #3 read-face API (matrix row 6:
@@ -127,7 +148,7 @@ func (rs *resultStore) queryForReconciliation(opID, receiptDigest string) (commi
 	if !ok {
 		return false, false, r
 	}
-	return true, r.Receipt == receiptDigest, r
+	return true, r.Receipt == receiptDigest, cloneStored(r)
 }
 
 // lookupByBusinessRequest finds the LATEST result for a business request
@@ -159,7 +180,7 @@ func (rs *resultStore) lookupByBusinessRequest(brID string) (storedResult, strin
 			found = true
 		}
 	}
-	return best, bestOp, found
+	return cloneStored(best), bestOp, found
 }
 
 // revisionNumber extracts the numeric suffix from "er-N" (returns -1 if
@@ -483,7 +504,7 @@ func (h *t2Host) reopen() *t2Host {
 // records the real one. R12' review found this MAJOR; this is the fix).
 func requestForT2(op, revision, evidence, digest, brID string) *adopt.Request {
 	return &adopt.Request{
-		AdoptionVersion: "0.2.0",
+		AdoptionVersion:  "0.2.0",
 		Identity:         ledger.Identity{BusinessRequestID: brID, EvaluationRevision: revision, OperationID: op},
 		Versions:         ledger.Versions{Evidence: evidence, Rule: "rule-credit-v1", Model: "s1-standin", Readout: "r-1", Policy: "p-1"},
 		PayloadDigest:    digest,
