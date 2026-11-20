@@ -1,0 +1,635 @@
+
+===== battery v1.1 run @ 2026-11-17T01:17:50+00:00
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] 要求 rc≠0 ∧ ['FAM-REALDOCS']⊆红族，实得 rc=1 fams=['FAM-REALDOCS']
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md：新增=[40, 41, 42, 43] 删除=[] 期望恰等 [40, 41, 42, 43]/∅
+PASS [V7-洪峰恰等] truth-doc-B.md：新增=[72] 删除=[] 期望恰等 [72]/∅
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-17T02:20:10+00:00
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] 要求 rc≠0 ∧ ['FAM-REALDOCS']⊆红族，实得 rc=1 fams=['FAM-REALDOCS']
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md：新增=[40, 41, 42, 43] 删除=[] 期望恰等 [40, 41, 42, 43]/∅
+PASS [V7-洪峰恰等] truth-doc-B.md：新增=[72] 删除=[] 期望恰等 [72]/∅
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-17T05:24:59+00:00
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] 要求 rc≠0 ∧ ['FAM-REALDOCS']⊆红族，实得 rc=1 fams=['FAM-REALDOCS']
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md：新增=[40, 41, 42, 43] 删除=[] 期望恰等 [40, 41, 42, 43]/∅
+PASS [V7-洪峰恰等] truth-doc-B.md：新增=[72] 删除=[] 期望恰等 [72]/∅
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-17T15:57:59+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] 要求 rc≠0 ∧ ['FAM-REALDOCS']⊆红族，实得 rc=1 fams=['FAM-REALDOCS']
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md：新增=[40, 41, 42, 43] 删除=[] 期望恰等 [40, 41, 42, 43]/∅
+PASS [V7-洪峰恰等] truth-doc-B.md：新增=[72] 删除=[] 期望恰等 [72]/∅
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-18T00:01:59+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] 要求 rc≠0 ∧ ['FAM-REALDOCS']⊆红族，实得 rc=1 fams=['FAM-REALDOCS']
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md：新增=[40, 41, 42, 43] 删除=[] 期望恰等 [40, 41, 42, 43]/∅
+PASS [V7-洪峰恰等] truth-doc-B.md：新增=[72] 删除=[] 期望恰等 [72]/∅
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-18T08:48:35+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-18T15:11:50+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: ' 零样本实验组结论如下。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-18T15:26:21+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: ' 零样本实验组结论如下。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-18T15:58:42+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: ' 零样本实验组结论如下。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-18T22:59:59+00:00
+
+===== battery v1.1 run @ 2026-11-18T23:01:22+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+
+===== battery v1.1 run @ 2026-11-18T23:03:30+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-18T23:10:34+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-18T23:16:48+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-18T23:27:32+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-18T23:32:27+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-18T23:59:22+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T01:02:49+00:00
+
+===== battery v1.1 run @ 2026-11-19T01:05:05+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T03:34:03+00:00
+
+===== battery v1.1 run @ 2026-11-19T03:34:06+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T03:34:36+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+FAIL [V10-冻结面+历史锚] 盘↔JSON 一致=False，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 10/11 PASS ['V10-冻结面+历史锚']
+
+===== battery v1.1 run @ 2026-11-19T03:34:51+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T03:38:35+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T10:13:39+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T10:13:59+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T10:14:16+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+FAIL [V10-冻结面+历史锚] 盘↔JSON 一致=False，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 10/11 PASS ['V10-冻结面+历史锚']
+
+===== battery v1.1 run @ 2026-11-19T10:30:10+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T10:47:19+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+FAIL [V10-冻结面+历史锚] 盘↔JSON 一致=False，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 10/11 PASS ['V10-冻结面+历史锚']
+
+===== battery v1.1 run @ 2026-11-19T10:47:33+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T13:51:57+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T14:41:50+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T15:01:46+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚；v2.7.1 双载体=a74105ad0256∈2），v2.7.2 总分=True，-c rc=0，负对照4态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T15:07:53+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON 一致=True，盘↔账本史面前缀=True（HIST_SHA 三枚；盘上 v2.7.1 前缀a74105ad0256 在双载体集=True），v2.7.2 总分=True，-c rc=0，负对照4态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T15:44:45+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照7态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T15:48:21+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照7态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T15:53:32+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照7态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T16:17:58+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照8态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T16:26:05+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照8态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T16:54:31+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照8态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T16:56:29+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照8态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T17:09:14+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照8态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T17:09:34+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照8态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T17:13:51+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照8态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T23:30:49+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照9态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T23:49:41+00:00
+
+===== battery v1.1 run @ 2026-11-19T23:49:44+00:00
+
+===== battery v1.1 run @ 2026-11-19T23:54:32+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-GT-MIRROR', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照9态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-19T23:55:01+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-GT-MIRROR', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照9态=True
+SUMMARY: 11/11 PASS 全绿
+
+===== battery v1.1 run @ 2026-11-20T00:02:03+00:00
+PASS [V0-基线腿] 未变异隔离副本全绿（rc=0∧红族空∧无 Traceback；崩溃/红可区分性由此钉保）
+PASS [V1-自拆锚-MATRIX列] 要求 rc≠0 ∧ ['FAM-MATRIX']⊆红族，实得 rc=1 fams=['FAM-MATRIX', 'FAM-TOTALS']
+PASS [V2-篡改锚值] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB']
+PASS [V3-自拆锚-REALDOCS值] truth-doc-A 不在场（公开包形态），本腿可见跳过——REALDOCS 篡改可辨性只在战役档案环境可测，如实不声称
+PASS [V4-归属分支摘除] 要求 rc≠0 ∧ ['FAM-ATTRIB']⊆红族，实得 rc=1 fams=['FAM-ATTRIB', 'FAM-GT-MIRROR', 'FAM-NO-SILENT']
+PASS [V5-闭集摘班连] 预期恰翻 ['全红 2 连', '红 3 班'] 且其余钉不动(['两个', '恰红 4'])：rc=1 命中=True 无旁伤=True；红面数=2 首行=selftest FAIL want_flag=False got_flag=True :: '全红 2 连演习明日开始。'
+PASS [V6-摘lstrip] 预期恰翻 ['本次 两个 文件'] 且其余钉不动(['恰红 4', '全红 2 连'])：rc=1 命中=True 无旁伤=True；红面数=1 首行=selftest FAIL want_flag=False got_flag=True :: '本次 两个 文件已通过。'
+PASS [V7-洪峰恰等] truth-doc-A.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V7-洪峰恰等] truth-doc-B.md 不在场（公开包形态），本腿可见跳过——真载体复现请在战役档案环境跑
+PASS [V8/V9-forms] 12 形全表 ALL MATCH
+PASS [V10-冻结面+历史锚] 盘↔JSON=True（v2.7.1 判定模式=全等），盘↔账本史面前缀=True（HIST_SHA 三枚），v2.7.2 总分=True，-c rc=0，负对照9态=True
+SUMMARY: 11/11 PASS 全绿

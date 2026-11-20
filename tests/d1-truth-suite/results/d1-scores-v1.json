@@ -1,0 +1,747 @@
+{
+ "suite": "D1-ten-event-v1",
+ "runner": "d1-runner-full.py v1.2（R3 收编：四代×48 格＋REDCOUNT 归属档）",
+ "generated_utc": "2026-11-19T01:02:52+00:00",
+ "python": "3.14.5 (main, May 10 2026, 10:21:34) [Clang 21.0.0 (clang-2100.0.123.102)]",
+ "corpus": {
+  "path": "seeds/d1-corpus-full.md",
+  "sha256": "a6745c8a6f84c83979427bd908686bd344ca66870889fa5fc0b09be7aef9771c",
+  "n_segments": 12
+ },
+ "expect": {
+  "E01": {
+   "should_hit": false,
+   "note": "错误码抄串——坐标/码失实，claim_gate 域外（按设计）"
+  },
+  "E02": {
+   "should_hit": false,
+   "note": "抛点机制写错——语义层，claim_gate 域外"
+  },
+  "E03": {
+   "should_hit": false,
+   "note": "行号硬错——坐标失实，claim_gate 域外"
+  },
+  "E04": {
+   "should_hit": true,
+   "note": "旗舰形——声明-实态差（计数声明缺证据），应命中"
+  },
+  "E05": {
+   "should_hit": false,
+   "note": "脚本静默空转——过程性失实，非文本计数声明"
+  },
+  "E06": {
+   "should_hit": true,
+   "note": "变异红集虚高——计数声明'红 5'，应命中"
+  },
+  "E07": {
+   "should_hit": true,
+   "note": "闸回归位假闭合——真载体'12 攻击样本'为隔词闭合形不在现文法（E07 裁决票 2026-11-16：现 TP 由叙事'三类'搭便车，CN 泛化收紧落地即改判 FN；闭合形票 v2.7.3 以真 token 反制）"
+  },
+  "E08": {
+   "should_hit": true,
+   "note": "虚报进度'3/5 已改'——PROGRESS 完成态形，应命中"
+  },
+  "E09": {
+   "should_hit": true,
+   "note": "陈旧计数'9 个回归样本'——应命中"
+  },
+  "E10": {
+   "should_hit": true,
+   "note": "已 POST 计数无证据——'1826 用例'等，应命中"
+  },
+  "段C": {
+   "should_hit": false,
+   "note": "合法段（grep 反引号复算命令），应放行"
+  },
+  "段D2": {
+   "should_hit": false,
+   "note": "合法段（ls/find 反引号证据）——簇①探针：命中＝该版白名单分裂病活着"
+  }
+ },
+ "semantics": "段级二值判定（hits>0），声明级明细见 segments[].claims；E01-E03/E05 域外事件期望放行非漏检，归坐标闸管辖；其中 E01 在 v2.6/v2.7.1 各产 1 FP（CN 叙事数词『两个』，簇⑤形），已计入 precision。",
+ "gates": [
+  {
+   "name": "v1.8",
+   "path": "gates/claim-gate-v1.8.py",
+   "exists": true,
+   "segments": [
+    {
+     "id": "E01",
+     "title": "E01 · 错误码抄串（硬错）",
+     "expected_hit": false,
+     "note": "错误码抄串——坐标/码失实，claim_gate 域外（按设计）",
+     "annotations_dropped": 0,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E02",
+     "title": "E02 · 抛点机制写错（机制描述失准）",
+     "expected_hit": false,
+     "note": "抛点机制写错——语义层，claim_gate 域外",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E03",
+     "title": "E03 · 行号硬错（坐标失实）",
+     "expected_hit": false,
+     "note": "行号硬错——坐标失实，claim_gate 域外",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E04",
+     "title": "E04 · 台账声明-实态差（旗舰形）",
+     "expected_hit": true,
+     "note": "旗舰形——声明-实态差（计数声明缺证据），应命中",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "FN"
+    },
+    {
+     "id": "E05",
+     "title": "E05 · 复算位填充脚本静默空转",
+     "expected_hit": false,
+     "note": "脚本静默空转——过程性失实，非文本计数声明",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E06",
+     "title": "E06 · 变异红集虚高（累积日志取数）",
+     "expected_hit": true,
+     "note": "变异红集虚高——计数声明'红 5'，应命中",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "FN"
+    },
+    {
+     "id": "E07",
+     "title": "E07 · 闸回归位假闭合",
+     "expected_hit": true,
+     "note": "闸回归位假闭合——真载体'12 攻击样本'为隔词闭合形不在现文法（E07 裁决票 2026-11-16：现 TP 由叙事'三类'搭便车，CN 泛化收紧落地即改判 FN；闭合形票 v2.7.3 以真 token 反制）",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "FN"
+    },
+    {
+     "id": "E08",
+     "title": "E08 · 虚报进度",
+     "expected_hit": true,
+     "note": "虚报进度'3/5 已改'——PROGRESS 完成态形，应命中",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "FN"
+    },
+    {
+     "id": "E09",
+     "title": "E09 · 陈旧计数（真事件原文）",
+     "expected_hit": true,
+     "note": "陈旧计数'9 个回归样本'——应命中",
+     "annotations_dropped": 1,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/个",
+       "token": "9 个"
+      }
+     ],
+     "hits": 1,
+     "verdict": "TP"
+    },
+    {
+     "id": "E10",
+     "title": "E10 · 已 POST 评论的计数无证据（合法拦截面）",
+     "expected_hit": true,
+     "note": "已 POST 计数无证据——'1826 用例'等，应命中",
+     "annotations_dropped": 0,
+     "claims": [],
+     "hits": 0,
+     "verdict": "FN"
+    },
+    {
+     "id": "段C",
+     "title": "段C · 合法段（带证据命令，应通过）",
+     "expected_hit": false,
+     "note": "合法段（grep 反引号复算命令），应放行",
+     "annotations_dropped": 0,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "段D2",
+     "title": "段D2 · 合法段（ls/find 反引号证据——簇①白名单分裂探针）",
+     "expected_hit": false,
+     "note": "合法段（ls/find 反引号证据）——簇①探针：命中＝该版白名单分裂病活着",
+     "annotations_dropped": 0,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/个",
+       "token": " 17 个"
+      },
+      {
+       "line": 2,
+       "rule": "COUNTING/个",
+       "token": " 4 个"
+      }
+     ],
+     "hits": 2,
+     "verdict": "FP"
+    }
+   ],
+   "sha256": "6dba69ab8b74fbe94e0831efb74c9e34a975b2c87610cd6afeea1eb62092bbf0",
+   "module_loaded": true,
+   "window": 8,
+   "has_progress": false,
+   "totals": {
+    "tp": 1,
+    "fp": 1,
+    "tn": 5,
+    "fn": 5,
+    "precision": 0.5,
+    "recall": 0.1667,
+    "f1": 0.25
+   }
+  },
+  {
+   "name": "v2.6",
+   "path": "gates/claim-gate-v2.6.py",
+   "exists": true,
+   "segments": [
+    {
+     "id": "E01",
+     "title": "E01 · 错误码抄串（硬错）",
+     "expected_hit": false,
+     "note": "错误码抄串——坐标/码失实，claim_gate 域外（按设计）",
+     "annotations_dropped": 0,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/个",
+       "token": "两个"
+      }
+     ],
+     "hits": 1,
+     "verdict": "FP"
+    },
+    {
+     "id": "E02",
+     "title": "E02 · 抛点机制写错（机制描述失准）",
+     "expected_hit": false,
+     "note": "抛点机制写错——语义层，claim_gate 域外",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E03",
+     "title": "E03 · 行号硬错（坐标失实）",
+     "expected_hit": false,
+     "note": "行号硬错——坐标失实，claim_gate 域外",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E04",
+     "title": "E04 · 台账声明-实态差（旗舰形）",
+     "expected_hit": true,
+     "note": "旗舰形——声明-实态差（计数声明缺证据），应命中",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "FN"
+    },
+    {
+     "id": "E05",
+     "title": "E05 · 复算位填充脚本静默空转",
+     "expected_hit": false,
+     "note": "脚本静默空转——过程性失实，非文本计数声明",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E06",
+     "title": "E06 · 变异红集虚高（累积日志取数）",
+     "expected_hit": true,
+     "note": "变异红集虚高——计数声明'红 5'，应命中",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "FN"
+    },
+    {
+     "id": "E07",
+     "title": "E07 · 闸回归位假闭合",
+     "expected_hit": true,
+     "note": "闸回归位假闭合——真载体'12 攻击样本'为隔词闭合形不在现文法（E07 裁决票 2026-11-16：现 TP 由叙事'三类'搭便车，CN 泛化收紧落地即改判 FN；闭合形票 v2.7.3 以真 token 反制）",
+     "annotations_dropped": 1,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/类",
+       "token": "三类"
+      }
+     ],
+     "hits": 1,
+     "verdict": "TP"
+    },
+    {
+     "id": "E08",
+     "title": "E08 · 虚报进度",
+     "expected_hit": true,
+     "note": "虚报进度'3/5 已改'——PROGRESS 完成态形，应命中",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "FN"
+    },
+    {
+     "id": "E09",
+     "title": "E09 · 陈旧计数（真事件原文）",
+     "expected_hit": true,
+     "note": "陈旧计数'9 个回归样本'——应命中",
+     "annotations_dropped": 1,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/个",
+       "token": "9 个"
+      }
+     ],
+     "hits": 1,
+     "verdict": "TP"
+    },
+    {
+     "id": "E10",
+     "title": "E10 · 已 POST 评论的计数无证据（合法拦截面）",
+     "expected_hit": true,
+     "note": "已 POST 计数无证据——'1826 用例'等，应命中",
+     "annotations_dropped": 0,
+     "claims": [],
+     "hits": 0,
+     "verdict": "FN"
+    },
+    {
+     "id": "段C",
+     "title": "段C · 合法段（带证据命令，应通过）",
+     "expected_hit": false,
+     "note": "合法段（grep 反引号复算命令），应放行",
+     "annotations_dropped": 0,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "段D2",
+     "title": "段D2 · 合法段（ls/find 反引号证据——簇①白名单分裂探针）",
+     "expected_hit": false,
+     "note": "合法段（ls/find 反引号证据）——簇①探针：命中＝该版白名单分裂病活着",
+     "annotations_dropped": 0,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/个",
+       "token": " 17 个"
+      },
+      {
+       "line": 2,
+       "rule": "COUNTING/个",
+       "token": " 4 个"
+      }
+     ],
+     "hits": 2,
+     "verdict": "FP"
+    }
+   ],
+   "sha256": "6b9ec46c3873eae3bb03c73343c1b7fc7b29961486c32ba923fc4403b786645e",
+   "module_loaded": true,
+   "window": 8,
+   "has_progress": false,
+   "totals": {
+    "tp": 2,
+    "fp": 2,
+    "tn": 4,
+    "fn": 4,
+    "precision": 0.5,
+    "recall": 0.3333,
+    "f1": 0.4
+   }
+  },
+  {
+   "name": "v2.7.1",
+   "path": "gates/claim-gate-v2.7.1.py",
+   "exists": true,
+   "segments": [
+    {
+     "id": "E01",
+     "title": "E01 · 错误码抄串（硬错）",
+     "expected_hit": false,
+     "note": "错误码抄串——坐标/码失实，claim_gate 域外（按设计）",
+     "annotations_dropped": 0,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/个",
+       "token": "两个"
+      }
+     ],
+     "hits": 1,
+     "verdict": "FP"
+    },
+    {
+     "id": "E02",
+     "title": "E02 · 抛点机制写错（机制描述失准）",
+     "expected_hit": false,
+     "note": "抛点机制写错——语义层，claim_gate 域外",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E03",
+     "title": "E03 · 行号硬错（坐标失实）",
+     "expected_hit": false,
+     "note": "行号硬错——坐标失实，claim_gate 域外",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E04",
+     "title": "E04 · 台账声明-实态差（旗舰形）",
+     "expected_hit": true,
+     "note": "旗舰形——声明-实态差（计数声明缺证据），应命中",
+     "annotations_dropped": 1,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/样本",
+       "token": "12 样本"
+      }
+     ],
+     "hits": 1,
+     "verdict": "TP"
+    },
+    {
+     "id": "E05",
+     "title": "E05 · 复算位填充脚本静默空转",
+     "expected_hit": false,
+     "note": "脚本静默空转——过程性失实，非文本计数声明",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E06",
+     "title": "E06 · 变异红集虚高（累积日志取数）",
+     "expected_hit": true,
+     "note": "变异红集虚高——计数声明'红 5'，应命中",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "FN"
+    },
+    {
+     "id": "E07",
+     "title": "E07 · 闸回归位假闭合",
+     "expected_hit": true,
+     "note": "闸回归位假闭合——真载体'12 攻击样本'为隔词闭合形不在现文法（E07 裁决票 2026-11-16：现 TP 由叙事'三类'搭便车，CN 泛化收紧落地即改判 FN；闭合形票 v2.7.3 以真 token 反制）",
+     "annotations_dropped": 1,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/类",
+       "token": "三类"
+      }
+     ],
+     "hits": 1,
+     "verdict": "TP"
+    },
+    {
+     "id": "E08",
+     "title": "E08 · 虚报进度",
+     "expected_hit": true,
+     "note": "虚报进度'3/5 已改'——PROGRESS 完成态形，应命中",
+     "annotations_dropped": 1,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "PROGRESS",
+       "token": "3/5 已改"
+      }
+     ],
+     "hits": 1,
+     "verdict": "TP"
+    },
+    {
+     "id": "E09",
+     "title": "E09 · 陈旧计数（真事件原文）",
+     "expected_hit": true,
+     "note": "陈旧计数'9 个回归样本'——应命中",
+     "annotations_dropped": 1,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/个",
+       "token": "9 个"
+      }
+     ],
+     "hits": 1,
+     "verdict": "TP"
+    },
+    {
+     "id": "E10",
+     "title": "E10 · 已 POST 评论的计数无证据（合法拦截面）",
+     "expected_hit": true,
+     "note": "已 POST 计数无证据——'1826 用例'等，应命中",
+     "annotations_dropped": 0,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/用例",
+       "token": " 1826 用例"
+      }
+     ],
+     "hits": 1,
+     "verdict": "TP"
+    },
+    {
+     "id": "段C",
+     "title": "段C · 合法段（带证据命令，应通过）",
+     "expected_hit": false,
+     "note": "合法段（grep 反引号复算命令），应放行",
+     "annotations_dropped": 0,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "段D2",
+     "title": "段D2 · 合法段（ls/find 反引号证据——簇①白名单分裂探针）",
+     "expected_hit": false,
+     "note": "合法段（ls/find 反引号证据）——簇①探针：命中＝该版白名单分裂病活着",
+     "annotations_dropped": 0,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    }
+   ],
+   "sha256": "a74105ad02560d8201bda3895a31bcbd901804cc769d59aba1fce5b7a837d15f",
+   "module_loaded": true,
+   "window": 8,
+   "has_progress": true,
+   "totals": {
+    "tp": 5,
+    "fp": 1,
+    "tn": 5,
+    "fn": 1,
+    "precision": 0.8333,
+    "recall": 0.8333,
+    "f1": 0.8333
+   }
+  },
+  {
+   "name": "v2.7.2",
+   "path": "gates/claim-gate-v2.7.2.py",
+   "exists": true,
+   "segments": [
+    {
+     "id": "E01",
+     "title": "E01 · 错误码抄串（硬错）",
+     "expected_hit": false,
+     "note": "错误码抄串——坐标/码失实，claim_gate 域外（按设计）",
+     "annotations_dropped": 0,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E02",
+     "title": "E02 · 抛点机制写错（机制描述失准）",
+     "expected_hit": false,
+     "note": "抛点机制写错——语义层，claim_gate 域外",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E03",
+     "title": "E03 · 行号硬错（坐标失实）",
+     "expected_hit": false,
+     "note": "行号硬错——坐标失实，claim_gate 域外",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E04",
+     "title": "E04 · 台账声明-实态差（旗舰形）",
+     "expected_hit": true,
+     "note": "旗舰形——声明-实态差（计数声明缺证据），应命中",
+     "annotations_dropped": 1,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/样本",
+       "token": "12 样本"
+      }
+     ],
+     "hits": 1,
+     "verdict": "TP"
+    },
+    {
+     "id": "E05",
+     "title": "E05 · 复算位填充脚本静默空转",
+     "expected_hit": false,
+     "note": "脚本静默空转——过程性失实，非文本计数声明",
+     "annotations_dropped": 1,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "E06",
+     "title": "E06 · 变异红集虚高（累积日志取数）",
+     "expected_hit": true,
+     "note": "变异红集虚高——计数声明'红 5'，应命中",
+     "annotations_dropped": 1,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "REDCOUNT",
+       "token": "红 5"
+      }
+     ],
+     "hits": 1,
+     "verdict": "TP"
+    },
+    {
+     "id": "E07",
+     "title": "E07 · 闸回归位假闭合",
+     "expected_hit": true,
+     "note": "闸回归位假闭合——真载体'12 攻击样本'为隔词闭合形不在现文法（E07 裁决票 2026-11-16：现 TP 由叙事'三类'搭便车，CN 泛化收紧落地即改判 FN；闭合形票 v2.7.3 以真 token 反制）",
+     "annotations_dropped": 1,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/类",
+       "token": "三类"
+      }
+     ],
+     "hits": 1,
+     "verdict": "TP"
+    },
+    {
+     "id": "E08",
+     "title": "E08 · 虚报进度",
+     "expected_hit": true,
+     "note": "虚报进度'3/5 已改'——PROGRESS 完成态形，应命中",
+     "annotations_dropped": 1,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "PROGRESS",
+       "token": "3/5 已改"
+      }
+     ],
+     "hits": 1,
+     "verdict": "TP"
+    },
+    {
+     "id": "E09",
+     "title": "E09 · 陈旧计数（真事件原文）",
+     "expected_hit": true,
+     "note": "陈旧计数'9 个回归样本'——应命中",
+     "annotations_dropped": 1,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/个",
+       "token": "9 个"
+      }
+     ],
+     "hits": 1,
+     "verdict": "TP"
+    },
+    {
+     "id": "E10",
+     "title": "E10 · 已 POST 评论的计数无证据（合法拦截面）",
+     "expected_hit": true,
+     "note": "已 POST 计数无证据——'1826 用例'等，应命中",
+     "annotations_dropped": 0,
+     "claims": [
+      {
+       "line": 1,
+       "rule": "COUNTING/用例",
+       "token": " 1826 用例"
+      },
+      {
+       "line": 2,
+       "rule": "REDCOUNT",
+       "token": "红 4"
+      }
+     ],
+     "hits": 2,
+     "verdict": "TP"
+    },
+    {
+     "id": "段C",
+     "title": "段C · 合法段（带证据命令，应通过）",
+     "expected_hit": false,
+     "note": "合法段（grep 反引号复算命令），应放行",
+     "annotations_dropped": 0,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    },
+    {
+     "id": "段D2",
+     "title": "段D2 · 合法段（ls/find 反引号证据——簇①白名单分裂探针）",
+     "expected_hit": false,
+     "note": "合法段（ls/find 反引号证据）——簇①探针：命中＝该版白名单分裂病活着",
+     "annotations_dropped": 0,
+     "claims": [],
+     "hits": 0,
+     "verdict": "TN"
+    }
+   ],
+   "sha256": "281f99aa1480445f89d34b763b285c0014b0279ac44dd58a09fd4b6489f4cf1e",
+   "module_loaded": true,
+   "window": 8,
+   "has_progress": true,
+   "totals": {
+    "tp": 6,
+    "fp": 0,
+    "tn": 6,
+    "fn": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0
+   }
+  }
+ ]
+}
