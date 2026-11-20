@@ -615,6 +615,10 @@ type BlockReason struct {
 	Cause string `json:"cause,omitempty"` // for RECONCILIATION_REQUIRED: which check failed
 	Note  string `json:"note"`
 	At    string `json:"at"`
+	// Startup reconciliation only: the record the disposition rests on and
+	// what was done (BLOCKED FLAGGED RESTORED PENDING_REVIEW).
+	Source      string `json:"source,omitempty"`
+	Disposition string `json:"disposition,omitempty"`
 }
 
 // blockReasonOf is the projected reason of a blocked run. Runs blocked before

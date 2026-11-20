@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -165,5 +166,152 @@ func TestReconciliationLeavesConsistentFinishedRunAlone(t *testing.T) {
 	got := s.st.Runs[r.ID]
 	if got.Status != "done" || got.Reconciliation != nil || got.Blocked != nil {
 		t.Fatalf("consistent finished run: %s %+v %+v", got.Status, got.Reconciliation, got.Blocked)
+	}
+}
+
+// olderBuildBlocks does what the candidate before this change did to a
+// finished run at startup: keep the pre-reconciliation snapshot, then block
+// the run and replace its final output with the reason. withSnapshot false
+// drops the snapshot, as if it was lost.
+func olderBuildBlocks(t *testing.T, e *ar04Env, s *Service, r *Run, withSnapshot bool) string {
+	t.Helper()
+	name := "reconciliation-" + strings.TrimPrefix(sha(string(s.lastSaved)), "sha256:") + ".json"
+	if withSnapshot {
+		if err := os.WriteFile(filepath.Join(e.dir, name), s.lastSaved, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	run := s.st.Runs[r.ID]
+	run.Status, run.Token, run.Blocked, run.Reconciliation = "blocked", "", nil, nil
+	run.Final = "RECONCILIATION_REQUIRED: 采纳账本与快照操作序列不一致；保留原账本与快照，需人工核对，不能重新生成决策。"
+	if err := s.save(); err != nil {
+		t.Fatal(err)
+	}
+	return name
+}
+
+func dispositions(t *testing.T, e *ar04Env) []reconcileRecord {
+	t.Helper()
+	paths, _ := filepath.Glob(filepath.Join(e.dir, "disposition-*.json"))
+	var out []reconcileRecord
+	for _, path := range paths {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var doc struct {
+			PreState string            `json:"pre_state"`
+			Records  []reconcileRecord `json:"records"`
+		}
+		if err := json.Unmarshal(raw, &doc); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := os.Stat(filepath.Join(e.dir, doc.PreState)); err != nil {
+			t.Fatalf("disposition without its pre-reconciliation snapshot: %v", err)
+		}
+		out = append(out, doc.Records...)
+	}
+	return out
+}
+
+func hasRecord(recs []reconcileRecord, run, from, to, disposition, source string) bool {
+	for _, x := range recs {
+		if x.Run == run && x.From == from && x.To == to && x.Disposition == disposition && strings.HasPrefix(x.Source, source) && x.Note != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// First upgrade: the finished run is flagged, and the flag is also kept as a
+// disposition record beside the pre-reconciliation snapshot.
+func TestReconciliationRecordsDisposition(t *testing.T) {
+	e := newAR04(t, true)
+	s := e.open()
+	r, _ := adoptedRun(t, e, s, true)
+	makeLegacy(t, s, r)
+	s = e.open()
+	if rc := s.st.Runs[r.ID].Reconciliation; rc.Disposition != "FLAGGED" || rc.Source != "runs/"+r.ID+"/adopt.jsonl" {
+		t.Fatalf("flag: %+v", rc)
+	}
+	if recs := dispositions(t, e); len(recs) != 1 || !hasRecord(recs, r.ID, "done", "done", "FLAGGED", "runs/") || recs[0].Cause != "LEGACY_ADOPTION_PROTOCOL" {
+		t.Fatalf("records: %+v", recs)
+	}
+}
+
+// Second upgrade: a finished run the older build blocked gets its original
+// status and final output back from the pre-reconciliation snapshot.
+func TestReconciliationRestoresRunBlockedByOlderBuild(t *testing.T) {
+	e := newAR04(t, true)
+	s := e.open()
+	r, _ := adoptedRun(t, e, s, true)
+	makeLegacy(t, s, r)
+	snapshot := olderBuildBlocks(t, e, s, r, true)
+	s = e.open()
+	got := s.st.Runs[r.ID]
+	if got.Status != "done" || got.Final != "final credit report" || got.Blocked != nil {
+		t.Fatalf("not restored: status=%s final=%q blocked=%+v", got.Status, got.Final, got.Blocked)
+	}
+	rc := got.Reconciliation
+	if rc == nil || rc.Cause != "LEGACY_ADOPTION_PROTOCOL" || rc.Disposition != "RESTORED" || rc.Source != snapshot {
+		t.Fatalf("reconciliation: %+v", rc)
+	}
+	if g := graphRunOf(t, s, got); g.Blocked != nil || g.Reconciliation == nil || g.Reconciliation.Disposition != "RESTORED" {
+		t.Fatalf("graph: blocked=%+v reconciliation=%+v", g.Blocked, g.Reconciliation)
+	}
+	if !hasRecord(dispositions(t, e), r.ID, "blocked", "done", "RESTORED", snapshot) {
+		t.Fatalf("records: %+v", dispositions(t, e))
+	}
+	if next, err := s.LeaseAs("worker", "model-a"); err != nil || next != nil {
+		t.Fatalf("restored history leased: %v %v", next, err)
+	}
+	if err := s.ResumeRun(r.ID); err == nil {
+		t.Fatal("restored history resumed")
+	}
+	rev := s.st.Rev
+	if again := e.open(); again.st.Rev != rev {
+		t.Fatal("repeated restart rewrote the restored run")
+	}
+}
+
+// Without original evidence the run stays blocked and is marked for review.
+func TestReconciliationKeepsOlderBlockWithoutEvidence(t *testing.T) {
+	for _, tc := range []struct {
+		name, want string
+		snapshot   bool
+		change     func(*Run)
+	}{
+		{"no snapshot", "未找到对账前快照", false, nil},
+		{"changed after snapshot", "之后任务记录有其他变化", true, func(r *Run) { r.Steps["related"].Output = "edited" }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newAR04(t, true)
+			s := e.open()
+			r, _ := adoptedRun(t, e, s, true)
+			makeLegacy(t, s, r)
+			olderBuildBlocks(t, e, s, r, tc.snapshot)
+			if tc.change != nil {
+				tc.change(s.st.Runs[r.ID])
+				if err := s.save(); err != nil {
+					t.Fatal(err)
+				}
+			}
+			s = e.open()
+			got := s.st.Runs[r.ID]
+			if got.Status != "blocked" || !strings.HasPrefix(got.Final, "RECONCILIATION_REQUIRED") {
+				t.Fatalf("restored without evidence: %s %q", got.Status, got.Final)
+			}
+			expectBlocked(t, s, got, "RECONCILIATION_REQUIRED", "LEGACY_ADOPTION_PROTOCOL")
+			if b := graphRunOf(t, s, got).Blocked; b.Disposition != "PENDING_REVIEW" || !strings.Contains(b.Note, tc.want) {
+				t.Fatalf("blocked: %+v", b)
+			}
+			if !hasRecord(dispositions(t, e), r.ID, "blocked", "blocked", "PENDING_REVIEW", "") {
+				t.Fatalf("records: %+v", dispositions(t, e))
+			}
+			rev := s.st.Rev
+			if again := e.open(); again.st.Rev != rev {
+				t.Fatal("repeated restart rewrote the pending run")
+			}
+		})
 	}
 }

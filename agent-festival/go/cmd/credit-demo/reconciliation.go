@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/openjiuwen/agent-festival/go/internal/adopt"
@@ -18,41 +21,166 @@ import (
 // with nothing left to execute (done, failed, or already blocked for another
 // reason) keeps its status, final output and original block reason; the
 // failed check is recorded beside it, so the finished result stays visible.
+//
+// A run an earlier startup check blocked (an older build also blocked
+// finished runs and replaced their final output) gets its result shown again
+// only from original evidence: a pre-reconciliation snapshot in which it had
+// finished, with nothing else about the run changed since. Without that
+// evidence it stays blocked and is marked for review.
+//
+// Every disposition is also kept in disposition-<digest>.json beside the
+// pre-reconciliation snapshot reconciliation-<digest>.json.
 func (s *Service) reconcileAdoptions() error {
-	changed := false
+	var records []reconcileRecord
+	backups := s.reconciliationBackups()
 	for _, r := range s.st.Runs {
 		issue := s.checkAdoptionSnapshot(r)
-		stopped := r.Status == "done" || r.Status == "failed" ||
-			(r.Status == "blocked" && (r.Blocked == nil || r.Blocked.Code != "RECONCILIATION_REQUIRED"))
+		from := r.Status
+		record := func(b *BlockReason) {
+			records = append(records, reconcileRecord{Run: r.ID, From: from, To: r.Status, Cause: b.Cause, Note: b.Note, Source: b.Source, Disposition: b.Disposition})
+		}
+		ledger := "runs/" + r.ID + "/adopt.jsonl"
+		if r.Status == "blocked" && blockReasonOf(r).Code == "RECONCILIATION_REQUIRED" {
+			orig, source, why := originalResult(r, backups)
+			switch {
+			case orig != nil:
+				r.Status, r.Final, r.Blocked, r.Reconciliation = orig.Status, orig.Final, nil, nil
+				b := &BlockReason{Code: "RECONCILIATION_REQUIRED", Note: "此前启动对账阻断了该任务；已按对账前快照恢复原终态与最终输出", At: now(), Source: source, Disposition: "RESTORED"}
+				if issue != nil {
+					b.Cause, b.Note = issue.cause, issue.note
+					r.Reconciliation = b
+				}
+				record(b)
+			case r.Blocked == nil || r.Blocked.Disposition == "":
+				b := &BlockReason{Code: "RECONCILIATION_REQUIRED", Note: "此前启动对账阻断了该任务，" + why, At: now(), Source: source, Disposition: "PENDING_REVIEW"}
+				if why == "" { // the snapshot shows it could still execute then
+					b.Note, b.Disposition = "此前启动对账阻断了该任务；对账前它仍可执行，保持阻断", "BLOCKED"
+				}
+				if issue != nil {
+					b.Cause = issue.cause
+				}
+				r.Blocked = b
+				record(b)
+			}
+			continue
+		}
+		stopped := r.Status == "done" || r.Status == "failed" || r.Status == "blocked"
 		switch {
 		case issue == nil:
 			if stopped && r.Reconciliation != nil {
 				r.Reconciliation = nil // the records pass now; a blocked run is never unblocked here
-				changed = true
+				record(&BlockReason{Note: "启动对账通过，清除标记", Source: ledger, Disposition: "CLEARED"})
 			}
 		case stopped:
 			if r.Reconciliation == nil || r.Reconciliation.Cause != issue.cause || r.Reconciliation.Note != issue.note {
-				r.Reconciliation = &BlockReason{Code: "RECONCILIATION_REQUIRED", Cause: issue.cause, Note: issue.note, At: now()}
-				changed = true
+				r.Reconciliation = &BlockReason{Code: "RECONCILIATION_REQUIRED", Cause: issue.cause, Note: issue.note, At: now(), Source: ledger, Disposition: "FLAGGED"}
+				record(r.Reconciliation)
 			}
 		default:
 			reason := "RECONCILIATION_REQUIRED: " + issue.note + "；保留原账本与快照，需人工核对，不能重新生成决策。"
 			if r.Status != "blocked" || r.Final != reason || r.Token != "" {
-				s.blockRun(r, BlockReason{Code: "RECONCILIATION_REQUIRED", Cause: issue.cause, Note: issue.note}, reason)
-				changed = true
+				s.blockRun(r, BlockReason{Code: "RECONCILIATION_REQUIRED", Cause: issue.cause, Note: issue.note, Source: ledger, Disposition: "BLOCKED"}, reason)
+				record(r.Blocked)
 			}
 		}
 	}
-	if changed {
+	if len(records) > 0 {
 		// Keep the pre-reconciliation snapshot for operator comparison. The
 		// content-derived name makes repeated restarts retain the same evidence.
-		backup := filepath.Join(s.cfg.DataDir, "reconciliation-"+strings.TrimPrefix(sha(string(s.lastSaved)), "sha256:")+".json")
-		if err := s.writeState(backup, json.RawMessage(s.lastSaved)); err != nil {
+		digest := strings.TrimPrefix(sha(string(s.lastSaved)), "sha256:")
+		if err := s.writeState(filepath.Join(s.cfg.DataDir, "reconciliation-"+digest+".json"), json.RawMessage(s.lastSaved)); err != nil {
 			return fmt.Errorf("save reconciliation evidence: %w", err)
+		}
+		sort.Slice(records, func(i, j int) bool { return records[i].Run < records[j].Run })
+		if err := s.writeState(filepath.Join(s.cfg.DataDir, "disposition-"+digest+".json"), map[string]any{
+			"at": now(), "pre_state": "reconciliation-" + digest + ".json", "records": records}); err != nil {
+			return fmt.Errorf("save reconciliation dispositions: %w", err)
 		}
 		return s.save()
 	}
 	return nil
+}
+
+// reconcileRecord is one startup disposition: status before and after, the
+// failed check, the record it rests on, and what was done.
+type reconcileRecord struct {
+	Run         string `json:"run"`
+	From        string `json:"from"`
+	To          string `json:"to"`
+	Cause       string `json:"cause,omitempty"`
+	Note        string `json:"note"`
+	Source      string `json:"source"`
+	Disposition string `json:"disposition"`
+}
+
+type stateBackup struct {
+	name string
+	st   State
+}
+
+// reconciliationBackups reads the pre-reconciliation snapshots kept in the
+// data directory. Unreadable ones are skipped: they cannot be evidence.
+func (s *Service) reconciliationBackups() []stateBackup {
+	paths, _ := filepath.Glob(filepath.Join(s.cfg.DataDir, "reconciliation-*.json"))
+	sort.Strings(paths)
+	var out []stateBackup
+	for _, path := range paths {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			continue
+		}
+		var st State
+		if json.Unmarshal(raw, &st) == nil {
+			out = append(out, stateBackup{filepath.Base(path), st})
+		}
+	}
+	return out
+}
+
+// originalResult finds the run as it was before a startup check blocked it.
+// Only a finished original whose record matches the current one apart from
+// what blocking changes counts; otherwise why says what is missing. A source
+// without an original or a reason means the run could still execute then.
+func originalResult(r *Run, backups []stateBackup) (orig *Run, source, why string) {
+	if len(backups) == 0 {
+		return nil, "", "未找到对账前快照，原结果待核对"
+	}
+	var found *Run
+	for _, b := range backups {
+		o := b.st.Runs[r.ID]
+		if o == nil || o.Status == "blocked" {
+			continue
+		}
+		if o.Status != "done" && o.Status != "failed" {
+			source = b.name
+			continue
+		}
+		if !sameApartFromBlock(r, o) {
+			return nil, b.name, "对账前快照之后任务记录有其他变化，原结果待核对"
+		}
+		if found != nil && (found.Status != o.Status || found.Final != o.Final) {
+			return nil, b.name, "多份对账前快照记录的原结果不一致，原结果待核对"
+		}
+		found, source = o, b.name
+	}
+	if found != nil {
+		return found, source, ""
+	}
+	if source != "" {
+		return nil, source, ""
+	}
+	return nil, "", "对账前快照中没有该任务的原结果，原结果待核对"
+}
+
+// sameApartFromBlock compares two records of one run, ignoring the fields
+// blocking a run changes.
+func sameApartFromBlock(cur, orig *Run) bool {
+	c, o := *cur, *orig
+	c.Status, c.Final, c.Token, c.TokenSaved, c.Blocked, c.Reconciliation = "", "", "", "", nil, nil
+	o.Status, o.Final, o.Token, o.TokenSaved, o.Blocked, o.Reconciliation = "", "", "", "", nil, nil
+	a, err1 := json.Marshal(c)
+	b, err2 := json.Marshal(o)
+	return err1 == nil && err2 == nil && bytes.Equal(a, b)
 }
 
 // reconcileIssue is a failed startup check: a stable cause code and the
