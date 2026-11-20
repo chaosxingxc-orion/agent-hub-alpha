@@ -57,6 +57,71 @@ class RemoteWindowIntegrationTest {
         assertEquals(local, requireSourceTask(local));
     }
 
+    @Test void observation503KeepsReceivedRemoteIdentityWithoutResend() throws Exception {
+        for (boolean forwarded : List.of(false, true)) {
+            try (var h = new Harness(temp.resolve("observation-retry-" + forwarded))) {
+                var proxy = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+                var transports = new AtomicInteger();
+                var original = new AtomicReference<JsonNode>();
+                var retry = new AtomicReference<JsonNode>();
+                var upstream = HttpClient.newHttpClient();
+                var storageFailure = "{\"error\":{\"code\":\"STORAGE_UNAVAILABLE\"}}".getBytes(StandardCharsets.UTF_8);
+                proxy.createContext("/", exchange -> {
+                    try (exchange) {
+                        byte[] body = exchange.getRequestBody().readAllBytes();
+                        boolean first = false;
+                        if (exchange.getRequestURI().getPath().endsWith("/observations")) {
+                            var fact = Json.read(new String(body, StandardCharsets.UTF_8));
+                            if (fact.path("state").asText().equals("TRANSPORT")) {
+                                first = transports.incrementAndGet() == 1;
+                                if (first) { original.set(fact); } else { retry.set(fact); }
+                            }
+                        }
+                        if (first && !forwarded) {
+                            exchange.sendResponseHeaders(503, storageFailure.length);
+                            exchange.getResponseBody().write(storageFailure);
+                            return;
+                        }
+                        var request = HttpRequest.newBuilder(URI.create(h.base + exchange.getRequestURI()))
+                                .header("Authorization", exchange.getRequestHeaders().getFirst("Authorization"))
+                                .header("Content-Type", "application/json")
+                                .method(exchange.getRequestMethod(), HttpRequest.BodyPublishers.ofByteArray(body)).build();
+                        var reply = upstream.send(request, HttpResponse.BodyHandlers.ofByteArray());
+                        byte[] result = first && reply.statusCode() == 200 ? storageFailure : reply.body();
+                        exchange.sendResponseHeaders(first && reply.statusCode() == 200 ? 503 : reply.statusCode(), result.length);
+                        exchange.getResponseBody().write(result);
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                    }
+                });
+                proxy.start();
+                try {
+                    var control = new ControlClient("http://127.0.0.1:" + proxy.getAddress().getPort(), h.config.path("tokens").path("worker").asText());
+                    var permit = h.control.post(h.path + "/nodes/" + h.node + "/resolve", Map.of("owner", h.owner, "epoch", h.epoch));
+                    var worker = new RemoteExpertExecutor(control, h.config.path("bus"));
+                    assertEquals("REMOTE_FAILED", assertThrows(ControlClient.ControlFailure.class,
+                            () -> worker.execute(h.task().path("task_id").asText(), h.node, h.owner, h.epoch, permit)).code);
+                    assertEquals(2, transports.get());
+                    assertEquals(original.get(), retry.get());
+                    assertEquals(1, h.sends.get());
+                    assertEquals(0, h.gets.get());
+                    var call = h.calls().getFirst();
+                    assertEquals("fixture-remote-task", call.path("remote_task_id").asText());
+                    assertEquals("FAILED", call.path("state").asText());
+                    var observations = h.control.get("/v1/calls/" + call.path("call_id").asText() + "/observations");
+                    assertEquals(2, observations.size());
+                    long recorded = h.control.get(h.path + "/events").valueStream()
+                            .filter(event -> event.path("kind").asText().equals("REMOTE_OBSERVATION")).count();
+                    assertEquals(2, recorded);
+                    h.saveEvidence("received-observation-503-" + forwarded, Map.of("forwarded_first_observation", forwarded,
+                            "gateway_sends", 1, "transport_write_attempts", 2, "observations", 2, "recovered_remote_identity", true));
+                } finally {
+                    proxy.stop(0);
+                }
+            }
+        }
+    }
+
     @Test void changedBusEnvironmentBlocksBothNewSendAndRecoveryQuery() throws Exception {
         for (boolean recovery : List.of(false, true)) {
             try (var h = new Harness(temp.resolve("bus-change-" + recovery))) {

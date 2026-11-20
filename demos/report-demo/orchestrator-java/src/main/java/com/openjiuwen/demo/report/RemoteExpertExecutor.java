@@ -114,9 +114,32 @@ final class RemoteExpertExecutor {
     }
 
     private void observe(JsonNode call, String state, String remoteID, JsonNode remote) {
-        control.post("/v1/calls/" + call.path("call_id").asText() + "/observations",
-                Map.of("event_id", UUID.randomUUID().toString(), "state", state, "remote_task_id", remoteID,
-                        "context_id", call.path("context_id").asText(), "payload", remote));
+        recordObservation(call, state, remoteID, remote);
+    }
+
+    private void recordObservation(JsonNode call, String state, String remoteID, Object payload) {
+        String path = "/v1/calls/" + call.path("call_id").asText() + "/observations";
+        var observation = Map.of("event_id", UUID.randomUUID().toString(), "state", state, "remote_task_id", remoteID,
+                "context_id", call.path("context_id").asText(), "payload", payload);
+        // Keep the received snapshot and event identity across a transient Go/PG
+        // failure. This loop can only replay evidence, never a Gateway command.
+        for (int attempt = 1; ; attempt++) {
+            try {
+                control.post(path, observation);
+                return;
+            } catch (ControlClient.ControlFailure failure) {
+                if (attempt == 3 || failure.status != 503 || Thread.currentThread().isInterrupted()
+                        || !(failure.code.equals("STORAGE_UNAVAILABLE") || failure.code.equals("CONTROL_UNAVAILABLE"))) {
+                    throw failure;
+                }
+                try {
+                    Thread.sleep(200L * attempt);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw failure;
+                }
+            }
+        }
     }
 
     private JsonNode discover(JsonNode capability) {
@@ -195,9 +218,8 @@ final class RemoteExpertExecutor {
             // task association before later polling/parsing can fail; no headers.
             boolean failed = response.statusCode() != 200 || value.has("error");
             Object safeResponse = failed ? Map.of("code", remoteErrorCode(response.statusCode(), value)) : value;
-            control.post("/v1/calls/"+call.path("call_id").asText()+"/observations",Map.of("event_id",UUID.randomUUID().toString(),"state","TRANSPORT",
-                    "remote_task_id",remoteID,"context_id",call.path("context_id").asText(),
-                    "payload",Map.of("method",method,"http_status",response.statusCode(),"response",safeResponse)));
+            recordObservation(call, "TRANSPORT", remoteID,
+                    Map.of("method", method, "http_status", response.statusCode(), "response", safeResponse));
             if (failed) {
                 throw new ControlClient.ControlFailure(remoteErrorCode(response.statusCode(), value), response.statusCode());
             }

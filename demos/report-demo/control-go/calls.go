@@ -153,7 +153,7 @@ func (s *Store) Observe(ctx context.Context, callID, source string, o Observatio
 			if previous != h || previousCall != callID {
 				return nil, fault("INPUT_CONFLICT", "event identity changed content", 409)
 			}
-			return map[string]string{"status": "REUSE", "event_id": o.EventID}, nil
+			return existingReceipt{map[string]string{"status": "REUSE", "event_id": o.EventID}}, nil
 		}
 		if !errors.Is(err, pgx.ErrNoRows) {
 			return nil, err
