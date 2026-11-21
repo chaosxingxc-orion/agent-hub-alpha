@@ -54,6 +54,14 @@ type storedResult struct {
 	BusinessReqID string   `json:"business_request_id"`
 	EvaluationRev string   `json:"evaluation_revision"`
 	KnowledgeUsed string   `json:"knowledge_used,omitempty"`
+	// KnowledgeVersion is the DECLARED version of the knowledge method that
+	// produced this result. It is a provenance pointer, not a content
+	// attestation: the host records what the served method declared, and a
+	// fresh host can read it without the in-memory method registry. Empty
+	// means "not recorded" (a pre-fix row, a non-knowledge result, or a
+	// method published without a version) — it does not mean "no knowledge
+	// was used".
+	KnowledgeVersion string `json:"knowledge_version,omitempty"`
 	// CmdDigest is the command-material binding (κ) this result was produced
 	// under — the retry-conflict face (MR !2 X3-13/RV-02): a retry carrying a
 	// different digest must Conflict, never silently serve this result.
@@ -288,9 +296,11 @@ func (m knowledgeMethod) execute(inputs map[string]string) (storedResult, error)
 		facts = append(facts, "no_overdue_beyond_threshold")
 	}
 	return storedResult{
-		Receipt:       receipt,
-		Facts:         facts,
-		BusinessReqID: inputs["business_request_id"],
+		Receipt:          receipt,
+		Facts:            facts,
+		BusinessReqID:    inputs["business_request_id"],
+		KnowledgeUsed:    m.ID,
+		KnowledgeVersion: m.Version,
 	}, nil
 }
 
@@ -483,7 +493,7 @@ func (h *t2Host) reopen() *t2Host {
 // records the real one. R12' review found this MAJOR; this is the fix).
 func requestForT2(op, revision, evidence, digest, brID string) *adopt.Request {
 	return &adopt.Request{
-		AdoptionVersion: "0.2.0",
+		AdoptionVersion:  "0.2.0",
 		Identity:         ledger.Identity{BusinessRequestID: brID, EvaluationRevision: revision, OperationID: op},
 		Versions:         ledger.Versions{Evidence: evidence, Rule: "rule-credit-v1", Model: "s1-standin", Readout: "r-1", Policy: "p-1"},
 		PayloadDigest:    digest,
