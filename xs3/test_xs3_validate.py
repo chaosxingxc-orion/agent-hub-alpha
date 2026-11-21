@@ -10,7 +10,8 @@
 族覆盖（每族至少一案，正控在位防「恒 False 假绿」）：
   A validate 守卫族   —— 空派生集/缺格/重格/空判定/空依据（邢三命令原文为锚案）
   B 派生族           —— cells_from_prompt 五格/六格/无格（count 不落硬编码的实证面）
-  C attempt 生命周期族 —— 同秒双发不覆盖('x'+uuid)/同名拒绝覆写/一行重建运行条件
+  C attempt 生命周期族 —— 同秒双发不覆盖('x'+uuid)/同键覆写拒绝/一行重建运行条件/
+                        一生命周期两事件共享身份/跨秒身份稳定
   D 解析路径族        —— 强杀窗口 PENDING 在案/畸形体入台账不裸崩/非 str 归一/
                         anthropic blocks 真形分支（R11-F1）/HTTP 失败终态入台账（R11-M1
                         ——四终态路径全覆盖）/choices 分支正控（R11-r3-M1——双解析分支×
@@ -22,6 +23,7 @@
 每个红案耦合一个变异：撤销对应守卫 → 本电池必须红（杀灭清单见 134号 执行记录）。
 """
 import importlib.util
+import re
 import json
 import pathlib
 import sys
@@ -108,15 +110,20 @@ def c_two_attempts_distinct():
         return len(rows) == 2 and rows[0]["attempt_id"] != rows[1]["attempt_id"]
 
 def c_append_only_refuses_overwrite():
-    """同名覆写拒绝：'x' 模式对已存在文件名大声失败（FileExistsError）而非替换记录。"""
+    """同名覆写拒绝：同一 (attempt_id, event_id) 再写 → 'x' 模式大声失败
+    （FileExistsError）且原记录未被替换。
+
+    注（XS3-RV-04 后）：文件名键是 (attempt_id, event_id)，不再是单独
+    attempt_id——同一 attempt 的第二个事件必须能写（见 C4），所以覆写闸
+    的探针改成显式注入同 event_id。"""
     with tempfile.TemporaryDirectory() as td:
         RUN.OUT = pathlib.Path(td)
         with mock.patch.object(RUN.time, "strftime", return_value="20261115-120000"):
             RUN.log_attempt("q", {"model": "s", "version_pin": "s"}, None, "PENDING", 0.0,
-                            attempt_id="deadbee1")
+                            attempt_id="20261115-120000-deadbee1", event_id="aaaaaaaa")
             try:
                 RUN.log_attempt("q", {"model": "s", "version_pin": "s"}, None, "FAILED", 0.0,
-                                attempt_id="deadbee1")
+                                attempt_id="20261115-120000-deadbee1", event_id="aaaaaaaa")
                 return False  # 覆写被静默接受 = 闸没了
             except FileExistsError:
                 return _attempt_rows(pathlib.Path(td))[0]["status"] == "PENDING"
@@ -127,17 +134,77 @@ def c_row_reconstructs_run():
         RUN.OUT = pathlib.Path(td)
         RUN.log_attempt("q", {"model": "m1", "version_pin": "vp"}, None, "PENDING", 0.0,
                         prompt_digest="a" * 12, cells=FIVE, proto="anthropic",
-                        temperature=0, max_tokens=32768, attempt_id="aaa11111")
+                        temperature=0, max_tokens=32768, attempt_id="20261115-120000-aaa11111")
         r = _attempt_rows(pathlib.Path(td))[0]
         return (len(r["attempt_id"].split("-")) == 3
+                and len(r["event_id"]) == 8
+                and r["attempt_id"] != r["event_id"]
                 and r["status"] == "PENDING" and r["prompt_digest"] == "a" * 12
                 and r["cells"] == FIVE and r["model"] == "m1"
                 and r["temperature"] == 0 and r["max_tokens"] == 32768)
 
 
+def c_one_attempt_two_events_share_identity():
+    """XS3-RV-04 主钉：一个生命周期写两次事件（同秒）——两行共享 attempt_id，
+    event_id 互异，两个文件都在。
+
+    这是「只补传 _aid」那种修法会崩的形态：文件名若只按 attempt_id 拼，第二次
+    写入会撞 'x' 模式并丢掉终态行。"""
+    with tempfile.TemporaryDirectory() as td:
+        RUN.OUT = pathlib.Path(td)
+        with mock.patch.object(RUN.time, "strftime", return_value="20261115-120000"):
+            aid = RUN._mint_attempt_id()
+            RUN.log_attempt("q", {"model": "s", "version_pin": "s"}, None, "PENDING", 0.0,
+                            attempt_id=aid)
+            RUN.log_attempt("q", {"model": "s", "version_pin": "s"}, None, "COMPLETE", 0.0,
+                            attempt_id=aid)
+        rows = _attempt_rows(pathlib.Path(td))
+        aid = rows[0]["attempt_id"] if rows else ""
+        return (len(rows) == 2
+                and len({r["attempt_id"] for r in rows}) == 1
+                and len({r["event_id"] for r in rows}) == 2
+                and re.fullmatch(r"\d{8}-\d{6}-[0-9a-f]{8}", aid) is not None
+                and {r["status"] for r in rows} == {"PENDING", "COMPLETE"})
+
+
+def c_lifecycle_crosses_seconds():
+    """XS3-RV-04 跨秒钉：PENDING 与终态若落在不同秒，attempt_id 仍必须相同。
+
+    strftime 按「铸身份 → PENDING 行 → 终态行」三次调用给出三个不同时间戳。
+    若记录里的 attempt_id 仍按每次调用的 ts 拼（旧病），两行的 attempt_id 会
+    分叉——这正是「只补传 UUID 而不固定完整身份」漏掉的形态。
+
+    Mutation anchor：把记录 attempt_id 改回 f"{ts}-{aid}" → 本案红。"""
+    def ticking_clock():
+        """strftime callable: every call advances one second. Binding the pin to
+        a CALL COUNT (a fixed side_effect list) would break on any harmless
+        extra call; a ticking clock stays valid for any number of calls."""
+        n = {"i": 0}
+        def tick(*_a, **_k):
+            n["i"] += 1
+            return f"20261115-1200{n['i']:02d}"
+        return tick
+
+    with tempfile.TemporaryDirectory() as td:
+        exit_seen, rows = _mocked_run(
+            td,
+            response_body={"choices": [{"message": {"content": COMPLETE_FIVE}}]},
+            strftime_side=ticking_clock(),
+        )
+        ids = {r["attempt_id"] for r in rows}
+        tss = {r["ts"] for r in rows}
+        aid = rows[0]["attempt_id"] if rows else ""
+        return (exit_seen is None and len(rows) == 2
+                and len(ids) == 1
+                and len(tss) == 2
+                and re.fullmatch(r"\d{8}-\d{6}-[0-9a-f]{8}", aid) is not None
+                and {r["status"] for r in rows} == {"PENDING", "COMPLETE"})
+
+
 # ── D. 解析路径族（mock 整跑 main——邢 F1 回执验证脚本形态） ──────────
 
-def _mocked_run(td, response_body=None, urlopen_side_effect=None, prompt_text=FIVE_GRID_PROMPT + "\n"):
+def _mocked_run(td, response_body=None, urlopen_side_effect=None,
+                prompt_text=FIVE_GRID_PROMPT + "\n", strftime_side=None):
     """在临时目录内整跑 main()：钉死时钟、注入钥匙/argv、拦截 urlopen。"""
     RUN.OUT = pathlib.Path(td)
     prompt_file = pathlib.Path(td) / "prompt.md"
@@ -146,7 +213,10 @@ def _mocked_run(td, response_body=None, urlopen_side_effect=None, prompt_text=FI
         RUN.OUT = pathlib.Path(fake_results)  # 台账另放，prompt 同目录不冲突
         with mock.patch.dict(RUN.os.environ, {"XS3_KEY": "x"}), \
              mock.patch.object(sys, "argv", ["r", "--arm", "qwen", "--prompt", str(prompt_file)]), \
-             mock.patch.object(RUN.time, "strftime", return_value="20261115-130000"), \
+             mock.patch.object(
+                 RUN.time, "strftime",
+                 **({"side_effect": strftime_side} if strftime_side else {"return_value": "20261115-130000"})
+             ), \
              mock.patch("urllib.request.urlopen",
                         side_effect=urlopen_side_effect,
                         **({} if urlopen_side_effect else {})) as _u:
@@ -173,8 +243,13 @@ def d_kill_window_pending():
         def killed(*a, **k):
             raise KeyboardInterrupt
         exit_seen, rows = _mocked_run(td, urlopen_side_effect=killed)
+        # The orphan row must stay identifiable: it carries the lifecycle id
+        # (whatever its format) and its own event id. The id's SEGMENT COUNT is
+        # not a contract here — the property is "one lifecycle, one identity".
         return (exit_seen == "KILL" and len(rows) == 1
-                and rows[0]["status"] == "PENDING")
+                and rows[0]["status"] == "PENDING"
+                and bool(rows[0]["attempt_id"])
+                and len(rows[0]["event_id"]) == 8)
 
 def d_parse_fail_lands_ledger():
     """畸形体（非 dict JSON）→ SystemExit 且 FAILED:parse 行入台账（RV25-03——
@@ -185,7 +260,9 @@ def d_parse_fail_lands_ledger():
         statuses = {r["status"] for r in rows}
         return (isinstance(exit_seen, SystemExit) and len(rows) == 2
                 and "PENDING" in statuses
-                and any("parse" in s for s in statuses))
+                and any("parse" in s for s in statuses)
+                and len({r["attempt_id"] for r in rows}) == 1
+                and len({r["event_id"] for r in rows}) == 2)
 
 def d_nonstr_content_normalised():
     """非 str content（int）→ 归一为空 → INCOMPLETE 落行不裸崩（R8 M2——
@@ -196,7 +273,9 @@ def d_nonstr_content_normalised():
         statuses = [r["status"] for r in rows]
         return (exit_seen is None and len(rows) == 2
                 and statuses.count("PENDING") == 1
-                and statuses.count("INCOMPLETE") == 1)
+                and statuses.count("INCOMPLETE") == 1
+                and len({r["attempt_id"] for r in rows}) == 1
+                and len({r["event_id"] for r in rows}) == 2)
 
 def d_anthropic_blocks_branch():
     """R11-F1(M) 修复：anthropic content-blocks 分支（volcano 兼容层真形——两臂
@@ -208,7 +287,9 @@ def d_anthropic_blocks_branch():
         statuses = [r["status"] for r in rows]
         return (exit_seen is None and len(rows) == 2
                 and statuses.count("PENDING") == 1
-                and statuses.count("COMPLETE") == 1)
+                and statuses.count("COMPLETE") == 1
+                and len({r["attempt_id"] for r in rows}) == 1
+                and len({r["event_id"] for r in rows}) == 2)
 
 def d_choices_branch_positive():
     """R11-r3-M1 修复：choices 分支正控（OpenAI 形合法回件→COMPLETE）——双解析
@@ -220,7 +301,9 @@ def d_choices_branch_positive():
         statuses = [r["status"] for r in rows]
         return (exit_seen is None and len(rows) == 2
                 and statuses.count("PENDING") == 1
-                and statuses.count("COMPLETE") == 1)
+                and statuses.count("COMPLETE") == 1
+                and len({r["attempt_id"] for r in rows}) == 1
+                and len({r["event_id"] for r in rows}) == 2)
 
 def d_request_body_matches_arms():
     """R11-r4-M1 修复：请求体 sampling 面首钉——body 键集穷尽（恰四键）+各键==ARMS 单源值+prompt
@@ -276,6 +359,8 @@ CASES = [
     ("C1 two_attempts_distinct(邢案4)", c_two_attempts_distinct),
     ("C2 append_only 拒覆写", c_append_only_refuses_overwrite),
     ("C3 row_reconstructs", c_row_reconstructs_run),
+    ("C4 one_attempt_two_events", c_one_attempt_two_events_share_identity),
+    ("C5 lifecycle across seconds", c_lifecycle_crosses_seconds),
     ("D1 kill_window PENDING", d_kill_window_pending),
     ("D2 parse_fail 入台账", d_parse_fail_lands_ledger),
     ("D3 nonstr_content 归一", d_nonstr_content_normalised),
