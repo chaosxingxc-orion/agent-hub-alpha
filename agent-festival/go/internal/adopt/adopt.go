@@ -374,7 +374,7 @@ func (m *Machine) dispatchGated(op string, liveGrants []ledger.Grant, observedDi
 		// architecture has ruled out, and the sentinel is explained.
 		return m.refuse(st, fmt.Sprintf("conditional commit rejected (E6/C4): the caller observed dispatch seq %d but the operation has no dispatch event (version -1) — the observation was never this operation's version", observedDispatchSeq))
 	}
-	if !grantsCover(liveGrants, st.grants) {
+	if !GrantsCover(liveGrants, st.grants) {
 		return m.refuse(st, "live grant set no longer covers the grants pinned at decision time (revocation check, 14-A4)")
 	}
 	// R31 M-2: the R30 detail split's two non-fresh arms were DEAD CODE —
@@ -766,48 +766,78 @@ func requestUTF8Errors(req *Request) []string {
 	return errs
 }
 
-// grantsCover reports whether the live set still covers every pinned grant:
-// same kind and selector, every pinned action present, and an effect at
-// least as severe. An empty pinned set is vacuously covered — requests are
-// required to carry at least one grant by the adoption schema, so live
-// machines see a non-empty pin.
-func grantsCover(live, pinned []ledger.Grant) bool {
+// GrantsCover reports whether the live grants cover the pinned grants.
+//
+// The unit of comparison is the ATOM (kind, selector, action), not the grant
+// record: for every action a pinned grant requires, some live grant with the
+// same kind and selector must carry that action with an effect rank at least
+// as high. This is what makes an EQUIVALENT REGROUPING transparent — one
+// grant {modify, execute} and two grants {modify}+{execute} express the same
+// authority and must be judged the same (external audit GC#23: a split
+// representation was accepted by admission and then refused at dispatch,
+// stopping a flow that had already been approved).
+//
+// The aggregation is deliberately per action, not "the union of some grant's
+// actions": a split that separates an action from the effect level it was
+// pinned at — {execute @irreversible} becoming {execute @none} plus
+// {modify @irreversible} — must still be REFUSED. A naive union accepts it,
+// which would be a new privilege-widening face, not a fix.
+//
+// Revocation semantics are unchanged: deleting a required action, lowering
+// the effect of the grant that carries it, or moving it to another
+// kind/selector all still fail. A pinned grant with an EMPTY ACTIONS list is
+// refused (an actionless pin is a fixture bug, not a universal permit), and a
+// pinned effect level this judge cannot rank is refused as well.
+//
+// An empty REQUIREMENT LIST has nothing to require and is vacuously covered
+// (both the adoption and the ledger schema require minItems 1, so a real
+// request never reaches that shape); this is distinct from a pinned grant
+// with no ACTIONS, which is refused above.
+//
+// Shape boundary: this judge reads the LEDGER's flat grant form (kind,
+// selector, actions, effect). The compose layer's nested resource form is a
+// different document and is judged there, not here.
+func GrantsCover(live, pinned []ledger.Grant) bool {
 	for _, p := range pinned {
-		covered := false
-		for _, l := range live {
-			if l.Kind != p.Kind || l.Selector != p.Selector {
-				continue
-			}
-			if !containsAll(l.Actions, p.Actions) {
-				continue
-			}
-			if effectRank(l.Effect) < effectRank(p.Effect) {
-				continue
-			}
-			covered = true
-			break
-		}
-		if !covered {
+		if len(p.Actions) == 0 {
 			return false
+		}
+		// Fail closed on an effect level this judge cannot rank: rank -1
+		// compares below nothing, so without this a garbage pinned level would
+		// be covered by any live grant.
+		if effectRank(p.Effect) < 0 {
+			return false
+		}
+		for _, action := range p.Actions {
+			covered := false
+			for _, l := range live {
+				if l.Kind != p.Kind || l.Selector != p.Selector {
+					continue
+				}
+				if !containsAction(l.Actions, action) {
+					continue
+				}
+				if effectRank(l.Effect) < effectRank(p.Effect) {
+					continue
+				}
+				covered = true
+				break
+			}
+			if !covered {
+				return false
+			}
 		}
 	}
 	return true
 }
 
-func containsAll(have, want []string) bool {
-	for _, w := range want {
-		found := false
-		for _, h := range have {
-			if h == w {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
+func containsAction(have []string, want string) bool {
+	for _, h := range have {
+		if h == want {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func effectRank(e string) int {
