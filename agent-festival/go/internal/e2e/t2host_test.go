@@ -483,7 +483,7 @@ func (h *t2Host) reopen() *t2Host {
 // records the real one. R12' review found this MAJOR; this is the fix).
 func requestForT2(op, revision, evidence, digest, brID string) *adopt.Request {
 	return &adopt.Request{
-		AdoptionVersion: "0.2.0",
+		AdoptionVersion:  "0.2.0",
 		Identity:         ledger.Identity{BusinessRequestID: brID, EvaluationRevision: revision, OperationID: op},
 		Versions:         ledger.Versions{Evidence: evidence, Rule: "rule-credit-v1", Model: "s1-standin", Readout: "r-1", Policy: "p-1"},
 		PayloadDigest:    digest,
@@ -499,84 +499,43 @@ func dispatchRequiredGrants() []ledger.Grant {
 	return []ledger.Grant{{Kind: "tool", Selector: "tool://credit-transfer", Actions: []string{"execute"}, Effect: "irreversible"}}
 }
 
-// grantsCoverEffect is the DISPATCH-gate coverage check — unlike
-// grantsCoverRead (the R29 m-5 read-face subset, which deliberately ignores
-// Effect because reads are Effect:"none" here), the effect gate compares the
-// Effect rank: a downgraded grant (execute action under Effect:"none") must
-// not admit an irreversible effect path (R2 F-2 — the pinned
-// Effect:"irreversible" was decorative under the read checker).
+// grantsCoverEffect is the DISPATCH-gate coverage check. It delegates to the
+// machine's own grant judgment: the T2
+// fixture must not carry a second implementation of the coverage rule (a
+// fixture-local copy is how the split-authority bug stayed invisible — the
+// machine refused a regrouped grant set while the fixture still described
+// the old single-grant shape). Empty pinned stays refused: an empty
+// requirement list is a fixture bug, not a permit.
 func grantsCoverEffect(live, pinned []ledger.Grant) bool {
-	for _, p := range pinned {
-		covered := false
-		for _, l := range live {
-			if l.Kind != p.Kind || l.Selector != p.Selector || l.Effect != p.Effect {
-				continue
-			}
-			allActions := true
-			for _, a := range p.Actions {
-				has := false
-				for _, la := range l.Actions {
-					if la == a {
-						has = true
-						break
-					}
-				}
-				if !has {
-					allActions = false
-					break
-				}
-			}
-			if allActions {
-				covered = true
-				break
-			}
-		}
-		if !covered {
-			return false
-		}
+	if len(pinned) == 0 {
+		return false
 	}
-	return len(pinned) > 0
+	return adopt.GrantsCover(live, pinned)
 }
 
-// grantsCoverRead is the T2 fixture's grant-coverage check — SAME SHAPE
-// as the machine's grantsCover but a DELIBERATE SUBSET (R29 m-5 honesty):
-// no effect-rank comparison (reads are Effect:"none" in this fixture) and
-// empty pinned returns false (the machine's vacuous-covered is inverted —
-// here an empty requirement list is a fixture bug, not a permit). The
-// pinned requirement at the call site is the fixture's single result
-// class — a second result class would need per-result grants on
-// storedResult (0.2.0 schema face), not this constant.
+// grantsCoverRead is the T2 fixture's read-face coverage check: the same
+// atom judgment as the machine's, with the effect level ignored (reads are
+// Effect:"none" here). Effect is normalised on both sides so the single
+// production implementation can be reused instead of mirroring its loops.
+// Deliberate divergence, kept from the old subset form: an EMPTY pinned list
+// is refused here (a fixture bug), while the machine treats an empty
+// requirement list as vacuously covered.
 func grantsCoverRead(live, pinned []ledger.Grant) bool {
-	for _, p := range pinned {
-		covered := false
-		for _, l := range live {
-			if l.Kind != p.Kind || l.Selector != p.Selector {
-				continue
-			}
-			allActions := true
-			for _, a := range p.Actions {
-				has := false
-				for _, la := range l.Actions {
-					if la == a {
-						has = true
-						break
-					}
-				}
-				if !has {
-					allActions = false
-					break
-				}
-			}
-			if allActions {
-				covered = true
-				break
-			}
-		}
-		if !covered {
-			return false
-		}
+	if len(pinned) == 0 {
+		return false
 	}
-	return len(pinned) > 0
+	return adopt.GrantsCover(withoutEffect(live), withoutEffect(pinned))
+}
+
+// withoutEffect returns grants with the effect level erased, for the read
+// face's comparison.
+func withoutEffect(gs []ledger.Grant) []ledger.Grant {
+	out := make([]ledger.Grant, len(gs))
+	for i, g := range gs {
+		g.Effect = "none"
+		out[i] = g
+	}
+	return out
 }
 
 // nodeEntry is the T2 reference host's unified node entry point (L41: a
