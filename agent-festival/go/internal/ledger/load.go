@@ -60,6 +60,24 @@ func ParseLines(raw []byte) ([]ParsedLine, bool, error) {
 			}
 			return nil, false, fmt.Errorf("durable form line is not valid UTF-8 — a bypass or corrupted write, not machine output (Go's json decoder would launder it to U+FFFD)")
 		}
+		// Exactly one JSON value per line (external audit GC#25 / GH#54): both
+		// decoders below accept the FIRST value and silently ignore whatever
+		// follows, so a line that was once two records squeezed together
+		// (registration + dispatch) read as the first one only — the dispatch
+		// record vanished and a restart could re-issue the permit. json.Valid
+		// is the stdlib's whole-text judgment (a hand-rolled decode-to-EOF
+		// check would be a bespoke low-level discriminator); it accepts
+		// trailing whitespace and CR (both are JSON text space) and rejects
+		// multi-value lines, trailing garbage, whitespace-only lines, BOM and
+		// NUL. A line that is valid JSON but not an object still falls
+		// through to the shape judgment below.
+		if !json.Valid(line) {
+			if atEOF {
+				torn = true
+				continue // torn tail: tolerated at EOF without a newline, reported via the flag
+			}
+			return nil, false, fmt.Errorf("durable form line is not exactly one JSON value (trailing data after the first value, or no JSON value at all — blank-only, BOM-prefixed and truncated lines land here too): repair the file outside, then re-Open — the machine will not guess which record was meant")
+		}
 		var ev Event
 		// R14' M-1 fix: strict shape judgment (the evidlog entryShapeError
 		// twin — P1-2 claimed "unified doctrine" but adopt's typed view was
