@@ -101,6 +101,10 @@ N/A）。判据 63（替换件自检）自此有执行面。**电池红必须是
 - L44：knowledgeMethod.execute 用 fmt.Sscanf 静默吞解析失败。
 - L45：resultStore.put 非原子写（无 temp+rename）且损坏时整体拒载。
 - L46：T2 店与账本双持久形态无一致性交叉核（adopt 成功后 store.put 前崩溃窗口）。
+- **L45 半面清偿（本 MR：fix/e2e-publish-after-persist，2026-11-20）**：`resultStore.put` 改为「先持久后发布」（候选 map → temp → 保留权限位 → rename → 成功后赋值），返回错误的路径零变更、无残留（best-effort：`os.Remove` 失败不上报）；open 期增「不可表示内容一律拒」守卫（顶层非对象 + 条目无 receipt），且**同一校验器同时挂写面**（put 拒收 open 会拒的记录，防「写得进读不出」把整库锁死）。**残留半面维持**：损坏文件仍整体拒载（不自愈）、无 fsync（GH#11 另案）。行为变化披露：只读**文件**不再是写屏障（rename 需目录写权限）、符号链接被替换而非跟随、硬链接仍指旧 inode。
+- **R9-F4 清偿（同 MR）**：F4（put 先内存后文件→幻影 committed）与本条同病，其建议探针形态（store 路径做成目录→put err→旧内存态仍可查）已落为 `audit_review_put_test.go` 的 `TestT2Store_FailureAfterTempLeavesNoResidue`（「failed put left a phantom committed result」断言，直接 get 比 second-put 更强）；修复后该探针绿、回退旧序即红（变异 μ1）。
+- **多实例面归属更正**：本条原拟写的「无多实例锁」一句并未落在 L45 记录里（同批的 L45 清偿付只有上一条）；跨实例面正确归属是 **R9-F5**（F5 条目本身已描述「跨实例双 host 同 dir 互不可见」），不是 L46（L46=店↔账本崩溃窗口）。F5 维持未修：跨实例探针（同 dir 两 store）仍双双成功；扁平键 / Receipt 自由串两面亦未收。
+
 - L47：E0 extraction-miss 病态断言测试缺 polarity guard（家族 2/3——SickS1 与两个 E3 有开关，本测无）。
 - **结构候选加权（第 3 次）**：写时覆盖族（R10 evidlog face-B → R11 STALE_WRITER → R14' phantom 对象行）——形状判定单表化（ParseLines typed view 与跨事件 checker 共用同一形状判定，evidlog entryShapeError 单表双消费为仓内范式）登记为候选战役，与「event_type×规则家族分派表」同向可并场。
 
