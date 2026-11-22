@@ -315,3 +315,42 @@ func TestReconciliationKeepsOlderBlockWithoutEvidence(t *testing.T) {
 		})
 	}
 }
+
+// Two pre-reconciliation snapshots of the same run, one where it had finished
+// and one where it was still running: the restore cites the finished one
+// whichever is scanned first (the order follows the file names).
+func TestReconciliationRestoreCitesFinishedSnapshotInEitherOrder(t *testing.T) {
+	for _, tc := range []struct{ finished, running string }{
+		{"reconciliation-0-finished.json", "reconciliation-1-running.json"},
+		{"reconciliation-1-finished.json", "reconciliation-0-running.json"},
+	} {
+		t.Run(tc.finished, func(t *testing.T) {
+			e := newAR04(t, true)
+			s := e.open()
+			r, job := adoptedRun(t, e, s, false)
+			running := append([]byte(nil), s.lastSaved...)
+			if err := s.Done(r.ID, job.Token, nil, "final credit report", ""); err != nil {
+				t.Fatal(err)
+			}
+			makeLegacy(t, s, r)
+			finished := append([]byte(nil), s.lastSaved...)
+			olderBuildBlocks(t, e, s, r, false)
+			for name, raw := range map[string][]byte{tc.finished: finished, tc.running: running} {
+				if err := os.WriteFile(filepath.Join(e.dir, name), raw, 0600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			s = e.open()
+			got := s.st.Runs[r.ID]
+			if got.Status != "done" || got.Final != "final credit report" {
+				t.Fatalf("not restored: %s %q", got.Status, got.Final)
+			}
+			if rc := got.Reconciliation; rc == nil || rc.Disposition != "RESTORED" || rc.Source != tc.finished {
+				t.Fatalf("restore cites %+v, want source %s", rc, tc.finished)
+			}
+			if !hasRecord(dispositions(t, e), r.ID, "blocked", "done", "RESTORED", tc.finished) {
+				t.Fatalf("records: %+v", dispositions(t, e))
+			}
+		})
+	}
+}

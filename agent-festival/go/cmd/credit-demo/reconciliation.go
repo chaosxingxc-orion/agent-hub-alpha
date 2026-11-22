@@ -145,14 +145,20 @@ func originalResult(r *Run, backups []stateBackup) (orig *Run, source, why strin
 	if len(backups) == 0 {
 		return nil, "", "未找到对账前快照，原结果待核对"
 	}
+	// The finished original is cited by its own snapshot, never by a snapshot
+	// in which the run was still running; among several, the smallest name, so
+	// the scan order does not change the answer.
 	var found *Run
+	var finishedSource, runningSource string
 	for _, b := range backups {
 		o := b.st.Runs[r.ID]
 		if o == nil || o.Status == "blocked" {
 			continue
 		}
 		if o.Status != "done" && o.Status != "failed" {
-			source = b.name
+			if runningSource == "" || b.name < runningSource {
+				runningSource = b.name
+			}
 			continue
 		}
 		if !sameApartFromBlock(r, o) {
@@ -161,13 +167,15 @@ func originalResult(r *Run, backups []stateBackup) (orig *Run, source, why strin
 		if found != nil && (found.Status != o.Status || found.Final != o.Final) {
 			return nil, b.name, "多份对账前快照记录的原结果不一致，原结果待核对"
 		}
-		found, source = o, b.name
+		if found == nil || b.name < finishedSource {
+			found, finishedSource = o, b.name
+		}
 	}
 	if found != nil {
-		return found, source, ""
+		return found, finishedSource, ""
 	}
-	if source != "" {
-		return nil, source, ""
+	if runningSource != "" {
+		return nil, runningSource, ""
 	}
 	return nil, "", "对账前快照中没有该任务的原结果，原结果待核对"
 }
