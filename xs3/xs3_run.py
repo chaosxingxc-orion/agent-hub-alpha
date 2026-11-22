@@ -11,15 +11,27 @@
 首译绑定（86号 §四.2 拟定）: 首个完整呈回件=五格行齐全且每行含「格ID｜判定｜依据」；
 不完整中间态不算呈回——本器只标记 COMPLETE/INCOMPLETE，是否重跑由你决定，
 每次尝试（含失败）都写入 attempt 台账，如实留痕。
+
+台账身份（XS3-RV-04）: **一次请求 = 一个 attempt_id**（请求发出前铸定，含时间
+前缀，跨秒不变），由该次尝试的每条事件记录共用；**每条事件另有独立 event_id**
+——行按 attempt_id 归组，文件名按 (attempt_id, event_id) 唯一，因此同一尝试
+写第二条事件不会撞 'x' 模式。强杀时留下的 PENDING 行带有可识别的 attempt_id。
+注意层级：这里的 attempt_id 是本实验启动器内的生命周期身份，与 ledger 的
+「attempt(a)=operation_id」是同层概念、不同载体——本器不冒充后者的权威。
 """
 import argparse, json, os, sys, time, pathlib
 
 def _mint_attempt_id():
-    """One ID per request lifecycle (PENDING row and terminal row share it
-    when the caller pre-minted; the ledger stays append-only — two rows,
-    one lifecycle)."""
+    """The full attempt identity, minted ONCE per request lifecycle (XS3-RV-04).
+
+    It carries its own timestamp prefix so the identity does not change when a
+    later event of the same attempt is written in a different second — the
+    previous code rebuilt the string as f"{ts}-{aid}" inside every log call,
+    so the PENDING row and its terminal row could never share an attempt_id.
+    The ledger stays append-only: one identity, several event rows.
+    """
     import uuid as _uuid
-    return _uuid.uuid4().hex[:8]
+    return f"{time.strftime('%Y%m%d-%H%M%S')}-{_uuid.uuid4().hex[:8]}"
 
 
 def _prompt_digest(text):
@@ -79,8 +91,9 @@ def main():
     # (SIGKILL between urlopen and the old log-at-completion call) used to
     # leave zero rows. The PENDING row shares the schema; every terminal path
     # (parse-fail exit / HTTP-fail exit / COMPLETE / INCOMPLETE) appends its
-    # own new-ID row alongside (append-only stays true — PENDING is a
-    # lifecycle record, not an overwrite).
+    # own new EVENT row alongside — same attempt_id, its own event_id
+    # (append-only stays true — PENDING is a lifecycle record, not an
+    # overwrite).
     _aid = _mint_attempt_id()
     log_attempt(a.arm, conf, None, "PENDING", t0,
                 prompt_digest=_prompt_digest(prompt), cells=_cells_used(prompt),
@@ -96,7 +109,8 @@ def main():
                     prompt_digest=_prompt_digest(prompt), cells=_cells_used(prompt),
                     proto=ARMS[a.arm].get("proto", ""),
                     temperature=ARMS[a.arm].get("temperature"),
-                    max_tokens=ARMS[a.arm].get("max_tokens"))
+                    max_tokens=ARMS[a.arm].get("max_tokens"),
+                    attempt_id=_aid)
         sys.exit(f"调用失败（已入 attempt 台账，不算呈回）: {e}")
     # 双形解析: OpenAI(choices.message) 或 Anthropic(content blocks)——volcano /compatible 系 Claude 兼容层
     # RV25-03 fix: EVERY parse path from response-read to verdict lands in
@@ -127,7 +141,8 @@ def main():
                     prompt_digest=_prompt_digest(prompt), cells=_cells_used(prompt),
                     proto=ARMS[a.arm].get("proto", ""),
                     temperature=ARMS[a.arm].get("temperature"),
-                    max_tokens=ARMS[a.arm].get("max_tokens"))
+                    max_tokens=ARMS[a.arm].get("max_tokens"),
+                    attempt_id=_aid)
         sys.exit(f"响应解析失败（已入 attempt 台账，不算呈回）: {type(e).__name__}: {e}")
     complete = validate(content, cells=cells_from_prompt(prompt))
     log_attempt(a.arm, conf, raw, "COMPLETE" if complete else "INCOMPLETE", t0,
@@ -135,7 +150,8 @@ def main():
                 prompt_digest=_prompt_digest(prompt), cells=_cells_used(prompt),
                 proto=ARMS[a.arm].get("proto", ""),
                 temperature=ARMS[a.arm].get("temperature"),
-                max_tokens=ARMS[a.arm].get("max_tokens"))
+                max_tokens=ARMS[a.arm].get("max_tokens"),
+                attempt_id=_aid)
     print(f"arm={a.arm} model={conf['model']} -> {'COMPLETE' if complete else 'INCOMPLETE'}")
     print(f"判定行:\n{content}")
 
@@ -182,18 +198,29 @@ def cells_from_prompt(prompt_text: str) -> str:
 
 def log_attempt(arm, conf, raw, status, t0, content="", reasoning_len=0,
                 prompt_digest="", cells="", proto="", temperature=None, max_tokens=None,
-                attempt_id=None):
-    """RV25-02 fix: unique attempt ID (uuid prefix — same-second/same-arm can
-    never overwrite; codex uuid_v7 precedent) + append-only ('x' mode — an
-    existing name is a bug, refusing loudly beats replacing a record) + the
-    acceptance extras (prompt digest / cell set / sampling params / proto)
-    so one row can reconstruct the run conditions."""
+                attempt_id=None, event_id=None):
+    """Write one ledger row for one attempt EVENT.
+
+    Two identities, deliberately separate:
+    - attempt_id (XS3-RV-04): the lifecycle identity, minted once before the
+      request is sent and shared by every event of that attempt (PENDING and
+      its terminal row). Stable across seconds.
+    - event_id: unique per row. It is what keeps the append-only 'x' mode from
+      turning "same attempt, second event" into a file-name collision; with a
+      fixed attempt_id and no event id, the second write would raise
+      FileExistsError and the terminal row would be lost.
+
+    Exactly one of the two is the key of each artefact: rows share attempt_id,
+    files are unique by event_id. `x` mode stays: an existing file name is a
+    bug and refuses loudly instead of replacing a record.
+    """
     import uuid as _uuid
     OUT.mkdir(exist_ok=True)
     ts = time.strftime("%Y%m%d-%H%M%S")
-    aid = attempt_id or _uuid.uuid4().hex[:8]
+    aid = attempt_id or _mint_attempt_id()
+    eid = event_id or _uuid.uuid4().hex[:8]
     rec = {
-        "attempt_id": f"{ts}-{aid}", "ts": ts, "arm": arm,
+        "attempt_id": aid, "event_id": eid, "ts": ts, "arm": arm,
         "model": conf["model"], "version_pin": conf["version_pin"],
         "status": status, "elapsed_s": round(time.time() - t0, 1),
         "reasoning_len": reasoning_len,
@@ -201,13 +228,13 @@ def log_attempt(arm, conf, raw, status, t0, content="", reasoning_len=0,
         "temperature": temperature, "max_tokens": max_tokens,
         "usage": (raw or {}).get("usage"),
     }
-    with open(OUT / f"attempt-{ts}-{aid}-{arm}.json", "x", encoding="utf-8") as f:
+    with open(OUT / f"attempt-{aid}-{eid}-{arm}.json", "x", encoding="utf-8") as f:
         f.write(json.dumps(rec, ensure_ascii=False, indent=1))
     if raw is not None:
-        with open(OUT / f"raw-{ts}-{aid}-{arm}.json", "x", encoding="utf-8") as f:
+        with open(OUT / f"raw-{aid}-{eid}-{arm}.json", "x", encoding="utf-8") as f:
             f.write(json.dumps(raw, ensure_ascii=False))
     if content:
-        with open(OUT / f"reply-{ts}-{aid}-{arm}.md", "x", encoding="utf-8") as f:
+        with open(OUT / f"reply-{aid}-{eid}-{arm}.md", "x", encoding="utf-8") as f:
             f.write(content)
 
 

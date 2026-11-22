@@ -33,9 +33,11 @@ export interface Options {
 export const finished = (s?: string) => s === "done" || s === "reused";
 // Once a run exists, an expert appears when it starts. A remote node may be
 // waiting for its result, or have one that still has to be checked (unknown).
-export const started = (s?: string) => s === "running" || s === "waiting" || s === "unknown" || s === "failed" || finished(s);
+// "stopped", "inflight" and "unconfirmed" are drawn only, for steps of a halted
+// task (halt.ts).
+export const started = (s?: string) => s === "running" || s === "stopped" || s === "inflight" || s === "unconfirmed" || s === "waiting" || s === "unknown" || s === "failed" || finished(s);
 
-export type Tone = "ok" | "bad" | "mute";
+export type Tone = "ok" | "bad" | "mute" | "warn";
 
 export function decisionLabel(level?: string): [Tone, string] | undefined {
   if (!level) return undefined;

@@ -92,20 +92,30 @@ func isUpperHex(c byte) bool {
 
 const unreserved = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
 
-var rootSchema Schema
-
+// SchemaErrors validates doc against schema, resolving same-document $refs
+// against schema itself (the common case: the caller validates a whole
+// document). schemaErrors carries the root explicitly for the recursive walk.
 func SchemaErrors(doc any, schema Schema, path string, errs *[]string) {
-	// $ref resolution: same-document $defs (rootSchema is the document currently being
-	// validated against — set by ContractErrors / EnvelopeErrors / compose) and
-	// cross-document URL refs into the contract schema. Both fail closed: an
-	// unresolvable ref is an error, never a silent pass.
+	schemaErrors(doc, schema, schema, path, errs)
+}
+
+// schemaErrors is the recursive worker. root is the document whose $defs
+// same-document refs resolve against — a per-call value, never shared state:
+// concurrent validations of different document types must not observe each
+// other's root (external audit GC#26: a package-level root produced a data
+// race and spurious rejections of unchanged valid input).
+func schemaErrors(doc any, schema Schema, root Schema, path string, errs *[]string) {
+	// $ref resolution: same-document $defs (root, see above) and cross-document
+	// URL refs into the contract schema (those switch the root to the contract
+	// schema for the referenced subtree). Both fail closed: an unresolvable ref
+	// is an error, never a silent pass.
 	if ref, ok := schema["$ref"].(string); ok {
 		if strings.HasPrefix(ref, "#/$defs/") {
 			name := strings.TrimPrefix(ref, "#/$defs/")
-			if rootSchema != nil {
-				if defs, ok := rootSchema["$defs"].(map[string]any); ok {
+			if root != nil {
+				if defs, ok := root["$defs"].(map[string]any); ok {
 					if def, ok := defs[name].(map[string]any); ok {
-						SchemaErrors(doc, def, path, errs)
+						schemaErrors(doc, def, root, path, errs)
 						return
 					}
 				}
@@ -128,10 +138,7 @@ func SchemaErrors(doc any, schema Schema, path string, errs *[]string) {
 				*errs = append(*errs, fmt.Sprintf("%s: unresolvable cross-schema $ref %s", path, ref))
 				return
 			}
-			savedRoot := rootSchema
-			rootSchema = ContractSchema
-			SchemaErrors(doc, target, path, errs)
-			rootSchema = savedRoot
+			schemaErrors(doc, target, ContractSchema, path, errs)
 			return
 		}
 		*errs = append(*errs, fmt.Sprintf("%s: unsupported $ref %s", path, ref))
@@ -228,12 +235,12 @@ func SchemaErrors(doc any, schema Schema, path string, errs *[]string) {
 		for _, k := range sortedKeys {
 			v := m[k]
 			if ps, ok := props[k].(map[string]any); ok {
-				SchemaErrors(v, ps, path+"/"+k, errs)
+				schemaErrors(v, ps, root, path+"/"+k, errs)
 			} else if hasAddlSchema {
 				// additionalProperties as a SCHEMA (the graph schema maps every
 				// node key to the contract schema this way) — the differential
 				// library caught this gap (V2 differential round, node-fails-contract-gate)
-				SchemaErrors(v, addlSchema, path+"/"+k, errs)
+				schemaErrors(v, addlSchema, root, path+"/"+k, errs)
 			} else if addlFalse {
 				*errs = append(*errs, fmt.Sprintf("%s: Additional properties are not allowed ('%s' was unexpected)", path, k))
 			}
@@ -260,7 +267,7 @@ func SchemaErrors(doc any, schema Schema, path string, errs *[]string) {
 		}
 		if items, ok := schema["items"].(map[string]any); ok {
 			for i, e := range arr {
-				SchemaErrors(e, items, fmt.Sprintf("%s/%d", path, i), errs)
+				schemaErrors(e, items, root, fmt.Sprintf("%s/%d", path, i), errs)
 			}
 		}
 	}
@@ -270,7 +277,7 @@ func SchemaErrors(doc any, schema Schema, path string, errs *[]string) {
 			matched := false
 			for _, e := range arr {
 				var e2 []string
-				SchemaErrors(e, contains, path, &e2)
+				schemaErrors(e, contains, root, path, &e2)
 				if len(e2) == 0 {
 					matched = true
 					break
@@ -334,9 +341,9 @@ func SchemaErrors(doc any, schema Schema, path string, errs *[]string) {
 				continue
 			}
 			var ifErrs []string
-			SchemaErrors(doc, ifCond, path, &ifErrs)
+			schemaErrors(doc, ifCond, root, path, &ifErrs)
 			if len(ifErrs) == 0 {
-				SchemaErrors(doc, thenS, path, errs)
+				schemaErrors(doc, thenS, root, path, errs)
 			}
 		}
 	}
@@ -347,7 +354,7 @@ func SchemaErrors(doc any, schema Schema, path string, errs *[]string) {
 		for _, sub := range oneOf {
 			if sm, ok := sub.(map[string]any); ok {
 				var e []string
-				SchemaErrors(doc, sm, path, &e)
+				schemaErrors(doc, sm, root, path, &e)
 				if len(e) == 0 {
 					matched++
 				} else {
@@ -600,8 +607,7 @@ func CrossFieldErrors(doc map[string]any) []string {
 
 func ContractErrors(doc map[string]any) []string {
 	var errs []string
-	rootSchema = ContractSchema
-	SchemaErrors(doc, ContractSchema, "<root>", &errs)
+	schemaErrors(doc, ContractSchema, ContractSchema, "<root>", &errs)
 	errs = CheckContractVerdict(doc, errs)
 	if len(errs) > 0 {
 		return errs
@@ -734,8 +740,7 @@ func LoadTrustStore(path string) (*TrustStore, error) {
 func EnvelopeErrors(doc map[string]any, ts *TrustStore, loneSurrogate bool) ([]string, []string) {
 	var verified []string
 	var errs []string
-	rootSchema = EnvelopeSchema
-	SchemaErrors(doc, EnvelopeSchema, "<root>", &errs)
+	schemaErrors(doc, EnvelopeSchema, EnvelopeSchema, "<root>", &errs)
 	errs = CheckEnvelopeVerdict(doc, errs)
 	if len(errs) > 0 {
 		return errs, verified
@@ -1060,9 +1065,6 @@ func CloneDoc(m map[string]any) map[string]any {
 	return out
 }
 
-// SetRootSchema sets the root for $defs resolution (compose uses a different schema).
-func SetRootSchema(s Schema) { rootSchema = s }
-
 // resolvePointer follows a "#/a/b/c" JSON pointer into a schema map.
 func resolvePointer(schema Schema, ptr string) (Schema, bool) {
 	parts := strings.Split(strings.TrimPrefix(ptr, "#/"), "/")
@@ -1077,9 +1079,10 @@ func resolvePointer(schema Schema, ptr string) (Schema, bool) {
 	return cur, true
 }
 
-// SchemaErrorsDoc is the exported entry for schema validation.
+// SchemaErrorsDoc is the exported entry for schema validation: same-document
+// $defs refs resolve against schema itself (root = schema).
 func SchemaErrorsDoc(doc any, schema Schema, path string, errs *[]string) {
-	SchemaErrors(doc, schema, path, errs)
+	schemaErrors(doc, schema, schema, path, errs)
 }
 
 // LevelRank is shared with the compose package (single definition, V2 m8).
