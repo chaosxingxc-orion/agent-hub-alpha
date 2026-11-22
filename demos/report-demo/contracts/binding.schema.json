@@ -295,6 +295,9 @@
     "graph_revision": {
       "type": "string"
     },
+    "human_review_required": {
+      "type": "boolean"
+    },
     "identity_contract": {
       "type": "string"
     },
@@ -370,6 +373,12 @@
           "decision": {
             "type": "string"
           },
+          "graph_digest": {
+            "type": "string"
+          },
+          "graph_revision": {
+            "type": "string"
+          },
           "object_digest": {
             "type": "string"
           },
@@ -380,6 +389,9 @@
             "type": "string"
           },
           "receipt": {
+            "type": "string"
+          },
+          "task_id": {
             "type": "string"
           }
         },

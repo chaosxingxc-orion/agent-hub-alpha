@@ -69,6 +69,7 @@ function ReportControl({g,refresh}:{g:Graph;refresh:()=>void}) {
  const pending=useRef(false);
  const receipt=useRef(new Map<string,string>());
  return <div className="wb-notice"><strong>正式状态：{g.task_status}</strong>
+ {g.human_review_required && <p>执行图要求人工核验。即使程序通过，报告也须有人核验接受后才可批准与交付。</p>}
  <HumanReviewNotice review={g.human_review} />
  {g.run && ['running','queued'].includes(g.run.status) && <button disabled={busy} onClick={()=>act('pause','')}>暂停新节点</button>}
  {g.reports?.map(r=><details key={r.artifact_id} data-artifact={r.artifact_id}><summary>报告 {r.node} · {r.check_outcome} · {r.digest.slice(0,22)}</summary><pre>{JSON.stringify(r.output,null,2)}</pre>

@@ -4,6 +4,8 @@
 
 工作台投影仅对当前有效、尚未处理的 HUMAN 检查返回 `human_review={url,checks:[{node,check_artifact,object_digest}]}`。url 由 Go 的 public_url 与任务 ID 构造，不含登录凭据；插件打开可信页，用户重新登录并走原有会话/CSRF 和对象绑定审核。审核后投影不再展示待处理提示；原始检查产物不变。
 
+候选图的可选字段 `human_review_required: true` 随获准图和图摘要固定。程序 `PASS` 后仍转入待人工核验，工作台在采纳前即展示要求，并在待核验时给出原因和可信入口。程序输出保持原字节。人工回执由服务端写入任务 ID、图版本、图摘要、检查产物 ID、报告摘要、具名主体和决定。批准和交付共用资格判定，只接受同一绑定的有效 `ACCEPT`。定向修订后的报告须按自身摘要再核验。旧图和未设置该字段的图继续按原检查结果推进。
+
 这是当前实现的应用协议 `report-demo/1`。这里的 Cxx 是设计中的 **Contract-Cxx**，不替代项目 issue 的其它同名编号。接入 [PR #25](https://github.com/chaosxingxc-orion/agent-hub-alpha/pull/25) `539d17a` 的结构化身份/schema；共享定义在主模块原目录，应用 schema 由实际 DTO 和共享身份资源导出。能力口径、前驱资格、租约、检查/批准和事务不变量仍由 Go 领域规则执行，不以“schema 合法”推断“业务获准”。
 
 | 身份 / 读面 | 实际映射 |

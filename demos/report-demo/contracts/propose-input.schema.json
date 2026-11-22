@@ -33,6 +33,10 @@
         "goal": {
           "type": "string"
         },
+        "human_review_required": {
+          "type": "boolean",
+          "description": "Require an independent human ACCEPT for the exact report even if program checks pass. Set when the user requires manual review before delivery."
+        },
         "material_id": {
           "type": "string"
         },

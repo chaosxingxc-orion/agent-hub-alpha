@@ -17,6 +17,12 @@
     "decision": {
       "type": "string"
     },
+    "graph_digest": {
+      "type": "string"
+    },
+    "graph_revision": {
+      "type": "string"
+    },
     "object_digest": {
       "type": "string"
     },
@@ -27,6 +33,9 @@
       "type": "string"
     },
     "receipt": {
+      "type": "string"
+    },
+    "task_id": {
       "type": "string"
     }
   },

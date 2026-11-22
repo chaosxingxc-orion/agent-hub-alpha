@@ -2,6 +2,15 @@
 
 本轮内部收敛基于已发布接收基线 `0358acbad0ce1b0ce73772f31eda845057ba4dc5`，分支 `codex/report-demo-w03-w04`。下面分开记录内部收敛验证与既有接收基线；接收方已经固定的0358acb源码/制品仍可取得，不把本轮整理视为新的联合验收。运行入口见 [LOCAL-RUN](LOCAL-RUN.md)，接口见 [contracts](contracts/README.md)，依赖见 [source-manifest](source-manifest.json)。
 
+## 年报 D2 人工核验门禁（2026-11-22，WSL）
+
+在 Ubuntu 26.04 WSL 中合入统一候选 `67fd5b0` 与年报 fork PR #1 的 `4004ab4`，用 WSL 内独立 PostgreSQL 18.6 验证。本轮以 WSL 为唯一验证环境。既有 D1 证据仍对应下文的固定版本。
+
+- Go/PG 共 108 个测试事件通过（含顶层和子测试）。离线重放篡改测试因未提供 `REPORT_TEST_SNAPSHOT` 跳过，`go vet` 通过。新增回归覆盖获准图要求人工时的程序 `PASS`、批准和交付两个 HTTP 入口、旧图和错误对象回执、人工拒绝和修订稿重新核验。
+- Java 编排定向 17 项通过，含固定材料和 Go/Java 规范化摘要。跨进程故障套件需要当前库的有效源任务 `REPORT_FAULT_SOURCE_TASK`，本次未取得该套件通过结论。
+- WorkSwarm 插件通过类型检查、构建、7 项 Node 测试和 4 项浏览器测试。浏览器测试使用模拟 RPC。
+- 独立启动真实身份服务、RDC、Gateway、控制面、WorkSwarm 和四专家。16 项就绪检查与 6 项正反例身份检查通过。真实会话在获得候选图和人工审核证据前中断，D2 联验仍需同一条实际任务的审核、恢复、交付和原字节下载记录，以及具名签收。
+
 ## 内部收敛验证（2026-11-17，基于0358acb）
 
 - 裁剪 W02 年报投影不会产生的授信结论、effect/blackbox 分组及旧版本展示分支；保留图采纳、恢复、BLOCKED、HUMAN、Bus详情与报告操作。

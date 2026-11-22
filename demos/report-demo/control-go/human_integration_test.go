@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -96,7 +98,7 @@ func TestPGHumanReviewDoesNotRewriteCheckerAndRevocationStillWins(t *testing.T) 
 	}
 	var original map[string]any
 	json.Unmarshal(state.Nodes["check"].Result.Output, &original)
-	if original["outcome"] != "HUMAN" || effectiveCheck(state.Nodes["check"]) != "PASS" {
+	if original["outcome"] != "HUMAN" || effectiveCheck(state, state.Nodes["check"]) != "PASS" {
 		t.Fatal("checker fact and human authority conflated")
 	}
 	if _, err = s.SetPause(ctx, task.ID, false); err != nil {
@@ -141,17 +143,20 @@ func TestPGHumanReviewDoesNotRewriteCheckerAndRevocationStillWins(t *testing.T) 
 // Simulates the waiting update sent by the worker immediately after the
 // selector discovers that its conditional predecessor has not settled.
 func TestPGHumanSelectorResumesAfterEarlyWaitingUpdate(t *testing.T) {
-	for _, decision := range []string{"ACCEPT", "REVISE", "REJECT"} {
-		t.Run(decision, func(t *testing.T) {
-			verifyHumanBranch(t, decision)
-		})
+	for _, outcome := range []string{"HUMAN", "PASS"} {
+		for _, decision := range []string{"ACCEPT", "REVISE", "REJECT"} {
+			t.Run(outcome+"/"+decision, func(t *testing.T) {
+				verifyHumanBranch(t, outcome, decision)
+			})
+		}
 	}
 }
 
-func verifyHumanBranch(t *testing.T, decision string) {
+func verifyHumanBranch(t *testing.T, outcome, decision string) {
 	t.Helper()
-	ctx, s, _, cat := integration(t)
+	ctx, s, cfg, cat := integration(t)
 	_, graph := sample(t)
+	graph.HumanReviewRequired = outcome == "PASS"
 	graph.Nodes = append(graph.Nodes,
 		Node{ID: "check", Expert: "checker@1", Task: "Initial review", DependsOn: []string{"draft"}},
 		Node{ID: "revision", Expert: "writer@1", Task: "Revise only when requested", DependsOn: []string{"draft", "check"}, Condition: &Condition{Step: "check", Outcome: "REVISE"}},
@@ -200,7 +205,7 @@ func verifyHumanBranch(t *testing.T, decision string) {
 	}
 	report := commit("draft", []byte(`{"fixture":"draft"}`))
 	digest := "sha256:" + report
-	raw, _ := json.Marshal(map[string]any{"checker_version": "control-fixture/1", "object_digest": digest, "outcome": "HUMAN", "failures": []string{}})
+	raw, _ := json.Marshal(map[string]any{"checker_version": "control-fixture/1", "object_digest": digest, "outcome": outcome, "failures": []string{}})
 	check := commit("check", raw)
 	_, err = s.ResolveNode(ctx, task.ID, "select", lease.Owner, lease.Epoch, "", cat, "fixed-source")
 	requireCode(t, err, "WAIT")
@@ -230,12 +235,74 @@ func verifyHumanBranch(t *testing.T, decision string) {
 		t.Fatal("unreviewed draft was approved")
 	}
 	in := CheckReview{CheckArtifact: check, ObjectDigest: digest, Decision: decision, Reason: "Fixture reviewer verified the cited evidence"}
+	if graph.HumanReviewRequired {
+		server := &Server{Store: s, Config: cfg, Catalog: cat, Files: files}
+		view := server.workbenchHumanReview(paused)
+		if view == nil || view["checks"].([]any)[0].(map[string]string)["reason"] != "获准执行图要求人工核验" {
+			t.Fatal("program PASS did not offer the required review")
+		}
+		// Even a ready task and an existing user approval cannot bypass either HTTP gate.
+		if _, err = s.Pool.Exec(ctx, "UPDATE tasks SET document=jsonb_set(document,'{status}',to_jsonb('AWAITING_ACCEPTANCE'::text)) WHERE scope=$1 AND id=$2", s.Scope, task.ID); err != nil {
+			t.Fatal(err)
+		}
+		if _, err = s.Pool.Exec(ctx, "INSERT INTO approvals(scope,id,task_id,action,object_digest,principal,expires_at) VALUES($1,$2,$3,'deliver',$4,$5,clock_timestamp()+interval '1 hour')", s.Scope, newID("fixture-"), task.ID, digest, cfg.User); err != nil {
+			t.Fatal(err)
+		}
+		login := httptest.NewRecorder()
+		body, _ := json.Marshal(map[string]string{"user": cfg.User, "password": cfg.UserPassword})
+		handler := server.Routes()
+		handler.ServeHTTP(login, httptest.NewRequest("POST", "/auth/login", strings.NewReader(string(body))))
+		var session struct {
+			CSRF string `json:"csrf"`
+		}
+		if err = json.Unmarshal(login.Body.Bytes(), &session); err != nil || session.CSRF == "" || len(login.Result().Cookies()) == 0 {
+			t.Fatal("test login failed")
+		}
+		for _, check := range []struct {
+			action, code string
+			status       int
+		}{{"approve", "CHECK_REQUIRED", http.StatusConflict}, {"deliver", "APPROVAL_REQUIRED", http.StatusForbidden}} {
+			req := httptest.NewRequest("POST", "/v1/tasks/"+task.ID+"/artifacts/"+report+"/"+check.action, strings.NewReader(`{"delivery_id":"must-not-deliver"}`))
+			req.AddCookie(login.Result().Cookies()[0])
+			req.Header.Set("X-CSRF-Token", session.CSRF)
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+			if w.Code != check.status || !strings.Contains(w.Body.String(), check.code) {
+				t.Fatalf("%s bypassed or misclassified required review: HTTP %d %s", check.action, w.Code, w.Body.String())
+			}
+		}
+		if _, err = s.Pool.Exec(ctx, "UPDATE tasks SET document=jsonb_set(document,'{status}',to_jsonb('WAITING_INPUT'::text)) WHERE scope=$1 AND id=$2", s.Scope, task.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
 	wrong := in
 	wrong.ObjectDigest = "sha256:another-report"
 	_, err = s.ReviewCheck(ctx, task.ID, "check", wrong, "reviewer")
 	requireCode(t, err, "INPUT_CONFLICT")
 	if _, err = s.ReviewCheck(ctx, task.ID, "check", in, "reviewer"); err != nil {
 		t.Fatal(err)
+	}
+	if graph.HumanReviewRequired && decision == "ACCEPT" {
+		state, err := s.GetTask(ctx, task.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ns := state.Nodes["check"]
+		var program map[string]any
+		if err = json.Unmarshal(ns.Result.Output, &program); err != nil || program["outcome"] != "PASS" || !reviewMatches(state, ns, digest) {
+			t.Fatal("required review did not preserve the program result and exact binding", err)
+		}
+		saved := *ns.Review
+		for _, wrong := range []CheckReview{
+			{TaskID: "different-task", GraphRevision: saved.GraphRevision, GraphDigest: saved.GraphDigest},
+			{TaskID: saved.TaskID, GraphRevision: "old", GraphDigest: saved.GraphDigest},
+			{TaskID: saved.TaskID, GraphRevision: saved.GraphRevision, GraphDigest: "sha256:old"},
+		} {
+			ns.Review.TaskID, ns.Review.GraphRevision, ns.Review.GraphDigest = wrong.TaskID, wrong.GraphRevision, wrong.GraphDigest
+			if effectiveCheck(state, ns) != "HUMAN" {
+				t.Fatal("accepted stale or unrelated review")
+			}
+		}
 	}
 	if decision == "REJECT" {
 		_, err = s.Heartbeat(ctx, task.ID, lease.Owner, lease.Epoch, "graph")
@@ -287,6 +354,25 @@ func verifyHumanBranch(t *testing.T, decision string) {
 		_, err = s.ReviewCheck(ctx, task.ID, "check-revision", stale, "reviewer")
 		requireCode(t, err, "INPUT_CONFLICT")
 		report = revised
+		if graph.HumanReviewRequired {
+			_, err = s.ResolveNode(ctx, task.ID, "select", lease.Owner, lease.Epoch, "", cat, "fixed-source")
+			requireCode(t, err, "WAIT")
+			if _, err = s.Complete(ctx, task.ID, lease.Owner, lease.Epoch); err != nil {
+				t.Fatal(err)
+			}
+			revisedReview := CheckReview{CheckArtifact: checkArtifact, ObjectDigest: "sha256:" + revised, Decision: "ACCEPT", Reason: in.Reason}
+			if _, err = s.ReviewCheck(ctx, task.ID, "check-revision", revisedReview, "reviewer"); err != nil {
+				t.Fatal(err)
+			}
+			if _, err = s.SetPause(ctx, task.ID, false); err != nil {
+				t.Fatal(err)
+			}
+			claim, err = s.ClaimRun(ctx, task.ID, "worker-after-revised-review", "graph")
+			if err != nil {
+				t.Fatal(err)
+			}
+			lease = leaseFrom(t, claim)
+		}
 	} else {
 		_, err = s.ResolveNode(ctx, task.ID, "revision", lease.Owner, lease.Epoch, "", cat, "fixed-source")
 		requireCode(t, err, "POLICY_REJECTED")
@@ -302,6 +388,9 @@ func verifyHumanBranch(t *testing.T, decision string) {
 		t.Fatalf("resumed run did not finish: %v %v", finished, err)
 	}
 	if _, err = s.ApproveReport(ctx, task.ID, report, "reviewer"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.Deliver(ctx, task.ID, report, "reviewed-report", "reviewer"); err != nil {
 		t.Fatal(err)
 	}
 	calls, err := s.Calls(ctx, task.ID, "select")

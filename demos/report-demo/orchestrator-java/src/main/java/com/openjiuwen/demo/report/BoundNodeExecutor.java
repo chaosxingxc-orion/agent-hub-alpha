@@ -30,7 +30,11 @@ final class BoundNodeExecutor implements SubAgentExecutor {
         if (node.hasNonNull("condition")) {
             JsonNode condition = node.path("condition");
             JsonNode checkState = state.path("nodes").path(condition.path("step").asText());
-            String outcome = ReportChecker.effectiveOutcome(checkState.path("result"),checkState.path("review"));
+            String outcome = ReportChecker.effectiveOutcome(checkState.path("result"), checkState.path("review"),
+                    state.path("graph").path("human_review_required").asBoolean());
+            if (outcome.equals("HUMAN") || outcome.equals("UNKNOWN")) {
+                throw new ControlClient.ControlFailure("WAIT", 409);
+            }
             if (!outcome.equals(condition.path("outcome").asText())) {
                 control.post(path + "/skip", Map.of("owner", owner, "epoch", epoch));
                 return "AUTHORIZED_SKIP";

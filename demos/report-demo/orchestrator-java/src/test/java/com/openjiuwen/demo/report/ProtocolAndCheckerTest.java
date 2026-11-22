@@ -30,10 +30,15 @@ class ProtocolAndCheckerTest {
     @Test void humanResolutionMustMatchBothImmutableCheckAndReport() {
         var check=Json.read("{\"artifact_id\":\"check-1\",\"output\":{\"outcome\":\"HUMAN\",\"object_digest\":\"report-1\"}}");
         var review=Json.read("{\"check_artifact\":\"check-1\",\"object_digest\":\"report-1\",\"receipt\":\"user-review-1\",\"decision\":\"ACCEPT\"}");
-        assertEquals("PASS",ReportChecker.effectiveOutcome(check,review));
+        assertEquals("PASS",ReportChecker.effectiveOutcome(check,review,false));
         assertEquals("HUMAN",check.path("output").path("outcome").asText());
         ((com.fasterxml.jackson.databind.node.ObjectNode)review).put("object_digest","other-report");
-        assertEquals("HUMAN",ReportChecker.effectiveOutcome(check,review));
+        assertEquals("HUMAN",ReportChecker.effectiveOutcome(check,review,false));
+        ((com.fasterxml.jackson.databind.node.ObjectNode)check.path("output")).put("outcome", "PASS");
+        assertEquals("PASS", ReportChecker.effectiveOutcome(check, review, false));
+        assertEquals("HUMAN", ReportChecker.effectiveOutcome(check, review, true));
+        ((com.fasterxml.jackson.databind.node.ObjectNode)review).put("object_digest", "report-1");
+        assertEquals("PASS", ReportChecker.effectiveOutcome(check, review, true));
     }
     @Test void nativeV1ResultTaskAndLegacyDirectTaskAreBothRead() {
         var nested=Json.read("{\"result\":{\"task\":{\"id\":\"remote\",\"contextId\":\"ctx\",\"status\":{\"state\":\"TASK_STATE_WORKING\"}}}}");

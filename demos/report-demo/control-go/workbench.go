@@ -217,7 +217,7 @@ func (s *Server) workbenchRoutes(m *http.ServeMux) {
 						Object string `json:"object_digest"`
 					}
 					if json.Unmarshal(check.Result.Output, &value) == nil && value.Object == ns.Result.ArtifactDigest {
-						outcome = effectiveCheck(check)
+						outcome = effectiveCheck(t, check)
 						break
 					}
 				}
@@ -225,6 +225,9 @@ func (s *Server) workbenchRoutes(m *http.ServeMux) {
 			}
 		}
 		out["reports"] = reports
+		if t.Graph.HumanReviewRequired {
+			out["human_review_required"] = true
+		}
 		if review := s.workbenchHumanReview(t); review != nil {
 			out["human_review"] = review
 		}
@@ -255,7 +258,7 @@ func (s *Server) workbenchHumanReview(t *Task) map[string]any {
 	checks := []any{}
 	for _, node := range t.Graph.Nodes {
 		ns := t.Nodes[node.ID]
-		if ns == nil || ns.Result == nil || !ns.Result.Valid || effectiveCheck(ns) != "HUMAN" {
+		if effectiveCheck(t, ns) != "HUMAN" {
 			continue
 		}
 		var check struct {
@@ -264,7 +267,11 @@ func (s *Server) workbenchHumanReview(t *Task) map[string]any {
 		if json.Unmarshal(ns.Result.Output, &check) != nil || check.ObjectDigest == "" {
 			continue
 		}
-		checks = append(checks, map[string]string{"node": node.ID, "check_artifact": ns.Result.ArtifactID, "object_digest": check.ObjectDigest})
+		reason := "程序检查发现待人工核验项"
+		if t.Graph.HumanReviewRequired {
+			reason = "获准执行图要求人工核验"
+		}
+		checks = append(checks, map[string]string{"node": node.ID, "check_artifact": ns.Result.ArtifactID, "object_digest": check.ObjectDigest, "reason": reason})
 	}
 	if len(checks) == 0 {
 		return nil

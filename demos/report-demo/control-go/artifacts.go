@@ -196,7 +196,7 @@ func (s *Store) Commit(ctx context.Context, id, node string, r CommitRequest, ra
 			if err != nil {
 				return nil, err
 			}
-			if outcome == "HUMAN" {
+			if reviewRequired(t, outcome) {
 				t.Status = "WAITING_INPUT"
 			}
 		}
@@ -290,7 +290,7 @@ func (s *Store) AuthorizeSkip(ctx context.Context, id, node, owner, epoch string
 		if err := json.Unmarshal(check.Result.Output, &m); err != nil {
 			return nil, err
 		}
-		m.Outcome = effectiveCheck(check)
+		m.Outcome = effectiveCheck(t, check)
 		if m.Outcome == n.Condition.Outcome {
 			return nil, fault("POLICY_REJECTED", "condition holds; node must execute", 422)
 		}

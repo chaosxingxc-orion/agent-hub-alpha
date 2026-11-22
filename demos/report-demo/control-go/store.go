@@ -349,7 +349,7 @@ func checkExecutionCondition(t *Task, condition *Condition) error {
 	if condition == nil {
 		return nil
 	}
-	outcome := effectiveCheck(t.Nodes[condition.Step])
+	outcome := effectiveCheck(t, t.Nodes[condition.Step])
 	switch outcome {
 	case "UNKNOWN", "HUMAN":
 		return fault("WAIT", "condition requires a resolved check", 409)
@@ -395,6 +395,7 @@ func (s *Store) Binding(ctx context.Context, t *Task, node string, c Catalog, ma
 	b.ExecutionProfile = s.ExecutionProfile
 	b.ModelBindingDigest = t.ModelBindingDigest
 	b.BusBinding = t.BusBinding
+	b.HumanReviewRequired = t.Graph.HumanReviewRequired && cap.Kind == "select"
 	if t.IdentityContract != "" {
 		if t.IdentityContract != pr25Contract {
 			return Binding{}, fault("BINDING_CHANGED", "identity contract unavailable", 409)
@@ -415,7 +416,7 @@ func (s *Store) Binding(ctx context.Context, t *Task, node string, c Catalog, ma
 		if !ns.Result.Valid {
 			return Binding{}, fault("INVALIDATED", "upstream result withdrawn", 409)
 		}
-		if cap.Kind == "select" && effectiveCheck(ns) == "HUMAN" {
+		if cap.Kind == "select" && effectiveCheck(t, ns) == "HUMAN" {
 			return Binding{}, fault("WAIT", "report check awaits human review", 409)
 		}
 		b.Upstream = append(b.Upstream, *ns.Result)
@@ -517,7 +518,7 @@ func (s *Store) Complete(ctx context.Context, id, owner, epoch string) (any, err
 			if n.Status == "FAILED" {
 				failed = true
 			}
-			if n.Result != nil && effectiveCheck(n) == "HUMAN" {
+			if n.Result != nil && effectiveCheck(t, n) == "HUMAN" {
 				missing = append(missing, "human-review:"+name)
 			}
 			_, skipValid := skipProof(t, name)
@@ -564,6 +565,11 @@ func (s *Store) SetPause(ctx context.Context, id string, pause bool) (any, error
 			t.Status = "QUEUED"
 		}
 		if !pause && t.Status == "WAITING_INPUT" {
+			for _, n := range t.Nodes {
+				if effectiveCheck(t, n) == "HUMAN" {
+					return map[string]any{"task_id": id, "pause_requested": pause, "status": t.Status}, nil
+				}
+			}
 			for _, ns := range t.Nodes {
 				if ns.Result == nil && ns.Status == "WAITING_INPUT" {
 					// Supplemental data belongs to the existing remote task. Poll

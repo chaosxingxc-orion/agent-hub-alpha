@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"github.com/jackc/pgx/v5"
 	"net/http"
+
+	"github.com/jackc/pgx/v5"
 )
 
 // A human review is a distinct immutable fact. It never rewrites the checker
@@ -16,9 +17,27 @@ type CheckReview struct {
 	Reason        string `json:"reason"`
 	Principal     string `json:"principal"`
 	Receipt       string `json:"receipt"`
+	TaskID        string `json:"task_id,omitempty"`
+	GraphRevision string `json:"graph_revision,omitempty"`
+	GraphDigest   string `json:"graph_digest,omitempty"`
 }
 
-func effectiveCheck(ns *NodeState) string {
+func reviewRequired(t *Task, outcome string) bool {
+	return outcome == "HUMAN" || (outcome == "PASS" && t.Graph.HumanReviewRequired)
+}
+
+func reviewMatches(t *Task, ns *NodeState, digest string) bool {
+	r := ns.Review
+	if r == nil || r.Receipt == "" || r.Principal == "" || r.CheckArtifact != ns.Result.ArtifactID || r.ObjectDigest != digest {
+		return false
+	}
+	if !t.Graph.HumanReviewRequired && r.TaskID == "" && r.GraphRevision == "" && r.GraphDigest == "" {
+		return true // Legacy reviews were already stored within their task and checker node.
+	}
+	return r.TaskID == t.ID && r.GraphRevision == t.Revision && r.GraphDigest == t.GraphDigest
+}
+
+func effectiveCheck(t *Task, ns *NodeState) string {
 	if ns == nil || ns.Result == nil || !ns.Result.Valid {
 		return "UNKNOWN"
 	}
@@ -26,10 +45,13 @@ func effectiveCheck(ns *NodeState) string {
 		Outcome      string `json:"outcome"`
 		ObjectDigest string `json:"object_digest"`
 	}
-	if json.Unmarshal(ns.Result.Output, &check) != nil {
+	if json.Unmarshal(ns.Result.Output, &check) != nil || check.ObjectDigest == "" {
 		return "UNKNOWN"
 	}
-	if check.Outcome == "HUMAN" && ns.Review != nil && ns.Review.CheckArtifact == ns.Result.ArtifactID && ns.Review.ObjectDigest == check.ObjectDigest && ns.Review.Receipt != "" {
+	if !reviewRequired(t, check.Outcome) {
+		return check.Outcome
+	}
+	if reviewMatches(t, ns, check.ObjectDigest) {
 		switch ns.Review.Decision {
 		case "ACCEPT":
 			return "PASS"
@@ -39,7 +61,7 @@ func effectiveCheck(ns *NodeState) string {
 			return "FAIL"
 		}
 	}
-	return check.Outcome
+	return "HUMAN"
 }
 
 func (s *Store) ReviewCheck(ctx context.Context, id, node string, in CheckReview, principal string) (any, error) {
@@ -55,8 +77,8 @@ func (s *Store) ReviewCheck(ctx context.Context, id, node string, in CheckReview
 		if err := tx.QueryRow(ctx, "SELECT checker_version,outcome,object_digest FROM checks WHERE scope=$1 AND task_id=$2 AND id=$3", s.Scope, id, in.CheckArtifact).Scan(&kind, &outcome, &object); err != nil {
 			return nil, fault("NOT_FOUND", "qualified checker fact missing", 404)
 		}
-		if outcome != "HUMAN" || object != in.ObjectDigest {
-			return nil, fault("INPUT_CONFLICT", "only exact HUMAN object can receive this review", 409)
+		if !reviewRequired(t, outcome) || object != in.ObjectDigest {
+			return nil, fault("INPUT_CONFLICT", "only the exact report requiring human review can receive this decision", 409)
 		}
 		var checked struct {
 			Failures []string `json:"failures"`
@@ -74,13 +96,14 @@ func (s *Store) ReviewCheck(ctx context.Context, id, node string, in CheckReview
 			return nil, fault("INVALIDATED", "reviewed report no longer valid", 409)
 		}
 		if ns.Review != nil {
-			if ns.Review.Decision == in.Decision && ns.Review.Reason == in.Reason && ns.Review.Principal == principal {
+			if reviewMatches(t, ns, object) && ns.Review.Decision == in.Decision && ns.Review.Reason == in.Reason && ns.Review.Principal == principal {
 				return ns.Review, nil
 			}
 			return nil, fault("INPUT_CONFLICT", "review fact is immutable; new changed content requires a new check", 409)
 		}
 		in.Principal = principal
 		in.Receipt = newID("human-review-")
+		in.TaskID, in.GraphRevision, in.GraphDigest = t.ID, t.Revision, t.GraphDigest
 		ns.Review = &in
 		if in.Decision == "REJECT" {
 			t.Status = "NEEDS_REVIEW"
@@ -113,7 +136,7 @@ func (s *Store) qualifiedReportCheck(ctx context.Context, tx pgx.Tx, t *Task, di
 		return false, err
 	}
 	for _, ns := range t.Nodes {
-		if ns.Result != nil && ids[ns.Result.ArtifactID] && effectiveCheck(ns) == "PASS" {
+		if ns.Result != nil && ids[ns.Result.ArtifactID] && effectiveCheck(t, ns) == "PASS" {
 			return true, nil
 		}
 	}
@@ -130,8 +153,8 @@ func (s *Server) humanRoutes(mux *http.ServeMux) {
 		if err = readBody(r, &in); err != nil {
 			return nil, err
 		}
-		if in.Principal != "" || in.Receipt != "" {
-			return nil, fault("INVALID_REQUEST", "review principal and receipt are assigned by server", 400)
+		if in.Principal != "" || in.Receipt != "" || in.TaskID != "" || in.GraphRevision != "" || in.GraphDigest != "" {
+			return nil, fault("INVALID_REQUEST", "review identity and receipt are assigned by server", 400)
 		}
 		if _, err = s.Files.Read(in.CheckArtifact); err != nil {
 			return nil, err

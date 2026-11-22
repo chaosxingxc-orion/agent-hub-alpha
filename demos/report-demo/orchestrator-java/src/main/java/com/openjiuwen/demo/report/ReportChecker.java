@@ -60,11 +60,12 @@ final class ReportChecker {
     }
 
     JsonNode select(JsonNode binding) {
+        boolean requireHuman = binding.path("human_review_required").asBoolean();
         JsonNode selected = null;JsonNode selectedReview=Json.MAPPER.nullNode();
         for (JsonNode upstream : binding.path("upstream")) {
             JsonNode review=Json.MAPPER.nullNode();
             for(JsonNode candidate:binding.path("reviews")){if(candidate.path("check_artifact").asText().equals(upstream.path("artifact_id").asText())){review=candidate;}}
-            if(effectiveOutcome(upstream,review).equals("PASS")){selected=upstream.path("output");selectedReview=review;}
+            if(effectiveOutcome(upstream,review,requireHuman).equals("PASS")){selected=upstream.path("output");selectedReview=review;}
         }
         if (selected == null) { throw new ControlClient.ControlFailure("INPUT_REQUIRED", 409); }
         return Json.MAPPER.valueToTree(Map.of("artifact_digest", selected.path("object_digest").asText(),
@@ -72,13 +73,14 @@ final class ReportChecker {
                 "qualification",selectedReview.isNull()?"PROGRAM_CHECK":"PROGRAM_CHECK_PLUS_HUMAN_REVIEW","human_review",selectedReview));
     }
 
-    static String effectiveOutcome(JsonNode result,JsonNode review){
+    static String effectiveOutcome(JsonNode result, JsonNode review, boolean requireHuman){
         String outcome=result.path("output").path("outcome").asText("UNKNOWN");
-        if(outcome.equals("HUMAN")&&review.isObject()&&review.path("check_artifact").asText().equals(result.path("artifact_id").asText())
+        if (!(outcome.equals("HUMAN") || (requireHuman && outcome.equals("PASS")))) { return outcome; }
+        if(review.isObject()&&review.path("check_artifact").asText().equals(result.path("artifact_id").asText())
                 &&review.path("object_digest").asText().equals(result.path("output").path("object_digest").asText())&&!review.path("receipt").asText().isBlank()){
             return switch(review.path("decision").asText()){case "ACCEPT"->"PASS";case "REVISE"->"REVISE";case "REJECT"->"FAIL";default->"HUMAN";};
         }
-        return outcome;
+        return "HUMAN";
     }
 
     private static Pattern rowPattern(String label) {

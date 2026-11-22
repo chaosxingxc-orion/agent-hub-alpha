@@ -149,13 +149,14 @@ type Node struct {
 	Condition *Condition `json:"condition,omitempty"`
 }
 type Graph struct {
-	Selection     *selection.SelectionRef `json:"selection,omitempty"`
-	Goal          string                  `json:"goal"`
-	MaterialID    string                  `json:"material_id"`
-	Focus         string                  `json:"focus" jsonschema:"Supported focus is exactly business or business+quality."`
-	Nodes         []Node                  `json:"nodes"`
-	CatalogDigest string                  `json:"catalog_digest"`
-	PolicyVersion string                  `json:"policy_version"`
+	HumanReviewRequired bool                    `json:"human_review_required,omitempty" jsonschema:"Require an independent human ACCEPT for the exact report even if program checks pass. Set when the user requires manual review before delivery."`
+	Selection           *selection.SelectionRef `json:"selection,omitempty"`
+	Goal                string                  `json:"goal"`
+	MaterialID          string                  `json:"material_id"`
+	Focus               string                  `json:"focus" jsonschema:"Supported focus is exactly business or business+quality."`
+	Nodes               []Node                  `json:"nodes"`
+	CatalogDigest       string                  `json:"catalog_digest"`
+	PolicyVersion       string                  `json:"policy_version"`
 }
 type Capability struct {
 	Selection     *SelectionDeclaration `json:"selection,omitempty"`
@@ -435,6 +436,7 @@ type Task struct {
 	CreatedAt          time.Time             `json:"created_at"`
 }
 type Binding struct {
+	HumanReviewRequired      bool                     `json:"human_review_required,omitempty"`
 	BusBinding               *BusBinding              `json:"bus_binding,omitempty"`
 	IdentityContract         string                   `json:"identity_contract,omitempty"`
 	LogicalExecution         *ledger.LogicalExecution `json:"logical_execution,omitempty"`
@@ -480,7 +482,7 @@ func skipProof(t *Task, id string) (SkipProof, bool) {
 			if json.Unmarshal(check.Result.Output, &out) != nil {
 				return SkipProof{}, false
 			}
-			out.Outcome = effectiveCheck(check)
+			out.Outcome = effectiveCheck(t, check)
 			if (out.Outcome == "PASS" || out.Outcome == "REVISE") && out.Outcome != n.Condition.Outcome {
 				proof := SkipProof{NodeID: id, CheckArtifact: ns.SkipCheck, Outcome: out.Outcome}
 				if check.Review != nil {
