@@ -265,22 +265,6 @@ func (rs *resultStore) get(opID string) (storedResult, bool) {
 	return cloneStored(r), ok
 }
 
-// queryForReconciliation is the batch-0 #3 read-face API (matrix row 6:
-// "Go 可返回某个请求待核对，不得变成第二个全图执行器"). It answers the ONE
-// question recovery needs — "does this o have a committed result, and is it
-// the same material?" — without any scheduling side effect. The caller
-// (W04/Runtime recovery logic) uses this to decide: serve (same κ), conflict
-// (different κ), or re-execute (no committed result).
-func (rs *resultStore) queryForReconciliation(opID, receiptDigest string) (committed bool, serve bool, stored storedResult) {
-	rs.mu.Lock()
-	defer rs.mu.Unlock()
-	r, ok := rs.data[opID]
-	if !ok {
-		return false, false, r
-	}
-	return true, r.Receipt == receiptDigest, cloneStored(r)
-}
-
 // lookupByBusinessRequest finds the LATEST result for a business request
 // (the "current validity projection" — per 29-reconciliation §3.2, the
 // projection is a T2-layer function over results, not a machine state).
@@ -630,6 +614,65 @@ func (h *t2Host) reopen() *t2Host {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// Read facts: what this host can say about an operation, and nothing more.
+
+// opReadFacts is the host's read-only answer about an operation. It is
+// deliberately a FACTS shape: there is no serve/conflict/re-execute/restart
+// field, because none of those is a fact this host can observe. Recovery
+// decides; the host only reports what it has locally recorded.
+//
+// It also carries NO payload. The stored result (receipt/facts/references/
+// business identity) is served only by nodeEntry, which enforces the E5/D-04
+// read grant. This view answers the recovery questions — is there a record,
+// what material was it bound to, what does the ledger say, is the ledger
+// damaged — and nothing that would let an ungated caller read the payload.
+//
+//   - ResultRecorded: this result store holds a payload for the op. The
+//     payload may have been written BEFORE the machine recorded completion
+//     (the B/C crash window), so true does not mean "formally committed".
+//   - StoredCmdDigest: the command-material binding (κ) recorded with the
+//     payload. Empty when there is no record or the row predates the
+//     binding. It is a fact for the consumer's own material comparison; it
+//     does not say the material is "the same" (that would be a verdict).
+//   - MachineState: this host's ledger projection. "" means no local record;
+//     adopted/dispatched/unresolved/failed are NOT completed; unresolved is
+//     "dispatch outcome unknown — never auto-retried". A local state says
+//     nothing about a remote task or a business receipt.
+//   - TornTail: the durable ledger ended in an unparseable tail at Open.
+//     While true the machine is read-only and the ABSENCE of a record is not
+//     evidence that nothing happened (an unrecorded dispatch may exist).
+//
+// None of these fields authorizes a re-execution. The host has not observed
+// the caller's current execution authority, the remote task, or the business
+// receipt; when the facts are insufficient the consumer must query or wait,
+// never restart.
+// The anonymous struct alias is deliberate: methods cannot be declared on it
+// (the receiver base type must be a defined type), so a verdict method such
+// as SafeToRestart() is not merely caught by a pin — it is inexpressible.
+// The exact four-field shape is pinned in the reconciliation facts test.
+type opReadFacts = struct {
+	ResultRecorded  bool
+	StoredCmdDigest string
+	MachineState    adopt.State
+	TornTail        bool
+}
+
+// inspectOperation returns the local facts for opID without scheduling,
+// executing, writing the ledger, or deciding. It is the reconciliation read
+// face (batch-0 #3 / matrix row 6): a consumer may learn "this request needs
+// reconciliation"; it may not learn a permission to re-run it, and it may
+// not read the stored payload from here (nodeEntry is the gated read face).
+func (h *t2Host) inspectOperation(opID string) opReadFacts {
+	r, recorded := h.store.get(opID)
+	return opReadFacts{
+		ResultRecorded:  recorded,
+		StoredCmdDigest: r.CmdDigest,
+		MachineState:    h.machine.State(opID),
+		TornTail:        h.machine.TornTail(),
+	}
+}
+
 // requestForT2 builds the adoption request with the T2 scenario's OWN
 // business_request_id (the T0 requestFor hardcodes "br-e2e-credit" — using
 // it here would put a wrong brID in the ledger Identity while the T2 store
@@ -854,6 +897,14 @@ func (h *t2Host) nodeEntryExec(opID string, callerGrants []ledger.Grant, nodeKin
 		}
 		return NodeOutcome{Branch: "A-retry", Result: r}, nil
 	}
+	// A stored result with no local machine record means the result store
+	// and the ledger disagree (e.g. the ledger was lost while the result
+	// file survived). The execution state is UNKNOWN: re-entering would
+	// duplicate the effect and, on the knowledge path, overwrite the stored
+	// provenance through the same receipt. Refuse; the caller reconciles.
+	if _, recorded := h.store.get(opID); recorded && h.machine.State(opID) == "" {
+		return NodeOutcome{}, fmt.Errorf("[N3.ENTRY] %s: a stored result exists but the machine has no local record — store/ledger disagree (unknown execution state); query or wait, do not re-execute", opID)
+	}
 	// X3-7 in-flight guard (unchanged): an op that exists but is not completed
 	// is owned by an in-flight execution — refuse, zero port calls.
 	if s := h.machine.State(opID); s != "" {
@@ -1061,36 +1112,6 @@ func TestT2Store_PutDedupGuard(t *testing.T) {
 	// same material (κ match): idempotent re-put is the serve path
 	if err := rs.put("op-dedup", storedResult{Receipt: "r-kappa-1", BusinessReqID: "br-dedup", EvaluationRev: "er-1"}); err != nil {
 		t.Fatalf("batch0#2 probe: same-receipt re-put = err %v, want nil — same-material retry is the serve path, not a conflict", err)
-	}
-}
-
-// TestT2Store_ReconciliationThreeStates probes batch-0 #3 (matrix row 6
-// read face): queryForReconciliation answers the three recovery states —
-// no committed result (re-execute), committed+same digest (serve),
-// committed+different digest (conflict). Mutation probe: force the serve
-// verdict to constant true and the different-digest leg fails; force the
-// committed verdict to constant true and the missing-op leg fails.
-func TestT2Store_ReconciliationThreeStates(t *testing.T) {
-	rs, err := newResultStore(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
-	// state 1: nothing committed → (false, false) — recovery re-executes
-	if c, s, _ := rs.queryForReconciliation("op-recon", "r-kappa-1"); c || s {
-		t.Fatalf("batch0#3 probe: missing op = (%v,%v), want (false,false) — no committed result means re-execute, not serve", c, s)
-	}
-	if err := rs.put("op-recon", storedResult{Receipt: "r-kappa-1", BusinessReqID: "br-recon", EvaluationRev: "er-1"}); err != nil {
-		t.Fatal(err)
-	}
-	// state 2: committed + same digest → (true, true) — recovery serves
-	if c, s, r := rs.queryForReconciliation("op-recon", "r-kappa-1"); !c || !s || r.Receipt != "r-kappa-1" {
-		t.Fatalf("batch0#3 probe: same-digest query = (%v,%v), want (true,true) — same κ is the serve path", c, s)
-	}
-	// state 3: committed + different digest → (true, false) — conflict,
-	// NOT serve: a constant-true serve verdict would hand the recovery
-	// side the wrong material
-	if c, s, r := rs.queryForReconciliation("op-recon", "r-kappa-2"); !c || s || r.Receipt != "r-kappa-1" {
-		t.Fatalf("batch0#3 probe: different-digest query = (%v,%v), want (true,false) — different κ must surface as conflict, not serve", c, s)
 	}
 }
 

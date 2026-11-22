@@ -9,7 +9,7 @@ package e2e
 // changed history, and mutating a put argument did too.
 //
 // Mutation anchors: dropping the clone in put turns PutArgumentIsCopied red;
-// dropping it in get / queryForReconciliation / lookupByBusinessRequest turns
+// dropping it in get / lookupByBusinessRequest turns
 // exactly that face's sub-test red (each sub-test builds its own store, so the
 // failure name is the culprit's name).
 
@@ -36,7 +36,7 @@ func aliasStore(t *testing.T) *resultStore {
 // query face was then reported by the get assertion first — detection intact,
 // attribution wrong. Per-face stores make the culprit unambiguous.)
 //
-// Mutation anchors: dropping the clone in get / queryForReconciliation /
+// Mutation anchors: dropping the clone in get /
 // lookupByBusinessRequest makes exactly the corresponding sub-test fail.
 func TestT2Store_ReadFacesReturnCopies(t *testing.T) {
 	faces := []struct {
@@ -44,13 +44,6 @@ func TestT2Store_ReadFacesReturnCopies(t *testing.T) {
 		read func(*resultStore) (storedResult, bool)
 	}{
 		{"get", func(rs *resultStore) (storedResult, bool) { return rs.get("op-1") }},
-		{"queryForReconciliation", func(rs *resultStore) (storedResult, bool) {
-			// committed is this face's own found-or-not source; returning a
-			// constant true here would make its "!ok" arm unreachable and turn
-			// a genuine miss into an index-out-of-range panic.
-			committed, _, r := rs.queryForReconciliation("op-1", "r-1")
-			return r, committed
-		}},
 		{"lookupByBusinessRequest", func(rs *resultStore) (storedResult, bool) {
 			r, _, ok := rs.lookupByBusinessRequest("br-1")
 			return r, ok
