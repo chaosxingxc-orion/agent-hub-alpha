@@ -33,6 +33,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -76,6 +77,26 @@ type resultStore struct {
 	mu   sync.Mutex
 	path string
 	data map[string]storedResult // keyed by operation_id
+}
+
+// cloneStored returns a record whose slice fields own their backing arrays.
+// The store is the single owner of its records: callers may keep, edit or
+// reuse whatever slices they handed in or received, and neither the store's
+// memory nor the durable file can be changed from the outside (external audit
+// GC#27: a caller mutating the returned Facts changed history, and the next
+// put persisted the mutation).
+//
+// slices.Clone preserves the nil/empty distinction (nil stays nil, an empty
+// slice stays empty) — the durable form distinguishes null from [] and a
+// restart must reproduce the same value. Any future aliasing field (slice,
+// array, map, pointer, interface) must be copied here and registered in the
+// pin's allow-list: TestStoredResultCloneCoversAllFields fails both when a
+// field is unregistered and when it is registered but not actually copied.
+// Plain value fields (string, numbers, bool) need no copy and pass.
+func cloneStored(r storedResult) storedResult {
+	r.Facts = slices.Clone(r.Facts)
+	r.References = slices.Clone(r.References)
+	return r
 }
 
 func newResultStore(dir string) (*resultStore, error) {
@@ -170,7 +191,7 @@ func (rs *resultStore) put(opID string, r storedResult) error {
 	for k, v := range rs.data {
 		next[k] = v
 	}
-	next[opID] = r
+	next[opID] = cloneStored(r)
 	raw, err := json.MarshalIndent(next, "", "  ")
 	if err != nil {
 		return err
@@ -241,7 +262,7 @@ func (rs *resultStore) get(opID string) (storedResult, bool) {
 	rs.mu.Lock()
 	defer rs.mu.Unlock()
 	r, ok := rs.data[opID]
-	return r, ok
+	return cloneStored(r), ok
 }
 
 // queryForReconciliation is the batch-0 #3 read-face API (matrix row 6:
@@ -257,7 +278,7 @@ func (rs *resultStore) queryForReconciliation(opID, receiptDigest string) (commi
 	if !ok {
 		return false, false, r
 	}
-	return true, r.Receipt == receiptDigest, r
+	return true, r.Receipt == receiptDigest, cloneStored(r)
 }
 
 // lookupByBusinessRequest finds the LATEST result for a business request
@@ -289,7 +310,7 @@ func (rs *resultStore) lookupByBusinessRequest(brID string) (storedResult, strin
 			found = true
 		}
 	}
-	return best, bestOp, found
+	return cloneStored(best), bestOp, found
 }
 
 // revisionNumber extracts the numeric suffix from "er-N" (returns -1 if
