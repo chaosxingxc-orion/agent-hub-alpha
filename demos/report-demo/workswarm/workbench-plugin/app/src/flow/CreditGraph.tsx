@@ -99,7 +99,10 @@ function Gate({ g, opts, onClose }: { g: Graph; opts: Options; onClose: () => vo
       <input ref={input} type="password" placeholder="密码" autoComplete="current-password" aria-label="密码" />
       <button className="cg-btn" type="submit" disabled={busy}>{busy ? "批准中…" : "批准执行"}</button>
       {err && <span className="msg">{err}</span>}
-      <span className="hash" title={g.hash}>绑定 {g.hash.replace("sha256:", "").slice(0, 8)}</span>
+      <div className="cg-review-policy">
+        <strong>{g.human_review_required ? "必须人工核验" : "按程序检查结果处理"}</strong>
+        <span>执行图 v{g.version} · <code>{g.hash}</code></span>
+      </div>
     </form>
   );
 }

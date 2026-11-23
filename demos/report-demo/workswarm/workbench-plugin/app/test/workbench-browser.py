@@ -14,7 +14,8 @@ from playwright.sync_api import sync_playwright, expect
 
 DIST = Path(__file__).resolve().parents[2] / "frontend/dist"
 TRANSPORT = r"""
-window.fixture = {statuses: {R1:'waiting', R2:'running'}, sent:[], deferred:[], delay:false, rev:1, human:false, blockedReason:null};
+window.fixture = {statuses: {R1:'waiting', R2:'running'}, sent:[], deferred:[], delay:false, rev:1, human:false, blockedReason:null,
+  candidates:JSON.parse(sessionStorage.getItem('test-candidates') || 'null')};
 window.WebSocket = class {
   static OPEN = 1;
   readyState = 1;
@@ -25,9 +26,15 @@ window.WebSocket = class {
     const reply = payload => queueMicrotask(() => this.onmessage?.({data:JSON.stringify({type:'res', id:m.id, ok:true, payload})}));
     const blocked = n => f.statuses['R'+n]==='blocked' && f.blockedReason ? {blocked_reason:f.blockedReason} : {};
     if (m.method.endsWith('.plans')) {
-      reply({plans:[1,2].map(n => ({plan:'T-'+String(n).repeat(32), version:1, case:'C006', goal:'fixture '+n, ok:true, run:'T-'+String(n).repeat(32), run_status:f.statuses['R'+n], ...blocked(n)}))});
+      reply({plans:[1,2].map(n => ({plan:'T-'+String(n).repeat(32), version:1, case:'C006', goal:f.candidates ? '批准前须人工核验年报' : 'fixture '+n, ok:true,
+        ...(f.candidates ? {} : {run:'T-'+String(n).repeat(32), run_status:f.statuses['R'+n], ...blocked(n)})}))});
     } else if (m.method.endsWith('.graph')) {
       const n = (m.params.plan || m.params.run) === 'T-'+ '2'.repeat(32) ? 2 : 1;
+      if (f.candidates) {
+        const {hash, ...policy} = f.candidates[n];
+        return reply({plan:'T-'+String(n).repeat(32), version:1, case:'C006', goal:'批准前须人工核验年报', hash, ok:true, rev:String(++f.rev),
+          nodes:[], layers:[], approve:'plugin', task_status:'AWAITING_APPROVAL', ...policy});
+      }
       reply({plan:'T-'+String(n).repeat(32), version:1, case:'C006', goal:'fixture '+n, hash:'fixture', ok:true, rev:String(++f.rev), nodes:[], layers:[],
         run:{id:'T-'+String(n).repeat(32), status:f.statuses['R'+n], leases:1, url:''}, ...blocked(n),
         ...(f.human ? {human_review:{url:'http://127.0.0.1:8190/ui/tasks/T-'+String(n).repeat(32),checks:[{node:'check',check_artifact:'fixture',object_digest:'sha256:fixture'}]}} : {})});
@@ -83,6 +90,27 @@ class WorkbenchBrowserTests(unittest.TestCase):
         expect(link).to_have_attribute("target","_blank")
         self.page.evaluate("window.fixture.human=false")
         expect(link).to_have_count(0)
+
+    def test_confirmation_shows_actual_review_policy_and_graph_digest(self):
+        self.page.evaluate("""
+            sessionStorage.setItem('test-candidates', JSON.stringify({
+                1: {hash: 'sha256:' + 'a'.repeat(64), human_review_required: true},
+                2: {hash: 'sha256:' + 'b'.repeat(64)},
+            }));
+        """)
+        self.page.reload()
+        policy = self.page.locator(".cg-review-policy")
+        for n, label, digit in [(1, "必须人工核验", "a"), (2, "按程序检查结果处理", "b")]:
+            if n == 2:
+                self.page.locator(".wb-item", has_text="T-" + "2" * 32).click()
+            self.page.get_by_role("button", name="批准", exact=True).click()
+            expect(policy).to_contain_text(label)
+            expect(policy).to_contain_text("执行图 v1")
+            expect(policy).to_contain_text("sha256:" + digit * 64)
+            if directory := os.environ.get("EVIDENCE_DIR"):
+                Path(directory).mkdir(parents=True, exist_ok=True)
+                self.page.screenshot(path=str(Path(directory) / f"review-policy-{n}.png"))
+        self.assertFalse(self.page.evaluate("fixture.sent.some(m => m.method.endsWith('.approve'))"))
 
     def test_receipt_survives_control_unmount_and_is_scoped_to_run(self):
         self.resume()

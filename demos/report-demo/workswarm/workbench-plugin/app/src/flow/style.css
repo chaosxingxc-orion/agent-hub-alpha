@@ -43,7 +43,8 @@
 .cg-gate input { width: 140px; height: 26px; padding: 0 8px; border: 1px solid #d1d5db; border-radius: 6px; font: inherit; outline: none; transition: border-color .15s, box-shadow .15s; }
 .cg-gate input:focus { border-color: #93c5fd; box-shadow: 0 0 0 3px rgba(59, 130, 246, .15); }
 .cg-gate .msg { color: var(--red); }
-.cg-gate .hash { margin-left: auto; color: #9ca3af; font-family: ui-monospace, Menlo, monospace; font-size: 11px; }
+.cg-review-policy { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; width: 100%; color: var(--text); }
+.cg-review-policy span { color: var(--muted); overflow-wrap: anywhere; }
 .cg-gate.ok { color: #047857; gap: 6px; }
 
 /* ---------- canvas ---------- */
