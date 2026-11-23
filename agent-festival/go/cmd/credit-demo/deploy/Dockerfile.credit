@@ -1,0 +1,33 @@
+ARG PYTHON_IMAGE=python:3.11-slim
+ARG NODE_IMAGE=node:22-slim
+FROM ${NODE_IMAGE} AS card
+WORKDIR /src/app
+COPY go/cmd/credit-demo/app .
+RUN --mount=type=cache,id=issue16-card-npm,target=/root/.npm \
+    npm ci --no-audit --no-fund && mkdir -p ../web && npm run build
+FROM ${PYTHON_IMAGE} AS build
+COPY --from=tools go.tar.gz /tmp/go.tar.gz
+RUN tar -xzf /tmp/go.tar.gz -C /usr/local && rm /tmp/go.tar.gz
+ENV PATH=/usr/local/go/bin:$PATH CGO_ENABLED=0 GOTOOLCHAIN=local
+ARG GOPROXY=https://proxy.golang.org,direct
+ENV GOPROXY=${GOPROXY}
+WORKDIR /src
+COPY go/go.mod go/go.sum ./go/
+COPY go/internal ./go/internal
+COPY go/cmd/credit-demo ./go/cmd/credit-demo
+COPY --from=card /src/web/graph-flow.js ./go/cmd/credit-demo/web/graph-flow.js
+COPY schema ./schema
+WORKDIR /src/go/cmd/credit-demo
+RUN --mount=type=cache,id=issue16-gomod,target=/root/go/pkg/mod \
+    --mount=type=cache,id=issue16-gobuild,target=/root/.cache/go-build \
+    go test ./... -count=1 && go vet ./... && \
+    go build -trimpath -ldflags="-s -w" -o /out/credit-demo .
+FROM ${PYTHON_IMAGE}
+COPY --from=build /out/credit-demo /opt/aha/run/credit/credit-demo
+COPY schema/*.schema.json /opt/aha/schema/
+COPY schema/examples/judgment/valid/judgment-spec-credit.json /opt/aha/run/credit/
+COPY go/cmd/credit-demo/deploy/scenarios/ /opt/aha/run/credit/scenarios/
+WORKDIR /opt/aha/run/credit
+ENV CREDIT_DATA=/data CREDIT_ADDR=:8091
+EXPOSE 8091
+ENTRYPOINT ["/opt/aha/run/credit/credit-demo"]

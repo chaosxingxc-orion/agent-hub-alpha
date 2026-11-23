@@ -1,0 +1,26 @@
+server:
+  port: 8090
+spring:
+  application:
+    name: ${AGENT_SERVICE_ID}
+openjiuwen:
+  service:
+    version: "1.0.0"
+    a2a:
+      public-url: ${AGENT_PUBLIC_URL}
+      streaming: false
+      agent-description: "Issue 16 controlled professional agent; node-scoped evidence and tools"
+      provider-organization: "Agent Hub Alpha"
+      default-input-modes: ["text/plain"]
+      default-output-modes: ["text/plain"]
+      skills:
+        - id: ${AGENT_SERVICE_ID}
+          name: ${AGENT_ROLE}
+          description: "Execute a control-service-authorized node with isolated input and read-only tools"
+          tags: ["issue16", "controlled"]
+          input-modes: ["text/plain"]
+          output-modes: ["text/plain"]
+logging:
+  level:
+    root: WARN
+    com.openjiuwen.demo: INFO

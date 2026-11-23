@@ -150,6 +150,8 @@ flowchart LR
 
 仓库已有的 Go `agent-festival/` 用于契约、状态机和宿主机制研究；Java consumer spike 用于跨语言消费验证。它们提供可复用资产与实验依据，各自的通过结果不自动等于 Java/openJiuwen 集成通过。存储、调度、消息、知识组织和模型服务等具体选型仍按兼容性与证据确定。
 
+Issue #16 的部署集成分支提供 [W02 原型构建与启动入口](agent-festival/go/cmd/credit-demo/deploy/README.md)：固定源码构建 WorkSwarm、Go 控制服务与 Java 执行器。当前为授信模拟场景的部署基线，年报场景、真实 Agent Bus 接入及完整验收仍待完成。
+
 ## 7. 当前实现、证据与下一步
 
 **截至 2026-11-08，本仓已接收原 NGA MR #4（包含 MR #2）的参考成果。** 来源提交、保留的组件承诺和系统开放项见[验收状态表](achitecture%20design/08-r1-r6-acceptance-and-open-items.md)。

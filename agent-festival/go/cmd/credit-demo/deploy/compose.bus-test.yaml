@@ -1,0 +1,21 @@
+# Only for transport acceptance. Normal deployments use compose.bus.yaml alone.
+services:
+  fault-proxy:
+    image: python:3.11-slim
+    command: [python, /test/fault_proxy.py]
+    volumes:
+      - ./bus/fault_proxy.py:/test/fault_proxy.py:ro
+    environment:
+      UPSTREAM: http://gateway:8080
+    mem_limit: 64m
+    healthcheck:
+      test: [CMD, python, -c, "import socket; socket.create_connection(('127.0.0.1',8099),3).close()"]
+      interval: 5s
+      timeout: 4s
+      retries: 12
+  orchestrator:
+    environment:
+      CREDIT_BUS_GATEWAY: http://fault-proxy:8099
+    depends_on:
+      fault-proxy:
+        condition: service_healthy

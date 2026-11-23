@@ -1,0 +1,61 @@
+server:
+  port: 8092
+spring:
+  datasource:
+    url: jdbc:postgresql://bus-db:5432/agent_rdc
+    username: agent_rdc
+    password: ${RDC_DB_PASSWORD}
+  flyway:
+    enabled: true
+rdc:
+  deployment-discovery:
+    enabled: true
+    reconcile-interval: 5s
+    binding-defaults:
+      framework-type: JIUWEN
+      route-key: /a2a
+      contract-version: "1.0.0"
+      capability-version: "1.0.0"
+      card-path: /.well-known/agent-card.json
+      max-concurrency: 3
+    instances:
+      - tenant-id: issue16
+        service-id: credit-material
+        instance-id: material-1
+        base-url: http://material-agent:8090
+        route-key: /a2a
+        contract-version: "1.0.0"
+        capability-version: "1.0.0"
+        deployment-version: "1.0.1"
+        readiness: READY
+      - tenant-id: issue16
+        service-id: credit-analysis
+        instance-id: analysis-1
+        base-url: http://analysis-agent:8090
+        route-key: /a2a
+        contract-version: "1.0.0"
+        capability-version: "1.0.0"
+        deployment-version: "1.0.1"
+        readiness: READY
+      - tenant-id: issue16
+        service-id: credit-writer
+        instance-id: writer-1
+        base-url: http://writer-agent:8090
+        route-key: /a2a
+        contract-version: "1.0.0"
+        capability-version: "1.0.0"
+        deployment-version: "1.0.1"
+        readiness: READY
+  registry:
+    card-fetch:
+      # Demo-only trusted Compose network. Upstream Runtime serves unsigned
+      # cards; registration targets are fixed by deployment, never model input.
+      verify-signatures: false
+      target-cidrs: ["172.16.0.0/12", "192.168.0.0/16"]
+openjiuwen:
+  registry:
+    registration-paths: [reconciliation]
+    route-handle-secret: ${RDC_ROUTE_HANDLE_SECRET}
+    auth:
+      adapter: static-token
+      token: ${RDC_REGISTRY_API_TOKEN}

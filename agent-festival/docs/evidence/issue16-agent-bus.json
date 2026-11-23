@@ -1,0 +1,643 @@
+{
+  "schema": 1,
+  "date": "2026-11-11",
+  "branch": "feat/issue16-agent-bus",
+  "implementation_commit": "7bb7f279b7b890e6811d5f8c9e5eaef35bff7edc",
+  "evidence_runner_commit": "d17f304d5b7b170f95e85404a9b43a0198458258",
+  "baseline_commit": "5051d3a",
+  "scope": "Agent Bus integration using synthetic credit roles; W01/W06 annual-report acceptance excluded",
+  "go_race_tests_passed": 18,
+  "versions": {
+    "prototype": {
+      "url": "https://github.com/WangHaowen99/agent-hub-alpha.git",
+      "commit": "46980e84bf12e9a0fbfa860614822509bf299db5"
+    },
+    "sources": {
+      "agent-solution": {
+        "url": "https://gitcode.com/openJiuwen/agent-solution.git",
+        "commit": "bf702bc95064d3491cf8b374f54d271363d84230"
+      },
+      "workswarm": {
+        "url": "https://github.com/openJiuwen-ai/jiuwenswarm.git",
+        "commit": "1142e5fb3984a2b1bc6352669a464976e204b2dc"
+      }
+    },
+    "go": {
+      "version": "1.25.0",
+      "url": "https://go.dev/dl/go1.25.0.linux-amd64.tar.gz",
+      "sha256": "2852af0cb20a13139b3448992e69b868e50ed0f8a1e5940ee1de9e19a123b613"
+    },
+    "java_core_maven": "com.openjiuwen:agent-core-java:0.1.17",
+    "solution_version": "0.1.3",
+    "workswarm_uv": "0.11.7",
+    "workswarm_protocol_fetch": {
+      "ref": "refs/merge-requests/391/head",
+      "commit": "4c5f3e9eb41bd33d34d012b06a3e364e8497ac11",
+      "reason": "GitCode PR-only commit; uv.lock resolved commit remains unchanged"
+    },
+    "agent_bus": {
+      "solution_commit": "bf702bc95064d3491cf8b374f54d271363d84230",
+      "rdc": "0.1.3",
+      "gateway": "0.1.3",
+      "runtime_maven": "com.openjiuwen:agent-service-app:0.1.4",
+      "protocol": "A2A 1.0 JSON-RPC",
+      "protocol_sdk": "org.a2aproject.sdk:a2a-java-sdk-spec:1.0.0.Final",
+      "client": "JDK 21 HttpClient narrow adapter; SendMessage(returnImmediately)/GetTask",
+      "spring_boot": "4.0.7",
+      "jdk": "21",
+      "compiler_release": 17,
+      "path_mode": "DIRECT",
+      "postgres": "15-alpine",
+      "postgres_image": "postgres:15-alpine@sha256:09e4f20b14ddb3dfe3a0c825b206032aaf8f28300ba2070c0b60fc1c10c6abc7"
+    }
+  },
+  "deployment": {
+    "at": "2026-11-11T11:59:46.523366+00:00",
+    "direct_gateway_restored": true,
+    "fresh_project_cleaned": true,
+    "services": {
+      "/agent-hub-issue16-orchestrator-1": {
+        "image": "sha256:d84ccb40acf7fe6f26cbdf4c54b45e39cdf20b9323ccfc2d7f33a60d56b42877",
+        "tag": "agent-hub-issue16/orchestrator:bus-v1",
+        "health": "healthy",
+        "memory_limit": 536870912
+      },
+      "/agent-hub-issue16-credit-1": {
+        "image": "sha256:e329b947ced77bbcd02ac9348bb3a2cc35a1dbb8867c3e591cc6c20a8524587d",
+        "tag": "agent-hub-issue16/credit:bus-v1",
+        "health": "healthy",
+        "memory_limit": 268435456
+      },
+      "/agent-hub-issue16-gateway-1": {
+        "image": "sha256:cede78ff227339f99fd7cc009effc8d85a506a0075669b671806c8cbcc109363",
+        "tag": "agent-hub-issue16/gateway:bf702bc",
+        "health": "healthy",
+        "memory_limit": 335544320
+      },
+      "/agent-hub-issue16-bus-db-1": {
+        "image": "sha256:c1dd58d6cec8e67cb85b2c8fd200fa870697269c5024e59627095326a8254ae2",
+        "tag": "postgres:15-alpine@sha256:09e4f20b14ddb3dfe3a0c825b206032aaf8f28300ba2070c0b60fc1c10c6abc7",
+        "health": "healthy",
+        "memory_limit": 201326592
+      },
+      "/agent-hub-issue16-analysis-agent-1": {
+        "image": "sha256:145d50009cfae342d7c6ac1079436a56f14d544e17ace260ed3fdfa0f25fcbaa",
+        "tag": "agent-hub-issue16/professional:bus-v1",
+        "health": "healthy",
+        "memory_limit": 440401920
+      },
+      "/agent-hub-issue16-material-agent-1": {
+        "image": "sha256:145d50009cfae342d7c6ac1079436a56f14d544e17ace260ed3fdfa0f25fcbaa",
+        "tag": "agent-hub-issue16/professional:bus-v1",
+        "health": "healthy",
+        "memory_limit": 440401920
+      },
+      "/agent-hub-issue16-writer-agent-1": {
+        "image": "sha256:145d50009cfae342d7c6ac1079436a56f14d544e17ace260ed3fdfa0f25fcbaa",
+        "tag": "agent-hub-issue16/professional:bus-v1",
+        "health": "healthy",
+        "memory_limit": 440401920
+      },
+      "/agent-hub-issue16-rdc-1": {
+        "image": "sha256:43b7156bc96b760e7fc6e38c7da6bc50e0e7b13e59729f19abe9fb520e382226",
+        "tag": "agent-hub-issue16/rdc:bf702bc",
+        "health": "healthy",
+        "memory_limit": 440401920
+      },
+      "/agent-hub-issue16-front-1": {
+        "image": "sha256:7bc5ba2f958a043e123135f456af857350673b64eaddcf811698239f3a53d6e6",
+        "tag": "nginx:alpine",
+        "health": "running",
+        "memory_limit": 100663296
+      },
+      "/agent-hub-issue16-swarm-1": {
+        "image": "sha256:4d3fbed091c5fb6386183317b3810cf3bb64a3febeac9bbe9baa81bf452fb69a",
+        "tag": "agent-hub-issue16/workswarm:1142e5fb3-local",
+        "health": "healthy",
+        "memory_limit": 2147483648
+      }
+    }
+  },
+  "latest_fault_runs": {
+    "disconnect": {
+      "file": "disconnect-1794397958.json",
+      "run": "R12",
+      "checks": {
+        "same_request_and_task": true,
+        "no_completed_node_model_increment": false,
+        "completed": true
+      },
+      "passed": true
+    },
+    "gateway-restart": {
+      "file": "gateway-restart-1794398125.json",
+      "run": "R15",
+      "checks": {
+        "manual_reconciliation_required": true,
+        "no_redispatch": true,
+        "dependents_blocked": true
+      },
+      "passed": true
+    },
+    "host-kill": {
+      "file": "host-kill-1794397901.json",
+      "run": "R11",
+      "checks": {
+        "same_request_and_task": true,
+        "no_completed_node_model_increment": true,
+        "completed": true
+      },
+      "passed": true
+    },
+    "late": {
+      "file": "late-1794397997.json",
+      "run": "R13",
+      "checks": {
+        "same_request_and_task": true,
+        "no_completed_node_model_increment": false,
+        "completed": true
+      },
+      "passed": true
+    },
+    "protocol-admission": {
+      "file": "protocol-admission-1794398171.json",
+      "run": null,
+      "checks": null,
+      "passed": true
+    },
+    "runtime-restart": {
+      "file": "runtime-restart-1794398141.json",
+      "run": "R16",
+      "checks": {
+        "manual_reconciliation_required": true,
+        "no_redispatch": true,
+        "dependents_blocked": true
+      },
+      "passed": true
+    },
+    "storage-failure": {
+      "file": "storage-failure-1794398063.json",
+      "run": "R14",
+      "checks": {
+        "real_atomic_rename_failure": true,
+        "no_success_before_durable_commit": true,
+        "dependents_blocked": true,
+        "original_task_reconciled": true
+      },
+      "passed": true
+    }
+  },
+  "experiments": [
+    {
+      "file": "disconnect-1794396384.json",
+      "scenario": "disconnect",
+      "run": "R5",
+      "passed": true,
+      "error": null,
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "disconnect-1794397958.json",
+      "scenario": "disconnect",
+      "run": "R12",
+      "passed": true,
+      "error": null,
+      "project": "agent-hub-issue16"
+    },
+    {
+      "file": "fresh-restart.json",
+      "scenario": "fresh-restart",
+      "run": "R1",
+      "passed": true,
+      "error": null,
+      "project": "agent-hub-issue16-fresh"
+    },
+    {
+      "file": "gateway-restart-1794396542.json",
+      "scenario": "gateway-restart",
+      "run": "R8",
+      "passed": true,
+      "error": null,
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "gateway-restart-1794398125.json",
+      "scenario": "gateway-restart",
+      "run": "R15",
+      "passed": true,
+      "error": null,
+      "project": "agent-hub-issue16"
+    },
+    {
+      "file": "host-kill-1794396318.json",
+      "scenario": "host-kill",
+      "run": "R4",
+      "passed": true,
+      "error": null,
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "host-kill-1794397010.json",
+      "scenario": "host-kill",
+      "run": "R2",
+      "passed": true,
+      "error": null,
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "host-kill-1794397901.json",
+      "scenario": "host-kill",
+      "run": "R11",
+      "passed": true,
+      "error": null,
+      "project": "agent-hub-issue16"
+    },
+    {
+      "file": "late-1794396420.json",
+      "scenario": "late",
+      "run": "R6",
+      "passed": true,
+      "error": null,
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "late-1794397997.json",
+      "scenario": "late",
+      "run": "R13",
+      "passed": true,
+      "error": null,
+      "project": "agent-hub-issue16"
+    },
+    {
+      "file": "normal-1794395568.json",
+      "scenario": "normal",
+      "run": "R2",
+      "passed": false,
+      "error": "waiting",
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "normal-1794395987.json",
+      "scenario": "normal",
+      "run": "R3",
+      "passed": true,
+      "error": null,
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "normal-1794396722.json",
+      "scenario": "normal",
+      "run": null,
+      "passed": false,
+      "error": "Three real roles must be discoverable",
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "normal-1794396780.json",
+      "scenario": "normal",
+      "run": "R1",
+      "passed": true,
+      "error": null,
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "normal-1794397789.json",
+      "scenario": "normal",
+      "run": "R10",
+      "passed": true,
+      "error": null,
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "protocol-admission-1794396604.json",
+      "scenario": "protocol-admission",
+      "run": null,
+      "passed": true,
+      "error": null,
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "protocol-admission-1794396891.json",
+      "scenario": "protocol-admission",
+      "run": null,
+      "passed": true,
+      "error": null,
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "protocol-admission-1794398171.json",
+      "scenario": "protocol-admission",
+      "run": null,
+      "passed": true,
+      "error": null,
+      "project": "agent-hub-issue16"
+    },
+    {
+      "file": "rdc-unavailable.json",
+      "scenario": "rdc-unavailable",
+      "run": null,
+      "passed": true,
+      "error": null,
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "runtime-restart-1794396557.json",
+      "scenario": "runtime-restart",
+      "run": "R9",
+      "passed": true,
+      "error": null,
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "runtime-restart-1794398141.json",
+      "scenario": "runtime-restart",
+      "run": "R16",
+      "passed": true,
+      "error": null,
+      "project": "agent-hub-issue16"
+    },
+    {
+      "file": "storage-failure-1794396486.json",
+      "scenario": "storage-failure",
+      "run": "R7",
+      "passed": true,
+      "error": null,
+      "project": "see report for first-round project mapping"
+    },
+    {
+      "file": "storage-failure-1794398063.json",
+      "scenario": "storage-failure",
+      "run": "R14",
+      "passed": true,
+      "error": null,
+      "project": "agent-hub-issue16"
+    },
+    {
+      "file": "workswarm-approved-execution.json",
+      "scenario": "workswarm-approved-execution",
+      "run": "R3",
+      "passed": true,
+      "error": null,
+      "project": "agent-hub-issue16-fresh"
+    },
+    {
+      "file": "workswarm-candidate.json",
+      "scenario": "workswarm-candidate",
+      "run": null,
+      "passed": true,
+      "error": null,
+      "project": "agent-hub-issue16-fresh"
+    }
+  ],
+  "source_sha256": {
+    "agent-festival/examples/credit-orchestrator/src/main/java/com/openjiuwen/demo/credit/RemoteAgentMember.java": "68df6b006f8891969b3deac1e53d431dbe417bfe19f5b24f5b46cd4c96871933",
+    "agent-festival/examples/credit-orchestrator/src/main/java/com/openjiuwen/demo/credit/Worker.java": "09e6467384da82d017c477d586264499517d16de6bbd22dd3f8bfd907e46225d",
+    "agent-festival/examples/professional-agent-runtime/pom.xml": "3968824a437ddfc214e99ce8663fa7fd68a39ba103edab11299995005511767f",
+    "agent-festival/examples/professional-agent-runtime/src/main/java/com/openjiuwen/demo/professional/ProfessionalAgentApplication.java": "59bfdf96091427d63f60526dd4829d60bf061db520b4a6dd1e7b8ce711bf9cff",
+    "agent-festival/examples/professional-agent-runtime/src/main/java/com/openjiuwen/demo/professional/ProfessionalHandler.java": "3a35876e532962bada133ad9bbdad0a228a90820a875e1a40d6038fdd7204a4c",
+    "agent-festival/examples/professional-agent-runtime/src/main/resources/application.yml": "73963a11b06b911ddac50f35aaf73d5e9037adcbbe2df69717bf32e7e2ea7304",
+    "agent-festival/go/cmd/credit-demo/app/dist/graph-app.html": "2cd516fe4d21679e0877936e4db312e5a0074ec5105dd7c31e9e99c0a0b2ea3f",
+    "agent-festival/go/cmd/credit-demo/app/src/graph.ts": "2617989b2a8ab5e7a3a793529b0319f72735f71c8c9e71a4467e30266a751738",
+    "agent-festival/go/cmd/credit-demo/bus.go": "1bde91af43becd20339fe84f991bf7e5d3132fd57244fe50411b604680216a2d",
+    "agent-festival/go/cmd/credit-demo/bus_test.go": "1359b780d1079c4b12cfe78bbe795bd877d03ad85fa7a8da5ae5b89b2e446861",
+    "agent-festival/go/cmd/credit-demo/catalog.go": "67ba7306ca365a70790a93f7dc4c0848092623e316083da0b6cb89ebffecefd2",
+    "agent-festival/go/cmd/credit-demo/deploy/Dockerfile.agent": "5ec91d4ee00516c05afff00329b1fd129639a2a67b61fb62f705375a87da3f39",
+    "agent-festival/go/cmd/credit-demo/deploy/Dockerfile.bus": "b1acb7fe01382367ce1fd59950a39afdacb88814b91c8a36ef1c5c5cd6b32b6a",
+    "agent-festival/go/cmd/credit-demo/deploy/README.md": "fcd8b7b29c8eca44de052f2258059993c9f46c06188e55df3fe9587b4f00db3b",
+    "agent-festival/go/cmd/credit-demo/deploy/bus/fault_proxy.py": "06e9620095161379b8ee9a239bf2c1204b7dd2f695f286728d1b05cdb24ca410",
+    "agent-festival/go/cmd/credit-demo/deploy/bus/health_gateway.py": "08fb541f62ece70846a789bb220d997f063189968d2142f967277fafbc037101",
+    "agent-festival/go/cmd/credit-demo/deploy/bus/rdc.yml": "d48e67478f189088744442a28bede8e145c8310d538216a17aaccc83b3f3f7c1",
+    "agent-festival/go/cmd/credit-demo/deploy/compose.bus-test.yaml": "ac4461f03d1d47e66ed445d84af749b04f4799b4602c224289bf0badd11a7555",
+    "agent-festival/go/cmd/credit-demo/deploy/compose.bus.yaml": "9be9ee4c3ddf6ed4d20d1bb4cb1d4bdf968cff20da70d9e0ede920cd069146fb",
+    "agent-festival/go/cmd/credit-demo/deploy/demo.py": "eb0bcaf14b41e32a45c058310db002e01d6883e0d83fcc4d76a329c9936ec601",
+    "agent-festival/go/cmd/credit-demo/deploy/probe_bus.py": "0a47d39143fe4330503f581cc24ae87348ddc564ce9c8093fb647ccc3e828387",
+    "agent-festival/go/cmd/credit-demo/deploy/smoke_bus.py": "945212d1762ac0bae4cf4b6e8dce01f0904fe38b4ef1e87b6d47a83ec28b392f",
+    "agent-festival/go/cmd/credit-demo/deploy/sources.lock.json": "bbf15ebf3a25dea6b1f6685062b88e35a93c536192c5e705f8b97e0bc8cfa329",
+    "agent-festival/go/cmd/credit-demo/graph.go": "175143a5453e489fe92596d65631dc48a72588594b6608ff22f7330ad6aed630",
+    "agent-festival/go/cmd/credit-demo/main.go": "cede570bc33d480d0db0ef4279dc77f9144e65ffac21b6637bc33bca2e9f0952",
+    "agent-festival/go/cmd/credit-demo/mcp.go": "af5b41d7b3fed37a015a69335f9a842f83f67ba5d8f71fd1b2583610aba55491",
+    "agent-festival/go/cmd/credit-demo/plan.go": "460a970fa9fdb040919d793250a6943db342a4ada5fb065bf24e74c8f32b5a4d",
+    "agent-festival/go/cmd/credit-demo/service.go": "df4969cbea80e12de0ec7a29c935899bfac71dbf2ea1281abd659e9a265f1d10",
+    "agent-festival/go/cmd/credit-demo/verify.go": "ca2e139da4ca44d194021575e373e4ec4819154ade176324c141c6ef2158796a",
+    "agent-festival/go/cmd/credit-demo/web.go": "e731215ef846c207134bc44448c8141589a5b534a5fe27c960f55f19efe02c45",
+    "agent-festival/go/cmd/credit-demo/web/graph.js": "8f0c80784fc6faf47c789296c8c6872dfe657dbf3e490cc5c2914858599cdfe9"
+  },
+  "evidence_files": {
+    "build-agent.log": {
+      "sha256": "125b46436604573efa1ab0fb4b124c959e5c08c78b5e48fbfd8fb34349037bc6",
+      "bytes": 4590
+    },
+    "build-assets.log": {
+      "sha256": "bd5958700faa6d3f96084281e822a08b6daa24b95aa983692ac5098cade7a868",
+      "bytes": 995
+    },
+    "build-bus.log": {
+      "sha256": "9aa1234c5214c4ed9ccb040b6966259f4cc1bcd1329e6ea073c5433a007d5ef6",
+      "bytes": 113785
+    },
+    "build-core.log": {
+      "sha256": "50b70ee8a6a2d6aea2c5f952a00ffec56aefccf92bdeb246a358c74260b87e20",
+      "bytes": 16601
+    },
+    "build-go.json": {
+      "sha256": "ba9b4d75258734cfc2aef29900dbfb882b6987f6382d44831bed74a00416a94f",
+      "bytes": 2738
+    },
+    "build-go.log": {
+      "sha256": "2e4c6ceb4aa4fed25278a44162d118c17000cbdea0452b5a9a5a8ce7f9412d23",
+      "bytes": 3406
+    },
+    "build-java.json": {
+      "sha256": "57891034c7050fdc34e74cf29aa537e42dbc6aca047a1844d6f338246b434b61",
+      "bytes": 3043
+    },
+    "build-java.log": {
+      "sha256": "3247bd69c5e0cc6e0bc0c7f49895ed96985c1e01bf3849d100d1678f998866a2",
+      "bytes": 39494
+    },
+    "build-rdc.log": {
+      "sha256": "68006a87647bcdfe4b667156f8bfa081e62c8c56ae1330202dbfb552956cd0aa",
+      "bytes": 2720
+    },
+    "disconnect-1794396384.json": {
+      "sha256": "34857aeb07f741cfdb8b0db9700de3053d06bb03b8dc5c707b09d1f443d5e0e6",
+      "bytes": 700304
+    },
+    "disconnect-1794397958.json": {
+      "sha256": "1c9d3bfae4a13227f654435c88943a6fab71d9862d18e86056bf23c12e249ef1",
+      "bytes": 788656
+    },
+    "final-deployment.json": {
+      "sha256": "2ca06e127865a8ba488e4281bf7748197bd4ed0aaf3cb8d59ee8b3861119033b",
+      "bytes": 2646
+    },
+    "final-start.log": {
+      "sha256": "f288f8502423c86a3584151492a113d139376613a7818ccd3b97724b3b9626ca",
+      "bytes": 3362
+    },
+    "final-ui-done.png": {
+      "sha256": "edcefa5c2f9ae746b2ed7b269cc8dc8144a6bb8098cb97714651025d112ca8b3",
+      "bytes": 145532
+    },
+    "final-ui-waiting.png": {
+      "sha256": "7b7d05dbd32192d70cf1b3fb5d2289df84777b57bdf07a4e4960060d266a1151",
+      "bytes": 57787
+    },
+    "final-ui.json": {
+      "sha256": "fbaa3ed0bf542150dc08f01c69ed3ae26a1e1156713de69aec5570aba7235bf3",
+      "bytes": 2235
+    },
+    "fresh-expert.png": {
+      "sha256": "9d505757c8124eab39cded32a46f8a608f35b66e33985d990811c4adcc75af47",
+      "bytes": 33341
+    },
+    "fresh-images.json": {
+      "sha256": "a2c136e65cf409096e205a8d617267b06fc328984599a150ce0340627ce84449",
+      "bytes": 2701
+    },
+    "fresh-restart.json": {
+      "sha256": "fe919f2c8665224c8dc4c8d645c676641f25aeb292285b75ef4ca35fff02081a",
+      "bytes": 18531
+    },
+    "fresh-start.log": {
+      "sha256": "2274631ea26143336886b936db9c05f3dd2ead5985d586e07cebcf5dc7f0ba55",
+      "bytes": 4552
+    },
+    "fresh-workswarm.png": {
+      "sha256": "d90794324f7d8817930057562434fc7978dee5f743dcf050043aaa322af0ee2b",
+      "bytes": 80935
+    },
+    "gateway-restart-1794396542.json": {
+      "sha256": "f5da9f36bc4d00e58870ea8a5f3d11b9cf1a1f39eaeddb50f97fd9705a928b3a",
+      "bytes": 32891
+    },
+    "gateway-restart-1794398125.json": {
+      "sha256": "64106386d230f6d51602cd40e2ee911f0b3891dd2245ccb05e8c008a870d53b5",
+      "bytes": 30008
+    },
+    "go-race.jsonl": {
+      "sha256": "dec308a5b60a065bc502b52923de12d7984f0fbbfbeb2ec34144b142bc88c564",
+      "bytes": 16614
+    },
+    "go-race.log": {
+      "sha256": "5cf36d3e0a709256f8ae95d4da3b032195d5fe26557030ec435e07f0f32b05a0",
+      "bytes": 68
+    },
+    "host-kill-1794396318.json": {
+      "sha256": "e3f51f8ff9e234b08ea6cac18c75b3c7c8f8bb87a86676e903635459e6cb00bd",
+      "bytes": 1242310
+    },
+    "host-kill-1794397010.json": {
+      "sha256": "a33c253e885dcba6dafe0c1ce87fe155997a38734088b8fe583d0e6dbdffc119",
+      "bytes": 1008999
+    },
+    "host-kill-1794397901.json": {
+      "sha256": "014fa315746b6f1a57023590b7664f78fc379ce99ca4d6f0dcab6307f3ee5e09",
+      "bytes": 1091413
+    },
+    "late-1794396420.json": {
+      "sha256": "73aa8bfccb9163a8ace8a6671a6558495412d949ae7efa64ab680e20956f4e68",
+      "bytes": 1102736
+    },
+    "late-1794397997.json": {
+      "sha256": "3ecba3d00507f24546708491da8e1aab7bd201f67fec188510c3b40da472e2a6",
+      "bytes": 1077608
+    },
+    "missing-config.json": {
+      "sha256": "62228cd3537f4d1fc18d1d5e48b9f674f835f49dfdaab443e3e5ec5b9580a413",
+      "bytes": 166
+    },
+    "normal-1794395568.json": {
+      "sha256": "2067d271a8ab1a6bb99da239e3c156919478f114ff1f24c7330b6a2974559582",
+      "bytes": 22033
+    },
+    "normal-1794395987.json": {
+      "sha256": "4012dc3dfbad85c42eb124f7a95e110fb0b212528fbe0ea1a35692b670ab29df",
+      "bytes": 772611
+    },
+    "normal-1794396722.json": {
+      "sha256": "f4cb40df67144b81146297df722383c4a46ce9db88723de80890ddbd57785369",
+      "bytes": 284
+    },
+    "normal-1794396780.json": {
+      "sha256": "a27a1b2d2de26031eb84004c2a016300b88ed17fc2e9c62098fb073350130e62",
+      "bytes": 1095472
+    },
+    "normal-1794397789.json": {
+      "sha256": "dda9b083fb9a312db5f825f31ee565ddc710638988015756730fd516efe825e1",
+      "bytes": 884874
+    },
+    "protocol-admission-1794396604.json": {
+      "sha256": "da550f40533104dae3f7b5e7b505801376651a40ad790fe476775f0b8126163d",
+      "bytes": 11626
+    },
+    "protocol-admission-1794396891.json": {
+      "sha256": "7078236d60c81b98904236120ba7a9a37945f4b46e5014f88c8f1dcb94d1e813",
+      "bytes": 16090
+    },
+    "protocol-admission-1794398171.json": {
+      "sha256": "73698b53e918373ba1a5bd236a10eabfbb24f7a017eb38b8825ea068f98e6096",
+      "bytes": 26542
+    },
+    "rdc-unavailable.json": {
+      "sha256": "56346b15bc33a3be260a3148f9b48f1391f57e446752dc32fa596d8c96c72a94",
+      "bytes": 10984
+    },
+    "resources.json": {
+      "sha256": "dfefcb39c8363853a0c6c7830100e859fcf286478a85c67d8b65ec2372b9bd1d",
+      "bytes": 3321
+    },
+    "runtime-restart-1794396557.json": {
+      "sha256": "eb637c90501655301b009df9d2f41ea333c8afb52ba59460d108fef8f37e0f62",
+      "bytes": 42713
+    },
+    "runtime-restart-1794398141.json": {
+      "sha256": "6cafbd7b3d2b42bccd92fa083a457a9154b95fe356103c2c7522e7bc1f2f6e52",
+      "bytes": 39851
+    },
+    "storage-failure-1794396486.json": {
+      "sha256": "d09782a28e5543ba0a09caba7f5c80f3f8156c23d7b6d57a77e2a3f2dd77fc95",
+      "bytes": 875196
+    },
+    "storage-failure-1794398063.json": {
+      "sha256": "d03296ad2482afe56455bb9a1da8f1cab945d76abfea1b978df5f425be57bb64",
+      "bytes": 1022615
+    },
+    "ui-approval.png": {
+      "sha256": "4016bd75563a45fc59be1c1de8af38756183015de036d8cddc8955c71413d4be",
+      "bytes": 271713
+    },
+    "ui-completed.json": {
+      "sha256": "65e4f76e5eca377670766d4e909a99f912c71b020b9bc7450e7003d9e3aea32d",
+      "bytes": 1967
+    },
+    "ui-completed.png": {
+      "sha256": "41fe1de31cab1f1b73334e2a63128c911b74cc6b22b1ddcdff9d21f82909a470",
+      "bytes": 180985
+    },
+    "ui-run-start.png": {
+      "sha256": "1e9c3f02456100f5d21ff39d737c47edc3d73c5a8561b7b4bcd8fd2af6f2c02a",
+      "bytes": 40348
+    },
+    "workswarm-approved-execution.json": {
+      "sha256": "e0df87d1959578e62b29b5e6e64770e54915b057be5972218ff5af1564287f7d",
+      "bytes": 203492
+    },
+    "workswarm-candidate.json": {
+      "sha256": "e077e6f7e1a72dd58d438023d6a38b30b0b30e3b91d76d212c16c20d7851e974",
+      "bytes": 14598
+    }
+  },
+  "archive": {
+    "cache_relative_path": "agent-bus-evidence.tar.gz",
+    "sha256": "830f3b81905dc0a315b2e8332df0f867826296656bbbd95247e91edb5af9f824",
+    "bytes": 1114173,
+    "credentials_scan_passed": true
+  },
+  "known_limits": [
+    "Gateway owner index and Runtime task storage are in memory; lost tasks require human reconciliation",
+    "Flat graph remote node identity; no general nested workflow/loop recovery claim",
+    "Demo credentials and unsigned cards in private network; not production authentication",
+    "Model events count attempts before client invocation, not provider billing"
+  ]
+}

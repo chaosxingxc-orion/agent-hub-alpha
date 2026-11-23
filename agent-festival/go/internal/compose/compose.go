@@ -720,7 +720,7 @@ func ComposeErrors(doc map[string]any) *Result {
 	res := &Result{}
 	// schema
 	var schemaErrs []string
-	validate.SetRootSchema(graphSchema)
+	// Root is per-call: schema itself supplies the $defs context (no shared state).
 	validate.SchemaErrorsDoc(doc, graphSchema, "<root>", &schemaErrs)
 	schemaErrs = validate.CheckGraphVerdict(doc, schemaErrs)
 	if len(schemaErrs) > 0 {

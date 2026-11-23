@@ -1,0 +1,30 @@
+ARG NODE_IMAGE=node:22-slim
+ARG PYTHON_IMAGE=python:3.11-slim
+FROM ${NODE_IMAGE} AS web
+COPY --from=swarm-src . /src
+WORKDIR /src/jiuwenswarm/channels/web/frontend
+RUN --mount=type=cache,id=issue16-npm,target=/root/.npm npm ci --no-audit --no-fund
+ARG NODE_HEAP_MB=3072
+ENV NODE_OPTIONS=--max-old-space-size=${NODE_HEAP_MB}
+RUN npm run build
+FROM ${PYTHON_IMAGE}
+RUN apt-get update && apt-get install -y --no-install-recommends git ca-certificates libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=tools uv /usr/local/bin/uv
+COPY --from=swarm-src . /opt/src/workswarm
+WORKDIR /opt/src/workswarm
+COPY prepare_workswarm.py /tmp/prepare_workswarm.py
+ENV UV_PYTHON_DOWNLOADS=never UV_LINK_MODE=copy PYTHONUNBUFFERED=1 \
+    UV_PROJECT_ENVIRONMENT=/opt/venv PATH="/opt/venv/bin:$PATH"
+RUN --mount=type=cache,id=issue16-uv,target=/root/.cache/uv \
+    python /tmp/prepare_workswarm.py && uv sync --frozen --no-dev --no-editable && \
+    uv pip check --python /opt/venv/bin/python
+COPY --from=web /src/jiuwenswarm/channels/web/frontend/dist /opt/venv/lib/python3.11/site-packages/jiuwenswarm/channels/web/frontend/dist
+COPY entrypoint.sh /usr/local/bin/aha-entrypoint.sh
+COPY configure.py /usr/local/bin/aha-configure.py
+COPY patches/ /opt/venv/lib/python3.11/site-packages/
+RUN chmod +x /usr/local/bin/aha-entrypoint.sh && rm -rf /opt/src/workswarm /tmp/prepare_workswarm.py
+WORKDIR /app
+ENV FRONTEND_HOST=0.0.0.0
+EXPOSE 5173
+ENTRYPOINT ["/usr/local/bin/aha-entrypoint.sh"]

@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Agent Hub Alpha 原始与当前架构对比：WorkSwarm、Java Graph、Agent Bus DIRECT、RDC 与独立专业 Runtime。"><title>Agent Hub Alpha · 原始与当前架构对比</title><style>
+:root{
+  --proc:#2563eb;
+  --tool:#16a34a;
+  --sub:#ea580c;
+  --model:#7c3aed;
+  --llm:#dc2626;
+  --loop:#4f46e5;
+  --core:#0891b2;
+  --ink:#1f2937;
+  --muted:#6b7280;
+  --line:#e5e7eb;
+  --bg:#f8fafc;
+  --surface:#fff;
+  --code-bg:#0f172a;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  color:var(--ink);
+  background:var(--bg);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.75;
+  font-size:15px;
+}
+a{color:inherit}
+.layout{display:flex;align-items:flex-start;max-width:1560px;margin:0 auto}
+.sidebar{
+  position:sticky;
+  top:0;
+  align-self:flex-start;
+  width:268px;
+  flex:0 0 268px;
+  height:100vh;
+  overflow-y:auto;
+  background:#fff;
+  border-right:1px solid var(--line);
+  padding:26px 14px 40px;
+}
+.brand{
+  padding:0 8px 14px;
+  margin-bottom:12px;
+  border-bottom:1px solid var(--line);
+  color:#0f172a;
+  font-size:14.5px;
+  font-weight:800;
+  line-height:1.4;
+}
+.brand small{
+  display:block;
+  margin-top:4px;
+  color:var(--muted);
+  font-size:11.5px;
+  font-weight:500;
+}
+.toc{font-size:12.6px}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc li{margin:1px 0}
+.toc a{
+  display:block;
+  padding:5px 9px;
+  border-left:2px solid transparent;
+  border-radius:6px;
+  color:#475569;
+  line-height:1.35;
+  text-decoration:none;
+}
+.toc a:hover{background:#f1f5f9;color:var(--proc)}
+.toc a.active{background:#eff6ff;color:var(--proc);border-left-color:var(--proc);font-weight:700}
+.content{flex:1 1 auto;min-width:0;max-width:1180px;padding:40px 46px 96px}
+.hero{
+  color:#fff;
+  background:linear-gradient(135deg,#0e7490,#4338ca);
+  border-radius:16px;
+  padding:34px 38px;
+  margin-bottom:30px;
+  box-shadow:0 10px 30px rgba(67,56,202,.22);
+}
+.hero h1{margin:0 0 8px;font-size:28px;line-height:1.25;letter-spacing:0}
+.hero p{margin:0;max-width:920px;opacity:.94;font-size:14.5px}
+.meta{margin-top:12px;font-size:12.5px;opacity:.86}
+.meta span{display:inline-block;margin-right:16px}
+h2{
+  margin:46px 0 14px;
+  padding-bottom:8px;
+  border-bottom:2px solid var(--line);
+  color:#0f172a;
+  font-size:21px;
+  line-height:1.35;
+  scroll-margin-top:16px;
+}
+h3{margin:24px 0 9px;color:#1e293b;font-size:16.5px}
+h4{margin:0 0 6px;color:#334155;font-size:14.5px}
+p{margin:10px 0}
+b,strong{color:#0f172a}
+code{
+  padding:1.5px 6px;
+  border-radius:5px;
+  background:#eef2f7;
+  color:#b91c1c;
+  font-family:"SF Mono",Consolas,"Liberation Mono",Menlo,monospace;
+  font-size:.84em;
+}
+.tldr{
+  margin:18px 0;
+  padding:16px 22px;
+  border:1px solid var(--line);
+  border-left:5px solid var(--core);
+  border-radius:12px;
+  background:#fff;
+}
+.tldr ol{margin:8px 0 0;padding-left:22px}
+.tldr li{margin:6px 0}
+.note{
+  margin:14px 0;
+  padding:12px 16px;
+  border:1px solid #c7d2fe;
+  border-radius:10px;
+  background:#eef2ff;
+  font-size:14px;
+}
+.note b{color:#4f46e5}
+.note.good{background:#f0fdf4;border-color:#bbf7d0}
+.note.good b{color:#16a34a}
+.note.warn{background:#fff7ed;border-color:#fed7aa}
+.note.warn b{color:#ea580c}
+.cols{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:14px;
+  margin:14px 0;
+}
+.cols.two{grid-template-columns:1fr 1fr}
+.card{
+  min-height:120px;
+  padding:14px 16px;
+  border:1px solid var(--line);
+  border-radius:12px;
+  background:#fff;
+  font-size:13.5px;
+}
+.card .label{
+  display:inline-block;
+  margin-bottom:8px;
+  padding:2px 8px;
+  border-radius:999px;
+  color:#fff;
+  font-size:11px;
+  font-weight:800;
+}
+.label.proc{background:var(--proc)}
+.label.tool{background:var(--tool)}
+.label.sub{background:var(--sub)}
+.label.model{background:var(--model)}
+.label.llm{background:var(--llm)}
+.label.loop{background:var(--loop)}
+.label.core{background:var(--core)}
+ul,ol{margin:10px 0;padding-left:24px}
+li{margin:5px 0}
+table{
+  width:100%;
+  margin:16px 0;
+  border-collapse:collapse;
+  overflow:hidden;
+  border-radius:10px;
+  background:#fff;
+  box-shadow:0 1px 3px rgba(0,0,0,.06);
+  font-size:13.2px;
+}
+th,td{padding:9px 12px;border:1px solid var(--line);text-align:left;vertical-align:top}
+th{background:#f1f5f9;font-weight:700}
+tbody tr:nth-child(even){background:#fafbfc}
+.arch,.diagram{
+  margin:18px 0;
+  padding:16px;
+  overflow-x:auto;
+  border:1px solid var(--line);
+  border-radius:14px;
+  background:#fff;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);
+}
+.diagram{text-align:center}
+.arch svg{display:block;width:100%;min-width:960px;height:auto}
+.diagram svg{display:block;width:100%;min-width:900px;height:auto;margin:0 auto}
+.cap{margin-top:-6px;color:var(--muted);font-size:12.5px}
+footer{
+  margin-top:60px;
+  padding-top:20px;
+  border-top:1px solid var(--line);
+  color:var(--muted);
+  font-size:13px;
+}
+.menu-toggle{display:none}
+@media(max-width:980px){
+  .cols,.cols.two{grid-template-columns:1fr}
+  .sidebar{
+    position:fixed;
+    left:0;
+    top:0;
+    z-index:40;
+    transform:translateX(-100%);
+    transition:transform .25s ease;
+    box-shadow:0 0 24px rgba(0,0,0,.18);
+  }
+  .sidebar.open{transform:translateX(0)}
+  .content{padding:66px 18px 80px}
+  .hero{padding:28px 24px}
+  .menu-toggle{
+    display:inline-flex;
+    position:fixed;
+    top:14px;
+    left:14px;
+    z-index:50;
+    padding:8px 12px;
+    border:0;
+    border-radius:8px;
+    background:var(--proc);
+    color:#fff;
+    box-shadow:0 2px 8px rgba(0,0,0,.2);
+    cursor:pointer;
+    font-size:14px;
+  }
+}
+
+.content{max-width:none;padding:36px 38px 80px}.layout{max-width:1780px}.hero{background:linear-gradient(120deg,#0d637d,#344c99);box-shadow:none;padding:32px 34px}.hero h1{font-size:30px}.hero strong{color:#fff}.eyebrow{font-size:11px;letter-spacing:2px;margin-bottom:12px;opacity:.8}.hero .meta{display:flex;flex-wrap:wrap;gap:8px 16px}.hero code{color:#fff;background:#ffffff17}.toolbar{display:flex;gap:9px;flex-wrap:wrap;margin-top:22px}.toolbar a,.toolbar button{padding:7px 12px;border:1px solid #ffffff55;background:#ffffff12;color:#fff;border-radius:7px;font:inherit;font-size:12px;text-decoration:none;cursor:pointer}.toolbar a:hover,.toolbar button:hover{background:#ffffff25}.section-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:36px}.section-head h2{border:0;margin:0;padding:0}.section-head .version{color:#64748b;font-size:12px}.diagram-tools{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:12px 0 0}.btn{padding:6px 10px;border:1px solid #cbd5e1;background:#fff;border-radius:6px;color:#334155;font:inherit;font-size:12px;cursor:pointer}.btn:hover{border-color:#2563eb;color:#2563eb}.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#64748b}.legend span{display:inline-flex;align-items:center;gap:6px}.swatch{width:12px;height:12px;border:1px solid #bac6d4;background:#f8fafc;border-radius:3px}.swatch.enhanced{background:#fff7ed;border-color:#f5ad68}.swatch.added{background:#ecfdf5;border-color:#68bd9a}.arch{padding:16px;margin-top:12px;box-shadow:none}.arch svg{min-width:920px}.compare-wrap{overflow-x:auto}.compare-wrap table{min-width:720px;margin-top:0}.diagram-hint{font-size:12px;color:#64748b}.cols .card{min-height:0;padding:18px}.card h3{margin:0 0 8px;font-size:15px}.card p{margin:0;font-size:13px}.metric{font-size:24px;font-weight:750;color:#0d637d;line-height:1.2;margin:8px 0}.step-list{counter-reset:steps;padding:0;list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:12px}.step-list li{margin:0;border:1px solid #e5e7eb;border-radius:10px;background:white;padding:16px 16px 16px 52px;position:relative;font-size:13px}.step-list li::before{counter-increment:steps;content:counter(steps);position:absolute;left:16px;top:17px;width:24px;height:24px;border-radius:50%;background:#e9f2ff;color:#2563eb;text-align:center;line-height:24px;font-weight:700}.step-list strong{display:block;margin-bottom:3px}.sources{font-size:13px}.sources code{overflow-wrap:anywhere}.sources a{color:#2563eb;text-underline-offset:3px}.sidebar .revision{font-size:11px;color:#64748b;padding:14px 9px;border-top:1px solid #e5e7eb;margin-top:20px}.toc a{padding:9px}.skip-link{position:absolute;left:-9999px}.skip-link:focus{left:12px;top:8px;background:#fff;z-index:100;padding:10px}.menu-shade{display:none}.btn:focus-visible,.toc a:focus-visible,.menu-toggle:focus-visible{outline:3px solid #93c5fd;outline-offset:3px}h2{scroll-margin-top:20px}.status-pill{display:inline-block;background:#eaf7ef;color:#167342;padding:1px 7px;font-size:11px;border-radius:4px;margin-left:5px}.line-key{color:#64748b;font-size:12px;margin:0 0 8px}.line-key b{font-weight:500}.line-key .blue{color:#2563eb}.line-key .orange{color:#c2410c}.line-key .green{color:#168a61}.diagram-tip{font-size:12px;color:#64748b}.hero .meta span{margin-right:0}footer{font-size:12px}.mobile-only{display:none}
+@media(max-width:980px){.content{padding:68px 18px 60px}.hero{padding:25px 22px}.hero h1{font-size:24px}.sidebar{width:268px}.menu-shade.visible{display:block;position:fixed;inset:0;background:#0f172a55;z-index:35}.menu-toggle{z-index:50}.section-head{gap:5px}.mobile-only{display:inline}.step-list{grid-template-columns:1fr}.arch{padding:8px}.arch svg{min-width:920px}h2{scroll-margin-top:65px}.hero .meta{font-size:11px}.content .tldr{padding:14px 17px}}
+@media print{@page{size:A3 portrait;margin:14mm}body{font-size:12px;background:white}.layout{display:block;max-width:none}.sidebar,.menu-toggle,.menu-shade,.toolbar,.diagram-tools .btn,.skip-link{display:none!important}.content{max-width:none;padding:0}.hero{print-color-adjust:exact;-webkit-print-color-adjust:exact}.arch{overflow:visible;padding:8px;break-inside:avoid}.arch svg{min-width:0;width:100%}.compare-wrap{overflow:visible}.compare-wrap table{min-width:0}h2,.section-head{break-after:avoid}.card,.step-list li{break-inside:avoid}.cap,.note{break-inside:avoid}.page-diagram{break-before:page}.hero h1{font-size:25px}a{text-decoration:none}footer{margin-top:25px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+</style></head><body>
+<a class="skip-link" href="#main">跳到正文</a>
+<button class="menu-toggle" type="button" aria-expanded="false" aria-controls="sidebar">☰ 目录</button><div class="menu-shade" aria-hidden="true"></div>
+<div class="layout">
+<aside class="sidebar" id="sidebar"><div class="brand">Agent Hub Alpha<small>Issue #16 · 架构演进对比</small></div><nav class="toc" aria-label="文档目录"><ol>
+<li><a href="#overview">1 · 对比结论</a></li><li><a href="#before">2 · 原始架构</a></li><li><a href="#after">3 · 当前架构</a></li><li><a href="#changes">4 · 差异清单</a></li><li><a href="#lifecycle">5 · 调用与恢复</a></li><li><a href="#boundaries">6 · 边界与依据</a></li></ol></nav><div class="revision">改造前<br><code>5051d3a</code><br><br>当前实现<br><code>4d5d1b8</code><br><br>核对日期 · 2026-11-11<br>图示反映实际代码与部署</div></aside>
+<main class="content" id="main">
+<header class="hero"><div class="eyebrow">ARCHITECTURE COMPARISON · ISSUE #16</div><h1>Agent Hub Alpha<br>从宿主内 Agent 到总线调用</h1><p>保留 WorkSwarm 与 Java Graph，接入真实 Agent Bus、独立专业 Runtime，并补齐远端调用的结果控制和可观察性。</p><div class="meta"><span>原始工作区基线 <code>5051d3a</code></span><span>当前分支 <code>feat/issue16-agent-bus</code></span><span>实现提交 <code>4d5d1b8</code></span></div><div class="toolbar"><a href="#before">查看原始架构 ↓</a><a href="#after">查看当前架构 ↓</a><button type="button" id="print">打印 / 保存 PDF</button></div></header>
+<section aria-labelledby="overview"><h2 id="overview">1 · 对比结论</h2><div class="tldr"><strong>变化集中在专业 Agent 的部署与调用边界，以及远端结果的可靠控制。</strong><p>原型已有中枢规划、用户确认、真实 Graph 并行、Loop Forest 和节点结果复用。本轮将五个专业节点接到三个独立 Runtime，由 Gateway DIRECT 调用、RDC 发现；Go 保存派发意图、远端关联与正式结果，页面展示这些持久事实。</p></div>
+<div class="cols"><div class="card"><span class="label proc">保留</span><h3>唯一执行推进者</h3><div class="metric">Java Graph</div><p>WorkSwarm 负责规划与呈现，Go 负责控制与结果。各组件职责延续。</p></div><div class="card"><span class="label tool">新增</span><h3>独立专业服务</h3><div class="metric">3 类 · 5 节点</div><p>资料 1 个，分析 3 个，写作 1 个；共享角色服务时仍隔离调用上下文。</p></div><div class="card"><span class="label sub">增强</span><h3>可核对的远端执行</h3><div class="metric">发现 → 调用 → 产物</div><p>固定能力绑定，保留原任务身份；写入失败不发布正式成功结果。</p></div></div>
+<div class="note"><b>比较口径：</b>原分支 <code>demo/issue16-deploy</code> 的指针仍为 <code>f707dd9</code>；当时未提交的可运行 Demo 工作区，在新分支以 <code>5051d3a</code> 保存。因此两图比较 <code>5051d3a → 4d5d1b8</code>，避免把原有 Demo 功能误计为本轮新增。</div></section>
+<section class="page-diagram" aria-labelledby="before"><div class="section-head"><h2 id="before">2 · 原始架构</h2><span class="version">可运行基线 · 5051d3a</span></div><p>专业 Agent 与 Graph 调度器处在同一个 Java 进程，由本地成员接口执行。</p><div class="diagram-tools"><div class="legend"><span><i class="swatch"></i>原有组件</span></div><button class="btn" type="button" data-export="before-svg">下载 SVG 图</button></div><div class="arch" tabindex="0" role="region" aria-label="原始架构图，可横向滚动"><svg id="before-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 850" role="img" aria-labelledby="before-svg-title before-svg-desc"><title id="before-svg-title">改造前：宿主内专业 Agent</title><desc id="before-svg-desc">基线 5051d3a。WorkSwarm 规划和确认，Go 保存计划及结果，Java Graph 调度同进程 ReActAgent 与 Loop Forest。</desc><style>text{font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;fill:#1f2937} .group-title{font-size:17px;font-weight:700} .title{font-size:18px;font-weight:700} .sub{font-size:14px;fill:#526175} .edge-label{font-size:13px;fill:#475569;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round} .pill{font-size:12px;font-weight:700} .edge{fill:none;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round} .wire{transition:opacity .2s} .node{transition:opacity .2s}</style><defs><marker id="before-svg-END-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#2563eb" stroke-width="1.6"/></marker><marker id="before-svg-START-flow" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M9 1 L1 5 L9 9" fill="none" stroke="#2563eb" stroke-width="1.6"/></marker><marker id="before-svg-END-control" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#ea580c" stroke-width="1.6"/></marker><marker id="before-svg-START-control" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M9 1 L1 5 L9 9" fill="none" stroke="#ea580c" stroke-width="1.6"/></marker><marker id="before-svg-END-discovery" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#168a61" stroke-width="1.6"/></marker><marker id="before-svg-START-discovery" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M9 1 L1 5 L9 9" fill="none" stroke="#168a61" stroke-width="1.6"/></marker><marker id="before-svg-END-record" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#718096" stroke-width="1.6"/></marker><marker id="before-svg-START-record" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M9 1 L1 5 L9 9" fill="none" stroke="#718096" stroke-width="1.6"/></marker></defs><rect width="1200" height="850" fill="#fff"/><g class="node"><rect x="290" y="35" width="620" height="116" rx="10" fill="#f8fafc" stroke="#bac6d4"/><text x="307" y="64" class="title" text-anchor="start" >WorkSwarm · 中枢规划与用户入口</text><text x="307" y="90" class="sub" text-anchor="start" >按目录生成候选图 → 用户确认</text><text x="307" y="111" class="sub" text-anchor="start" >MCP 图卡：计划、状态、节点结果和复用标记</text></g><rect x="30" y="235" width="400" height="450" rx="15" fill="#fff" stroke="#bac6d4" stroke-width="1.4"/><text x="50" y="265" class="group-title" text-anchor="start" >Go 管理 / 控制与结果</text><text x="50" y="287" class="sub" text-anchor="start" >一个服务；本地能力契约与状态投影</text><rect x="600" y="235" width="570" height="450" rx="15" fill="#fff" stroke="#bac6d4" stroke-width="1.4"/><text x="620" y="265" class="group-title" text-anchor="start" >Java 协同宿主 · 同一个进程</text><text x="620" y="287" class="sub" text-anchor="start" >Graph 唯一推进执行；专业成员在宿主内创建</text><g class="node"><rect x="50" y="302" width="360" height="86" rx="10" fill="#f8fafc" stroke="#bac6d4"/><text x="67" y="331" class="title" text-anchor="start" >计划检查、采纳与执行控制</text><text x="67" y="357" class="sub" text-anchor="start" >固定图版本 · 租约 / epoch</text></g><g class="node"><rect x="50" y="425" width="360" height="80" rx="10" fill="#f8fafc" stroke="#bac6d4"/><text x="67" y="454" class="title" text-anchor="start" >本地能力目录</text><text x="67" y="480" class="sub" text-anchor="start" >签名契约 · 白名单 · 权限与预算</text></g><g class="node"><rect x="50" y="555" width="360" height="95" rx="10" fill="#f8fafc" stroke="#bac6d4"/><text x="67" y="584" class="title" text-anchor="start" >受控 MCP 工具</text><text x="67" y="610" class="sub" text-anchor="start" >C006 / C007 授信模拟材料</text><text x="67" y="631" class="sub" text-anchor="start" >按节点契约放行并记录读取证据</text></g><g class="node"><rect x="620" y="302" width="530" height="86" rx="10" fill="#f8fafc" stroke="#bac6d4"/><text x="637" y="331" class="title" text-anchor="start" >openJiuwen Graph / BlueprintScheduler</text><text x="637" y="357" class="sub" text-anchor="start" >依赖推进 · 并行 · 已完成节点复用</text></g><g class="node"><rect x="620" y="435" width="530" height="95" rx="10" fill="#f8fafc" stroke="#bac6d4"/><text x="637" y="464" class="title" text-anchor="start" >进程内专业 ReActAgent</text><text x="637" y="490" class="sub" text-anchor="start" >资料 · 财务 · 行业 · 征信 · 写作</text><text x="637" y="511" class="sub" text-anchor="start" >由 Worker.member() 创建</text></g><g class="node"><rect x="620" y="565" width="245" height="95" rx="10" fill="#f8fafc" stroke="#bac6d4"/><text x="637" y="594" class="title" text-anchor="start" >关联方排查</text><text x="637" y="620" class="sub" text-anchor="start" >Loop Forest</text><text x="637" y="641" class="sub" text-anchor="start" >节点内自主分叉</text></g><g class="node"><rect x="885" y="565" width="265" height="95" rx="10" fill="#f8fafc" stroke="#bac6d4"/><text x="902" y="594" class="title" text-anchor="start" >风险判断</text><text x="902" y="620" class="sub" text-anchor="start" >结构化判断</text><text x="902" y="641" class="sub" text-anchor="start" >Go 规约校验与采纳</text></g><g class="node"><rect x="50" y="735" width="360" height="85" rx="10" fill="#f8fafc" stroke="#bac6d4"/><text x="67" y="764" class="title" text-anchor="start" >Go 数据持久卷</text><text x="67" y="790" class="sub" text-anchor="start" >state.json · 节点结果 · 证据日志</text></g><g class="wire control"><path d="M 290 94 H 15 V 345 H 50" class="edge" stroke="#ea580c" marker-end="url(#before-svg-END-control)" marker-start="url(#before-svg-START-control)"/><text x="45" y="194" class="edge-label" text-anchor="start" >候选 / 确认 ↔ 状态</text></g><g class="wire control"><path d="M 410 333 H 620" class="edge" stroke="#ea580c" marker-end="url(#before-svg-END-control)"/><text x="442" y="322" class="edge-label" text-anchor="start" >已采纳图 / 租约</text></g><g class="wire record"><path d="M 620 366 H 410" class="edge" stroke="#718096" marker-end="url(#before-svg-END-record)" stroke-dasharray="6 5"/><text x="442" y="390" class="edge-label" text-anchor="start" >执行状态 / 结果</text></g><g class="wire record"><path d="M 230 425 V 388" class="edge" stroke="#718096" marker-end="url(#before-svg-END-record)" stroke-dasharray="6 5"/><text x="244" y="415" class="edge-label" text-anchor="start" >能力与权限</text></g><g class="wire flow"><path d="M 885 388 V 435" class="edge" stroke="#2563eb" marker-end="url(#before-svg-END-flow)"/><text x="900" y="418" class="edge-label" text-anchor="start" >成员调用</text></g><g class="wire flow"><path d="M 1095 388 V 410 H 1178 V 700 H 744 V 660" class="edge" stroke="#2563eb" marker-end="url(#before-svg-END-flow)"/></g><g class="wire flow"><path d="M 1178 700 H 1017 V 660" class="edge" stroke="#2563eb" marker-end="url(#before-svg-END-flow)"/></g><g class="wire flow"><path d="M 620 483 H 520 V 588 H 410" class="edge" stroke="#2563eb" marker-end="url(#before-svg-END-flow)"/><text x="445" y="566" class="edge-label" text-anchor="start" >工具读取</text></g><g class="wire flow"><path d="M 620 612 H 410" class="edge" stroke="#2563eb" marker-end="url(#before-svg-END-flow)"/></g><g class="wire record"><path d="M 230 685 V 735" class="edge" stroke="#718096" marker-end="url(#before-svg-END-record)" stroke-dasharray="6 5"/><text x="245" y="719" class="edge-label" text-anchor="start" >持久保存</text></g><text x="620" y="770" class="sub" text-anchor="start" >已有：真实 Graph、并行、Loop Forest、图确认及结果复用。</text><text x="620" y="799" class="sub" text-anchor="start" >专业 Agent 通过进程内成员接口执行；未接 RDC / Gateway。</text></svg></div><p class="cap">方框分组表示服务或进程边界。图中省略两版共有的 Nginx、模型供应商和 WorkSwarm 自有持久卷。<span class="mobile-only">窄屏可左右滑动查看完整图。</span></p></section>
+<section class="page-diagram" aria-labelledby="after"><div class="section-head"><h2 id="after">3 · 当前架构</h2><span class="version">feat/issue16-agent-bus · 4d5d1b8</span></div><p>资料、分析与写作改为独立 Runtime，Graph 通过窄适配器接入 Gateway。关联方 Loop Forest 和风险判断保留在宿主内。</p><div class="diagram-tools"><div class="legend"><span><i class="swatch"></i>保留</span><span><i class="swatch enhanced"></i>增强</span><span><i class="swatch added"></i>新增</span></div><button class="btn" type="button" data-export="after-svg">下载 SVG 图</button></div><div class="arch" tabindex="0" role="region" aria-label="当前架构图，可横向滚动"><svg id="after-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1080" role="img" aria-labelledby="after-svg-title after-svg-desc"><title id="after-svg-title">改造后：Agent Bus DIRECT 与独立 Runtime</title><desc id="after-svg-desc">当前分支 4d5d1b8。保留 WorkSwarm、Go 控制与 Java Graph，新增远程成员适配、RDC、Gateway 和三类专业 Runtime。</desc><style>text{font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif;fill:#1f2937} .group-title{font-size:17px;font-weight:700} .title{font-size:18px;font-weight:700} .sub{font-size:14px;fill:#526175} .edge-label{font-size:13px;fill:#475569;paint-order:stroke;stroke:#fff;stroke-width:5px;stroke-linejoin:round} .pill{font-size:12px;font-weight:700} .edge{fill:none;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round} .wire{transition:opacity .2s} .node{transition:opacity .2s}</style><defs><marker id="after-svg-END-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#2563eb" stroke-width="1.6"/></marker><marker id="after-svg-START-flow" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M9 1 L1 5 L9 9" fill="none" stroke="#2563eb" stroke-width="1.6"/></marker><marker id="after-svg-END-control" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#ea580c" stroke-width="1.6"/></marker><marker id="after-svg-START-control" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M9 1 L1 5 L9 9" fill="none" stroke="#ea580c" stroke-width="1.6"/></marker><marker id="after-svg-END-discovery" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#168a61" stroke-width="1.6"/></marker><marker id="after-svg-START-discovery" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M9 1 L1 5 L9 9" fill="none" stroke="#168a61" stroke-width="1.6"/></marker><marker id="after-svg-END-record" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M1 1 L9 5 L1 9" fill="none" stroke="#718096" stroke-width="1.6"/></marker><marker id="after-svg-START-record" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M9 1 L1 5 L9 9" fill="none" stroke="#718096" stroke-width="1.6"/></marker></defs><rect width="1200" height="1080" fill="#fff"/><g class="node"><rect x="290" y="35" width="620" height="116" rx="10" fill="#fff7ed" stroke="#f5ad68"/><text x="307" y="64" class="title" text-anchor="start" >WorkSwarm · 沿用同一中枢与 MCP 图卡</text><text x="307" y="90" class="sub" text-anchor="start" >候选图 → 用户确认 → 持久状态投影</text><text x="307" y="111" class="sub" text-anchor="start" >增强展示：RDC 快照 / Gateway 回执 / 模型尝试 / 产物</text></g><rect x="30" y="235" width="350" height="705" rx="15" fill="#fff" stroke="#f5ad68" stroke-width="1.4"/><text x="50" y="265" class="group-title" text-anchor="start" >Go 管理 / 控制与结果</text><text x="50" y="287" class="sub" text-anchor="start" >保留服务；增强缺失控制</text><rect x="430" y="235" width="350" height="410" rx="15" fill="#fff" stroke="#bac6d4" stroke-width="1.4"/><text x="450" y="265" class="group-title" text-anchor="start" >Java 协同宿主</text><text x="450" y="287" class="sub" text-anchor="start" >保留唯一执行推进者</text><rect x="830" y="235" width="340" height="410" rx="15" fill="#fff" stroke="#68bd9a" stroke-width="1.4"/><text x="850" y="265" class="group-title" text-anchor="start" >Agent Bus · 复用上游</text><text x="850" y="287" class="sub" text-anchor="start" >DIRECT；无 broker / relay</text><rect x="430" y="740" width="740" height="220" rx="15" fill="#fff" stroke="#68bd9a" stroke-width="1.4"/><text x="450" y="770" class="group-title" text-anchor="start" >专业 Agent · 三个独立 Runtime 进程</text><text x="450" y="792" class="sub" text-anchor="start" >每次调用隔离上下文和获准工具；真实 AgentCard</text><g class="node"><rect x="50" y="302" width="310" height="92" rx="10" fill="#fff7ed" stroke="#f5ad68"/><text x="67" y="331" class="title" text-anchor="start" >图采纳与结果控制</text><text x="67" y="357" class="sub" text-anchor="start" >真实能力绑定 · 节点身份</text><text x="67" y="378" class="sub" text-anchor="start" >输入校验 · 冲突拒绝 · 状态投影</text></g><g class="node"><rect x="50" y="430" width="310" height="86" rx="10" fill="#fff7ed" stroke="#f5ad68"/><text x="67" y="459" class="title" text-anchor="start" >受控场景能力目录</text><text x="67" y="485" class="sub" text-anchor="start" >本地业务契约 + 真实卡片</text><text x="67" y="506" class="sub" text-anchor="start" >固定能力版本与契约摘要</text></g><g class="node"><rect x="50" y="555" width="310" height="112" rx="10" fill="#fff7ed" stroke="#f5ad68"/><text x="67" y="584" class="title" text-anchor="start" >节点上下文与 MCP 工具</text><text x="67" y="610" class="sub" text-anchor="start" >授信模拟材料 · 节点作用域</text><text x="67" y="631" class="sub" text-anchor="start" >按凭据取得获准输入和工具</text><text x="67" y="652" class="sub" text-anchor="start" >记录模型调用尝试</text></g><g class="node"><rect x="50" y="765" width="310" height="158" rx="10" fill="#fff7ed" stroke="#f5ad68"/><text x="67" y="794" class="title" text-anchor="start" >原 Go 持久卷增强</text><text x="67" y="820" class="sub" text-anchor="start" >派发意图 / request-task-context</text><text x="67" y="841" class="sub" text-anchor="start" >节点正式产物 / 输入与产物摘要</text><text x="67" y="862" class="sub" text-anchor="start" >RDC 快照 / Gateway 调用观测</text><text x="67" y="883" class="sub" text-anchor="start" >写失败回滚内存并冻结写入</text></g><g class="node"><rect x="450" y="302" width="310" height="86" rx="10" fill="#f8fafc" stroke="#bac6d4"/><text x="467" y="331" class="title" text-anchor="start" >Graph / BlueprintScheduler</text><text x="467" y="357" class="sub" text-anchor="start" >依赖推进 · 并行 · 恢复</text></g><g class="node"><rect x="450" y="430" width="310" height="86" rx="10" fill="#ecfdf5" stroke="#68bd9a"/><text x="467" y="459" class="title" text-anchor="start" >RemoteAgentMember</text><text x="467" y="485" class="sub" text-anchor="start" >远程成员窄适配</text><text x="467" y="506" class="sub" text-anchor="start" >发送 / 查询原任务 / 提交结果</text></g><g class="node"><rect x="450" y="550" width="310" height="72" rx="10" fill="#f8fafc" stroke="#bac6d4"/><text x="467" y="579" class="title" text-anchor="start" >仍在宿主内执行</text><text x="467" y="605" class="sub" text-anchor="start" >关联方 Loop Forest · 风险判断</text></g><g class="node"><rect x="850" y="302" width="300" height="86" rx="10" fill="#ecfdf5" stroke="#68bd9a"/><text x="867" y="331" class="title" text-anchor="start" >RDC · 发现与路由</text><text x="867" y="357" class="sub" text-anchor="start" >按部署配置读取真实卡片</text><text x="867" y="378" class="sub" text-anchor="start" >核对能力版本与实例状态</text></g><g class="node"><rect x="850" y="430" width="300" height="86" rx="10" fill="#ecfdf5" stroke="#68bd9a"/><text x="867" y="459" class="title" text-anchor="start" >Gateway DIRECT</text><text x="867" y="485" class="sub" text-anchor="start" >A2A 1.0 JSON-RPC</text><text x="867" y="506" class="sub" text-anchor="start" >SendMessage / GetTask</text></g><g class="node"><rect x="850" y="550" width="300" height="72" rx="10" fill="#ecfdf5" stroke="#68bd9a"/><text x="867" y="579" class="title" text-anchor="start" >PostgreSQL</text><text x="867" y="605" class="sub" text-anchor="start" >仅承载 RDC 注册与发现数据</text></g><g class="node"><rect x="450" y="830" width="210" height="104" rx="10" fill="#ecfdf5" stroke="#68bd9a"/><text x="467" y="859" class="title" text-anchor="start" >credit-material</text><text x="467" y="885" class="sub" text-anchor="start" >资料节点：intake</text><text x="467" y="906" class="sub" text-anchor="start" >Runtime 独立进程</text></g><g class="node"><rect x="680" y="830" width="240" height="104" rx="10" fill="#ecfdf5" stroke="#68bd9a"/><text x="697" y="859" class="title" text-anchor="start" >credit-analysis</text><text x="697" y="885" class="sub" text-anchor="start" >财务 / 行业 / 征信</text><text x="697" y="906" class="sub" text-anchor="start" >隔离节点 · 可并行</text></g><g class="node"><rect x="940" y="830" width="210" height="104" rx="10" fill="#ecfdf5" stroke="#68bd9a"/><text x="957" y="859" class="title" text-anchor="start" >credit-writer</text><text x="957" y="885" class="sub" text-anchor="start" >报告节点：report</text><text x="957" y="906" class="sub" text-anchor="start" >Runtime 独立进程</text></g><g class="wire control"><path d="M 290 94 H 15 V 345 H 50" class="edge" stroke="#ea580c" marker-end="url(#after-svg-END-control)" marker-start="url(#after-svg-START-control)"/><text x="45" y="194" class="edge-label" text-anchor="start" >候选 / 确认 ↔ 状态</text></g><g class="wire control"><path d="M 360 332 H 450" class="edge" stroke="#ea580c" marker-end="url(#after-svg-END-control)"/><text x="371" y="320" class="edge-label" text-anchor="start" >采纳图</text></g><g class="wire flow"><path d="M 605 388 V 430" class="edge" stroke="#2563eb" marker-end="url(#after-svg-END-flow)"/><text x="620" y="415" class="edge-label" text-anchor="start" >远端节点</text></g><g class="wire flow"><path d="M 760 362 H 795 V 586 H 760" class="edge" stroke="#2563eb" marker-end="url(#after-svg-END-flow)"/></g><g class="wire control"><path d="M 450 473 H 410 V 369 H 360" class="edge" stroke="#ea580c" marker-end="url(#after-svg-END-control)"/><text x="370" y="418" class="edge-label" text-anchor="start" >意图 / 结果</text></g><g class="wire flow"><path d="M 760 473 H 850" class="edge" stroke="#2563eb" marker-end="url(#after-svg-END-flow)" marker-start="url(#after-svg-START-flow)"/><text x="789" y="459" class="edge-label" text-anchor="start" >A2A</text></g><g class="wire discovery"><path d="M 1000 430 V 388" class="edge" stroke="#168a61" marker-end="url(#after-svg-END-discovery)" marker-start="url(#after-svg-START-discovery)" stroke-dasharray="6 5"/><text x="1016" y="415" class="edge-label" text-anchor="start" >路由解析</text></g><g class="wire discovery"><path d="M 360 459 H 395 V 215 H 810 V 345 H 850" class="edge" stroke="#168a61" marker-end="url(#after-svg-END-discovery)" stroke-dasharray="6 5"/><text x="527" y="206" class="edge-label" text-anchor="start" >读取卡片 / 核对版本</text></g><g class="wire record"><path d="M 1150 345 H 1185 V 586 H 1150" class="edge" stroke="#718096" marker-end="url(#after-svg-END-record)" stroke-dasharray="6 5"/></g><g class="wire flow"><path d="M 1150 473 H 1165 V 810 H 555 V 830" class="edge" stroke="#2563eb" marker-end="url(#after-svg-END-flow)"/></g><g class="wire flow"><path d="M 800 810 V 830" class="edge" stroke="#2563eb" marker-end="url(#after-svg-END-flow)"/></g><g class="wire flow"><path d="M 1045 810 V 830" class="edge" stroke="#2563eb" marker-end="url(#after-svg-END-flow)"/></g><text x="786" y="716" class="edge-label" text-anchor="middle" >Gateway 直连专业 Runtime；结果沿原调用链返回</text><g class="wire record"><path d="M 800 960 V 1015 H 405 V 611 H 360" class="edge" stroke="#718096" marker-end="url(#after-svg-END-record)" stroke-dasharray="6 5"/><text x="560" y="1003" class="edge-label" text-anchor="start" >获准输入 / 工具读取 / 模型尝试记录</text></g><g class="wire record"><path d="M 205 667 V 765" class="edge" stroke="#718096" marker-end="url(#after-svg-END-record)" stroke-dasharray="6 5"/><text x="221" y="718" class="edge-label" text-anchor="start" >正式记录落盘</text></g><text x="450" y="1050" class="sub" text-anchor="start" >发现：RDC 拉取 Runtime 的 AgentCard。执行：Graph → Gateway → Runtime。</text></svg></div><p class="line-key"><b class="blue">蓝线：执行与 Agent 调用</b>　<b class="orange">橙线：确认、控制与正式结果提交</b>　<b class="green">绿虚线：能力发现与路由</b>　灰虚线：记录与工具关联</p><p class="cap">Runtime 产物经 Gateway 返回 Java；适配器校验后提交 Go，持久化成功才向 Graph 返回正式结果。RDC 的 PostgreSQL 不存储 Go 节点结果；三类服务通过部署发现接入 RDC。</p><div class="note good"><b>复用约束得到保留：</b>继续使用 openJiuwen、WorkSwarm、Agent Bus、Loop Forest。新代码集中于远程成员适配、专业角色封装、控制缺口和场景配置。</div></section>
+<section aria-labelledby="changes"><h2 id="changes">4 · 差异清单</h2><div class="compare-wrap" tabindex="0" role="region" aria-label="架构差异表，可横向滚动"><table><thead><tr><th scope="col" style="width:18%">维度</th><th scope="col" style="width:37%">原始架构 · 5051d3a</th><th scope="col">当前架构 · 4d5d1b8</th></tr></thead><tbody><tr><th scope="row">中枢与用户面</th><td>WorkSwarm 中枢规划 + MCP 图卡；候选图检查、用户确认</td><td>沿用原入口；增加 RDC / Gateway / 结果关联详情</td></tr><tr><th scope="row">执行推进权</th><td>Java BlueprintScheduler 按采纳图执行，Go 保存状态</td><td>保持 Java 唯一推进执行；Go 增强控制与结果记录</td></tr><tr><th scope="row">专业 Agent 部署</th><td>在 Java 协同宿主内创建 ReActAgent</td><td>资料、分析、写作分别部署独立 Runtime；5 个远端节点</td></tr><tr><th scope="row">能力发现与绑定</th><td>本地预置能力、签名业务契约、权限与预算</td><td>保留受控场景目录，结合真实 RDC 卡片、能力版本与契约摘要</td></tr><tr><th scope="row">实际调用</th><td>进程内 SubAgentExecutor / ReActAgentMember</td><td>RemoteAgentMember → Gateway DIRECT → Runtime；A2A 1.0 JSON-RPC</td></tr><tr><th scope="row">Loop Forest 与判断</th><td>关联方节点使用 Loop Forest，风险判断由本地节点执行</td><td>两者仍在 Java 宿主内；未迁移到远端专业 Runtime</td></tr><tr><th scope="row">正式结果关联</th><td>任务、步骤、节点输出与复用记录</td><td>增加节点执行 ID、输入摘要、request / task / context、产物 ID 与摘要</td></tr><tr><th scope="row">恢复与未知结果</th><td>租约 / epoch 接管，已完成步骤读账本复用</td><td>增加原远端任务查询；未决不盲重发；拒绝冲突、失效执行者与覆盖</td></tr><tr><th scope="row">持久写入失败</th><td>state.json 写入失败主要记录日志</td><td>错误向上传播；回滚未保存内存并冻结写入；原子替换及同步磁盘</td></tr><tr><th scope="row">存储职责</th><td>Go 状态 / 证据日志持久卷；WorkSwarm 自有持久卷</td><td>沿用原卷；新增 PostgreSQL 与 rdc-data 卷，仅承载 RDC 数据</td></tr><tr><th scope="row">部署组成</th><td>4 个 Compose 服务：WorkSwarm、Go、Java 宿主、前端代理</td><td>10 个服务：在原服务上新增 RDC、Gateway、PostgreSQL、3 个 Runtime</td></tr><tr><th scope="row">实际业务范围</th><td>C006 / C007 授信模拟场景</td><td>仍为授信模拟场景；公开年报材料、核验和交付门槛待接入</td></tr></tbody></table></div><p class="cap">服务数按当前 Compose 启用 UI 的默认部署计算，不含故障注入代理和临时测试项目。</p></section>
+<section aria-labelledby="lifecycle"><h2 id="lifecycle">5 · 当前调用与恢复</h2><ol class="step-list"><li><strong>发现并固定能力</strong>从受控目录读取真实 RDC 卡片，计划采纳绑定能力与契约版本；派发前再次核对。</li><li><strong>先保存派发意图</strong>记录节点执行身份、输入摘要与原请求标识。必需记录保存失败时停止派发。</li><li><strong>经 DIRECT 调用</strong>Java 调用 Gateway，Gateway 解析可信路由。Runtime 按节点凭据取得输入并执行。</li><li><strong>关联原任务</strong>保存远端 task / context；查询沿用原任务。HTTP 200 中的协议错误仍保持错误或未决。</li><li><strong>提交正式结果</strong>校验身份、输入摘要、尝试与产物；Go 落盘成功，Graph 才允许依赖节点消费结果。</li><li><strong>按已有事实恢复</strong>已完成节点读取正式产物；有任务号则查询原任务；恢复信息不足时保留未决并等待人工核对。</li></ol><div class="cols two"><div class="card"><h3>宿主重启</h3><p>恢复读取原采纳图；实验 R11 验证已完成节点复用，产物标识和摘要不变，已完成远端节点模型调用事件集合不增加。</p></div><div class="card"><h3>Gateway / Runtime 重启</h3><p>当前上游任务归属索引和默认任务存储在内存中。R15 / R16 验证任务丢失后保持未决，不自动生成第二份调用。</p></div></div></section>
+<section aria-labelledby="boundaries"><h2 id="boundaries">6 · 边界与依据</h2><div class="note warn"><b>实际完成范围：</b>两版均为授信模拟场景。公开年报材料、指标与引用核验、报告验收导出、命令级去重、暂停、跨任务资料复用和反馈仍需补齐。#6 知识服务是可选增强，不是启动依赖。</div><div class="cols two"><div class="card"><h3>页面证据的口径</h3><p>RDC 候选是发现时的快照；实际执行实例未采集。Gateway 时刻来自 Java 宿主观测。历史缺失数据不补写，模型尝试数不等于供应商账单。</p></div><div class="card"><h3>现有验收样例</h3><p>R18：三类服务、五个远端节点；R11：宿主强杀恢复；R12 / R13：断线与迟到；R14：存储失败；R16：原任务查询协议错误保持未决。</p></div></div>
+<div class="sources"><h3>代码与证据入口</h3><ul><li>基线：<code>5051d3a566ac95be9a992e02350e924e3bda03c8</code>；当前实现：<code>4d5d1b8ab9b64910abb81345fbea5a1f50bb1f24</code>。</li><li><a href="../examples/credit-orchestrator/src/main/java/com/openjiuwen/demo/credit/Worker.java">Worker.java</a>：保留 BlueprintScheduler，按 bus_binding 选择远程成员。</li><li><a href="../examples/credit-orchestrator/src/main/java/com/openjiuwen/demo/credit/RemoteAgentMember.java">RemoteAgentMember.java</a>：A2A 调用、原任务查询与结果提交。</li><li><a href="../go/cmd/credit-demo/bus.go">bus.go</a>：能力绑定、调用身份与正式结果控制；<a href="../go/cmd/credit-demo/deploy/compose.bus.yaml">compose.bus.yaml</a>：新增部署组件。</li><li><a href="issue16-agent-bus-results.md">接入验收记录</a>；<a href="evidence/issue16-agent-bus-ui.json">页面证据索引</a>。</li></ul><p>这些相对链接在仓库目录内可用；单独分享本 HTML 时，正文与架构图仍可离线阅读。文档不依赖外部字体、图片、脚本或 CDN。</p></div></section>
+<footer>Agent Hub Alpha · 架构对比 · 2026-11-11<br>独立 HTML，内嵌 SVG / CSS / JavaScript；支持打印与单图 SVG 导出。图示以所列代码提交为准。</footer>
+</main></div>
+<script>
+const links = Array.from(document.querySelectorAll('.toc a'));
+const sections = links.map(a => document.querySelector(a.getAttribute('href'))).filter(Boolean);
+const sidebar = document.querySelector('.sidebar'), menu = document.querySelector('.menu-toggle'), shade = document.querySelector('.menu-shade');
+function setMenu(open){sidebar.classList.toggle('open',open);shade.classList.toggle('visible',open);menu.setAttribute('aria-expanded',String(open));}
+menu.addEventListener('click',()=>setMenu(!sidebar.classList.contains('open')));
+shade.addEventListener('click',()=>setMenu(false));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&sidebar.classList.contains('open')){setMenu(false);menu.focus();}});
+const setActive=()=>{let current=sections[0];for(const section of sections){if(section.getBoundingClientRect().top<=110)current=section;}links.forEach(link=>{const active=link.getAttribute('href')==='#'+current.id;link.classList.toggle('active',active);if(active)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');});};
+document.addEventListener('scroll',setActive,{passive:true});
+links.forEach(link=>link.addEventListener('click',()=>{if(window.innerWidth<=980)setMenu(false);}));
+window.addEventListener('resize',()=>{if(window.innerWidth>980)setMenu(false);});setActive();
+document.querySelector('#print').addEventListener('click',()=>window.print());
+document.querySelectorAll('[data-export]').forEach(button=>button.addEventListener('click',()=>{const svg=document.getElementById(button.dataset.export).cloneNode(true);svg.setAttribute('width','1200');svg.setAttribute('height',svg.viewBox.baseVal.height);const data='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(svg);const url=URL.createObjectURL(new Blob([data],{type:'image/svg+xml;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=button.dataset.export==='before-svg'?'agent-hub-before-5051d3a.svg':'agent-hub-after-4d5d1b8.svg';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}));
+</script></body></html>

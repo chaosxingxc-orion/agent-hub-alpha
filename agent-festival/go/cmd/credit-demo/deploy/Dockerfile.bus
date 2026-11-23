@@ -1,0 +1,25 @@
+ARG PYTHON_IMAGE=python:3.11-slim
+FROM ${PYTHON_IMAGE} AS build
+RUN apt-get update && apt-get install -y --no-install-recommends openjdk-21-jdk-headless maven ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+ENV MAVEN_OPTS=-Xmx768m
+COPY go/cmd/credit-demo/deploy/maven_settings.py /tmp/maven_settings.py
+COPY --from=solution-src pom.xml /src/solution/pom.xml
+COPY --from=solution-src common/agent-bus /src/solution/common/agent-bus
+RUN --mount=type=cache,id=issue16-maven,target=/root/.m2 \
+    python /tmp/maven_settings.py && \
+    mvn -B -s /tmp/maven-settings.xml -f /src/solution/pom.xml -N -Dmaven.test.skip=true install && \
+    mvn -B -s /tmp/maven-settings.xml -f /src/solution/common/agent-bus/registry-discovery-center/pom.xml -Dmaven.test.skip=true install && \
+    mvn -B -s /tmp/maven-settings.xml -f /src/solution/common/agent-bus/event-bus/pom.xml -pl event-bus-spi -am -Dmaven.test.skip=true install && \
+    mvn -B -s /tmp/maven-settings.xml -f /src/solution/common/agent-bus/agent-gateway/pom.xml -Dmaven.test.skip=true package && \
+    rm /tmp/maven-settings.xml
+FROM ${PYTHON_IMAGE} AS runtime
+RUN apt-get update && apt-get install -y --no-install-recommends openjdk-21-jre-headless ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+FROM runtime AS rdc
+COPY --from=build /src/solution/common/agent-bus/registry-discovery-center/target/agent-rdc-0.1.3.jar /app/rdc.jar
+ENTRYPOINT ["java", "-Xmx192m", "-Djdk.httpclient.allowRestrictedHeaders=host", "-jar", "/app/rdc.jar"]
+FROM runtime AS gateway
+COPY --from=build /src/solution/common/agent-bus/agent-gateway/target/agent-gateway-0.1.3.jar /app/gateway.jar
+ENTRYPOINT ["java", "-Xmx160m", "-jar", "/app/gateway.jar"]
