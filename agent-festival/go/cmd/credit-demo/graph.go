@@ -66,7 +66,7 @@ func graphSelection(rec *SelectionRecord, p *Plan) *GraphSelection {
 	}
 	for _, el := range rec.Eligibility {
 		c := GraphCandidate{Capability: el.Capability, Result: el.Result, Score: el.Score}
-		if e := expertByID(el.Capability); e != nil {
+		if e := p.expert(el.Capability); e != nil {
 			c.Name = e.Name
 		}
 		switch {
@@ -88,24 +88,25 @@ func graphSelection(rec *SelectionRecord, p *Plan) *GraphSelection {
 }
 
 type GraphNode struct {
-	ID        string         `json:"id"`
-	Name      string         `json:"name"`
-	Kind      string         `json:"kind"` // investigate blackbox judge write effect
-	Role      string         `json:"role,omitempty"`
-	Task      string         `json:"task"`
-	Deps      []string       `json:"deps,omitempty"`
-	When      *RunIf         `json:"when,omitempty"`
-	Effect    string         `json:"effect,omitempty"`
-	Reads     []string       `json:"reads,omitempty"`
-	Contract  string         `json:"contract,omitempty"`
-	Denied    string         `json:"denied,omitempty"`
-	Status    string         `json:"status,omitempty"` // pending running done reused skipped failed
-	Activity  string         `json:"activity,omitempty"`
-	Output    string         `json:"output,omitempty"`
-	Branches  []GraphBranch  `json:"branches,omitempty"`
-	Remote    map[string]any `json:"remote,omitempty"`
-	Execution GraphExecution `json:"execution"`
-	Chosen    string         `json:"chosen,omitempty"` // why the selection picked this capability
+	Consumption map[string]any `json:"consumption,omitempty"`
+	ID          string         `json:"id"`
+	Name        string         `json:"name"`
+	Kind        string         `json:"kind"` // investigate blackbox judge write effect
+	Role        string         `json:"role,omitempty"`
+	Task        string         `json:"task"`
+	Deps        []string       `json:"deps,omitempty"`
+	When        *RunIf         `json:"when,omitempty"`
+	Effect      string         `json:"effect,omitempty"`
+	Reads       []string       `json:"reads,omitempty"`
+	Contract    string         `json:"contract,omitempty"`
+	Denied      string         `json:"denied,omitempty"`
+	Status      string         `json:"status,omitempty"` // pending running done reused skipped failed
+	Activity    string         `json:"activity,omitempty"`
+	Output      string         `json:"output,omitempty"`
+	Branches    []GraphBranch  `json:"branches,omitempty"`
+	Remote      map[string]any `json:"remote,omitempty"`
+	Execution   GraphExecution `json:"execution"`
+	Chosen      string         `json:"chosen,omitempty"` // why the selection picked this capability
 }
 
 // GraphBranch is one sub-goal a Loop Forest step forked, as the graph draws it.
@@ -136,6 +137,9 @@ type GraphRun struct {
 }
 
 func (s *Service) graph(p *Plan, withVerify bool) (*Graph, error) {
+	if errs := h03BindingErrors(p); len(errs) > 0 {
+		return nil, fmt.Errorf("profile snapshot is invalid: %v", errs)
+	}
 	g := &Graph{Plan: p.ID, Version: p.Version, Case: p.CaseID, Goal: p.Goal, Layers: p.Layers, OK: p.Precheck.OK, Hash: p.Hash}
 	g.Problems = append(append(g.Problems, p.Precheck.NotHeld...), p.Precheck.Rules...)
 	for _, e := range p.Precheck.Errors {
@@ -163,9 +167,9 @@ func (s *Service) graph(p *Plan, withVerify bool) (*Graph, error) {
 		if a == nil {
 			continue
 		}
-		e := expertByID(a.Expert)
+		e := p.expert(a.Expert)
 		n := GraphNode{ID: st.ID, Name: e.Name, Kind: e.Kind, Role: a.Role, Task: a.Task, Deps: st.DependsOn, When: st.When,
-			Contract: clip(strings.TrimPrefix(s.cat.Hashes[e.ID], "sha256:"), 12)}
+			Contract: clip(strings.TrimPrefix(p.contractHash(e.ID, s.cat.Hashes), "sha256:"), 12)}
 		n.Execution.Kind = "host"
 		if e.Kind == "blackbox" {
 			n.Execution.Kind = "loop_forest"
@@ -175,6 +179,9 @@ func (s *Service) graph(p *Plan, withVerify bool) (*Graph, error) {
 		}
 		if e.effectLevel != "none" {
 			n.Effect = e.effectLevel
+		}
+		if p.ExecutionBinding != nil {
+			n.Consumption = s.h03Consumption(run, p, a.ID)
 		}
 		if g.Selection != nil {
 			for _, c := range g.Selection.Candidates {
@@ -211,6 +218,9 @@ func (s *Service) graph(p *Plan, withVerify bool) (*Graph, error) {
 					}
 				}
 			}
+		}
+		if p.ExecutionBinding != nil {
+			n.Output = ""
 		}
 		g.Nodes = append(g.Nodes, n)
 	}

@@ -1,0 +1,51 @@
+# Local Linux Docker only. Original sources.lock / Dockerfile.bus are reused.
+services:
+  bus-db:
+    image: ${H02B_POSTGRES_IMAGE:-postgres:15-alpine@sha256:09e4f20b14ddb3dfe3a0c825b206032aaf8f28300ba2070c0b60fc1c10c6abc7}
+    restart: "no"
+    labels: {io.agent-hub.h02b.owner: "${H02B_OWNER:?required}"}
+    environment:
+      POSTGRES_DB: agent_rdc
+      POSTGRES_USER: agent_rdc
+      POSTGRES_PASSWORD: ${RDC_DB_PASSWORD:?required}
+    ports: ["127.0.0.1:${H02B_DB_PORT:?required}:5432"]
+    volumes: ["rdc-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U agent_rdc -d agent_rdc]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  rdc:
+    image: ${H02B_RDC_IMAGE:?required}
+    restart: "no"
+    network_mode: host
+    labels: {io.agent-hub.h02b.owner: "${H02B_OWNER:?required}"}
+    environment:
+      RDC_DB_PASSWORD: ${RDC_DB_PASSWORD:?required}
+      RDC_ROUTE_HANDLE_SECRET: ${RDC_ROUTE_HANDLE_SECRET:?required}
+      RDC_REGISTRY_API_TOKEN: ${RDC_REGISTRY_API_TOKEN:?required}
+      SPRING_CONFIG_ADDITIONAL_LOCATION: file:/config/rdc.yml
+    volumes: ["${H02B_STATE:?required}/rdc.yml:/config/rdc.yml:ro"]
+    depends_on:
+      bus-db: {condition: service_healthy}
+  gateway:
+    image: ${H02B_GATEWAY_IMAGE:?required}
+    restart: "no"
+    network_mode: host
+    labels: {io.agent-hub.h02b.owner: "${H02B_OWNER:?required}"}
+    environment:
+      SERVER_ADDRESS: 127.0.0.1
+      SERVER_PORT: ${H02B_GATEWAY_PORT:?required}
+      GATEWAY_PATH_MODE: direct
+      GATEWAY_PUBLIC_BASE_URL: http://127.0.0.1:${H02B_GATEWAY_PORT:?required}
+      GATEWAY_RUNTIME_A2A_PROTOCOL_VERSION: ${H02B_PROTOCOL_VERSION:-}
+      GATEWAY_RDC_V2_BASE_URL: http://127.0.0.1:${H02B_RDC_PORT:?required}
+      GATEWAY_RDC_TOKEN: ${RDC_REGISTRY_API_TOKEN:?required}
+      GATEWAY_RDC_TENANT_ID: ${H02B_TENANT:?required}
+      GATEWAY_TEST_CREDENTIAL_TOKEN: ${H02B_GATEWAY_TOKEN:?required}
+      GATEWAY_TEST_CREDENTIAL_PRINCIPALID: ${H02B_OWNER:?required}
+      GATEWAY_TEST_CREDENTIAL_TENANTID: ${H02B_TENANT:?required}
+    depends_on: [rdc]
+volumes:
+  rdc-data:
+    labels: {io.agent-hub.h02b.owner: "${H02B_OWNER:?required}"}

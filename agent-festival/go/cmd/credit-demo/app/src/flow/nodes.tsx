@@ -5,6 +5,7 @@ import { memo, type CSSProperties } from "react";
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, Handle, Position, type EdgeProps, type NodeProps } from "@xyflow/react";
 import { Ban, Circle, CircleCheck, CircleDashed, CircleDot, CircleHelp, CirclePause, CircleX, Clock, GitBranch, Hourglass, Loader2 } from "lucide-react";
 import type { BranchData, EdgeData, ExpertData, GroupData, Line } from "./layout";
+import { consumptionLabel } from "./h03-consumption";
 
 // A denied node shakes once it has landed: the second delay is for that.
 const enter = (delay: number, shake = false): CSSProperties => ({ animationDelay: shake ? `${delay}ms, ${delay + 900}ms` : `${delay}ms` });
@@ -49,6 +50,8 @@ export const ExpertNode = memo(({ data }: NodeProps) => {
   if (n.effect === "irreversible") tags.push(<span key="irr" className="tag irr">不可逆</span>);
   if (status === "reused") tags.push(<span key="re" className="tag reuse pop">复用</span>);
   if (d.denied) tags.push(<span key="dn" className="tag bad pop">无权限</span>);
+  const consumption = consumptionLabel(n.consumption);
+  if (consumption) tags.push(<span key="fields" className="tag bus" title={consumption}>字段</span>);
   return (
     <div className={`cn s-${status} k-${n.kind}${d.denied ? " denied" : ""}${d.host ? " host" : ""}`} style={enter(d.delay, d.denied)}>
       {!d.host && <Handle type="target" position={Position.Left} isConnectable={false} />}

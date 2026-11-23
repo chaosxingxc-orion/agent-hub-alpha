@@ -56,7 +56,11 @@ func (s *Service) runView(r *Run, p *Plan) map[string]any {
 	steps := []map[string]any{}
 	for _, id := range r.Order {
 		st := r.Steps[id]
-		steps = append(steps, map[string]any{"step": id, "expert": expertByID(st.Expert).Name, "status": st.Status, "reused": st.Reused, "output": clip(st.Output, 200)})
+		output := clip(st.Output, 200)
+		if p.ExecutionBinding != nil {
+			output = ""
+		}
+		steps = append(steps, map[string]any{"step": id, "expert": p.expert(st.Expert).Name, "status": st.Status, "reused": st.Reused, "output": output})
 	}
 	return map[string]any{
 		"run_id": r.ID, "plan_id": r.PlanID, "plan_version": r.PlanVersion, "status": r.Status, "approved_by": r.ApprovedBy,

@@ -364,7 +364,10 @@ func checkComposition(pkg *ScenarioPackage, q *SelectionQuery, ms []member) (Com
 
 // selectCapabilities runs recall, eligibility, ranking, selection,
 // composition and graph mapping for one task. It does not store the record.
-func selectCapabilities(pkg *ScenarioPackage, q SelectionQuery) (*SelectionRecord, error) {
+func selectCapabilities(pkg *ScenarioPackage, q SelectionQuery, profile ...*H03Profile) (*SelectionRecord, error) {
+	if len(profile) > 1 {
+		return nil, fmt.Errorf("at most one server profile is allowed")
+	}
 	if pkg.Selection == nil {
 		return nil, fmt.Errorf("scenario %s publishes no selection policy: its plans are composed with propose_plan", pkg.Ref())
 	}
@@ -385,6 +388,9 @@ func selectCapabilities(pkg *ScenarioPackage, q SelectionQuery) (*SelectionRecor
 	for i := range pkg.Capabilities {
 		c := &pkg.Capabilities[i]
 		el := eligible(pkg, c, &q)
+		if len(profile) == 1 && profile[0] != nil {
+			el = h03Eligibility(profile[0], pkg, c, &q, el)
+		}
 		rec.Eligibility = append(rec.Eligibility, el)
 		if el.Result == "pass" {
 			inputs[c.Output.Schema] = true
@@ -495,7 +501,10 @@ func (s *Service) Select(q SelectionQuery) (*SelectionRecord, error) {
 	if pkg == nil {
 		return nil, fmt.Errorf("unknown scenario package %q (see list_capabilities)", q.Package)
 	}
-	rec, err := selectCapabilities(pkg, q)
+	if s.cfg.H03Profile != nil && pkg.Package != s.cfg.H03Profile.Package.ID {
+		return nil, fmt.Errorf("controlled deployment only selects its explicit engineering profile")
+	}
+	rec, err := selectCapabilities(pkg, q, s.h03ProfileFor(pkg))
 	if err != nil {
 		return nil, err
 	}
