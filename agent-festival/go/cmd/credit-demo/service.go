@@ -93,8 +93,14 @@ type Run struct {
 	ReplaySteps []map[string]any    `json:"replay_steps,omitempty"`
 	// LeaseRefusals: executors on another model that asked for this run (AR-04 review P2).
 	LeaseRefusals []LeaseRefusal `json:"lease_refusals,omitempty"`
-	Scenario      string         `json:"scenario,omitempty"`
-	Final         string         `json:"final_output,omitempty"`
+	// Blocked says why a blocked run stopped, as a stable code and a short
+	// note built from fixed text and identifiers only (never a raw error).
+	Blocked *BlockReason `json:"blocked,omitempty"`
+	// Reconciliation flags a run with nothing left to execute whose records
+	// failed the startup check; its status and final output are kept.
+	Reconciliation *BlockReason `json:"reconciliation,omitempty"`
+	Scenario       string       `json:"scenario,omitempty"`
+	Final          string       `json:"final_output,omitempty"`
 }
 
 type State struct {
@@ -325,9 +331,16 @@ type PlanSummary struct {
 	ProposedAt string `json:"proposed_at"`
 	Run        string `json:"run,omitempty"`
 	RunStatus  string `json:"run_status,omitempty"`
+	// Blocked / Reconciliation: code and short note, as on the run's graph.
+	Blocked        *BlockReason `json:"blocked,omitempty"`
+	Reconciliation *BlockReason `json:"reconciliation,omitempty"`
 }
 
 // RecentPlans lists the latest version of each plan, newest first.
+// adoptionVersion is the adoption request protocol this service writes and
+// replays; records of another version are not judged by the current replay.
+const adoptionVersion = "0.2.0"
+
 func (s *Service) RecentPlans(limit int) []PlanSummary {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -336,7 +349,11 @@ func (s *Service) RecentPlans(limit int) []PlanSummary {
 		p := vs[len(vs)-1]
 		row := PlanSummary{Plan: p.ID, Version: p.Version, Case: p.CaseID, Goal: p.Goal, OK: p.Precheck.OK, ProposedAt: p.ProposedAt, Run: p.RunID}
 		if r := s.st.Runs[p.RunID]; r != nil {
-			row.RunStatus = r.Status
+			row.RunStatus, row.Blocked = r.Status, blockReasonOf(r)
+			if r.Reconciliation != nil {
+				c := *r.Reconciliation
+				row.Reconciliation = &c
+			}
 		}
 		out = append(out, row)
 	}
@@ -513,8 +530,8 @@ func (s *Service) LeaseAs(worker, executorModel string) (*Job, error) {
 		if p.hasJudge() {
 			var err error
 			if spec, err = s.runSpec(r); err != nil {
-				r.Status = "blocked"
-				r.Final = "规约版本不可解析，任务已停止：" + err.Error() + "。不会改用当前规约继续，需人工处理。"
+				s.blockRun(r, BlockReason{Code: "SPEC_UNRESOLVABLE", Note: "任务绑定的判断规约版本无法解析，已在接管时停止；不会改用当前规约继续"},
+					"规约版本不可解析，任务已停止："+err.Error()+"。不会改用当前规约继续，需人工处理。")
 				if err := s.save(); err != nil {
 					return nil, err
 				}
@@ -591,6 +608,40 @@ func (s *Service) LeaseAs(worker, executorModel string) (*Job, error) {
 // bound model. Mapped to HTTP 409 with this code; the call is not made.
 var errModelBinding = errors.New("MODEL_BINDING_MISMATCH")
 
+// BlockReason is what users and operators see about a stopped run. Final
+// keeps the full operator text.
+type BlockReason struct {
+	Code  string `json:"code"`            // SPEC_UNRESOLVABLE MODEL_BINDING_MISMATCH RECONCILIATION_REQUIRED
+	Cause string `json:"cause,omitempty"` // for RECONCILIATION_REQUIRED: which check failed
+	Note  string `json:"note"`
+	At    string `json:"at"`
+	// Startup reconciliation only: the record the disposition rests on and
+	// what was done (BLOCKED FLAGGED RESTORED PENDING_REVIEW).
+	Source      string `json:"source,omitempty"`
+	Disposition string `json:"disposition,omitempty"`
+}
+
+// blockReasonOf is the projected reason of a blocked run. Runs blocked before
+// the reason was recorded get the code their final text starts with.
+func blockReasonOf(r *Run) *BlockReason {
+	if r.Status != "blocked" {
+		return nil
+	}
+	if r.Blocked != nil {
+		b := *r.Blocked
+		return &b
+	}
+	switch {
+	case strings.HasPrefix(r.Final, "RECONCILIATION_REQUIRED"):
+		return &BlockReason{Code: "RECONCILIATION_REQUIRED", Note: "启动对账未通过，需人工核对"}
+	case strings.HasPrefix(r.Final, "规约版本不可解析"):
+		return &BlockReason{Code: "SPEC_UNRESOLVABLE", Note: "任务绑定的判断规约版本无法解析"}
+	case strings.HasPrefix(r.Final, "执行端模型与任务绑定不一致"):
+		return &BlockReason{Code: "MODEL_BINDING_MISMATCH", Note: "执行端模型与任务绑定不一致"}
+	}
+	return &BlockReason{Code: "BLOCKED", Note: "任务已停止，需人工处理"}
+}
+
 func modelMismatch(bound, who, actual string) string {
 	if actual == "" {
 		actual = "（未上报）"
@@ -627,8 +678,9 @@ func (s *Service) noteLeaseRefusal(r *Run, worker, model, bound string) bool {
 
 // blockRun stops a run for an operator decision and withdraws the current
 // executor's lease, so it can write nothing further. Must hold s.mu.
-func (s *Service) blockRun(r *Run, reason string) {
-	r.Status, r.Final, r.Token = "blocked", reason, ""
+func (s *Service) blockRun(r *Run, why BlockReason, reason string) {
+	why.At = now()
+	r.Status, r.Final, r.Token, r.Blocked = "blocked", reason, "", &why
 }
 
 var errFenced = fmt.Errorf("fenced: this executor's lease was taken over")
@@ -906,7 +958,7 @@ func (s *Service) Judgment(runID, token, step, raw string) (string, error) {
 	q, _ := bs.spec["question"].(map[string]any)
 	op := "op-" + r.ID
 	req := &adopt.Request{
-		AdoptionVersion: "0.2.0",
+		AdoptionVersion: adoptionVersion,
 		Identity:        ledger.Identity{BusinessRequestID: "br-" + strings.ToLower(r.CaseID) + "-" + strings.ToLower(r.ID), EvaluationRevision: "er-1", OperationID: op},
 		Versions: ledger.Versions{Evidence: sha(evidence...), Rule: fmt.Sprintf("%v@%v", q["question_id"], q["spec_version"]),
 			Model: s.runModel(r), Readout: "risk-readout-1", Policy: r.PlanHash},
