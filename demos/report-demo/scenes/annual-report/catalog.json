@@ -1,0 +1,308 @@
+{
+  "schema_version": "report-capabilities/1",
+  "policy_version": "annual-report-policy/1",
+  "capabilities": [
+    {
+      "id": "extractor@1",
+      "name": "年报资料提取",
+      "version": "1",
+      "kind": "extract",
+      "agent_id": "report-extractor",
+      "input_schema": "node-input/1",
+      "output_schema": "indicators/1",
+      "scope": "group-annual-report",
+      "enabled": true,
+      "remote_binding": {
+        "card_version": "1.0.0",
+        "contract_version": "1.0.0",
+        "capability_version": "1.0.0"
+      },
+      "selection": {
+        "focus": [],
+        "applicability": {
+          "entities": [
+            "招商银行股份有限公司"
+          ],
+          "basis": [
+            "本集团"
+          ],
+          "periods": [
+            "2025",
+            "2024"
+          ],
+          "materials": [
+            "cmb-2025-annual-report-a"
+          ],
+          "templates": [
+            "annual-report/1"
+          ]
+        },
+        "input": {
+          "schema": "node-input/1"
+        },
+        "output": {
+          "schema": "indicators/1"
+        }
+      }
+    },
+    {
+      "id": "business@1",
+      "name": "经营分析",
+      "version": "1",
+      "kind": "business",
+      "agent_id": "business-analyst",
+      "input_schema": "indicators/1",
+      "output_schema": "analysis/1",
+      "scope": "group-annual-report",
+      "enabled": true,
+      "remote_binding": {
+        "card_version": "1.0.0",
+        "contract_version": "1.0.0",
+        "capability_version": "1.0.0"
+      },
+      "selection": {
+        "focus": [
+          "经营"
+        ],
+        "applicability": {
+          "entities": [
+            "招商银行股份有限公司"
+          ],
+          "basis": [
+            "本集团"
+          ],
+          "periods": [
+            "2025",
+            "2024"
+          ],
+          "materials": [
+            "cmb-2025-annual-report-a"
+          ],
+          "templates": [
+            "annual-report/1"
+          ]
+        },
+        "input": {
+          "schema": "indicators/1"
+        },
+        "output": {
+          "schema": "analysis/1",
+          "section": "经营"
+        }
+      }
+    },
+    {
+      "id": "quality@1",
+      "name": "资产质量分析",
+      "version": "1",
+      "kind": "quality",
+      "agent_id": "asset-quality-analyst",
+      "input_schema": "indicators/1",
+      "output_schema": "analysis/1",
+      "scope": "group-annual-report",
+      "enabled": true,
+      "remote_binding": {
+        "card_version": "1.0.0",
+        "contract_version": "1.0.0",
+        "capability_version": "1.0.0"
+      },
+      "selection": {
+        "focus": [
+          "资产质量"
+        ],
+        "applicability": {
+          "entities": [
+            "招商银行股份有限公司"
+          ],
+          "basis": [
+            "本集团"
+          ],
+          "periods": [
+            "2025",
+            "2024"
+          ],
+          "materials": [
+            "cmb-2025-annual-report-a"
+          ],
+          "templates": [
+            "annual-report/1"
+          ]
+        },
+        "input": {
+          "schema": "indicators/1"
+        },
+        "output": {
+          "schema": "analysis/1",
+          "section": "资产质量"
+        }
+      }
+    },
+    {
+      "id": "writer@1",
+      "name": "报告写作与一次修订",
+      "version": "1",
+      "kind": "write",
+      "agent_id": "report-writer",
+      "input_schema": "analysis/1",
+      "output_schema": "report/1",
+      "scope": "group-annual-report",
+      "enabled": true,
+      "remote_binding": {
+        "card_version": "1.0.0",
+        "contract_version": "1.0.0",
+        "capability_version": "1.0.0"
+      },
+      "selection": {
+        "focus": [],
+        "applicability": {
+          "entities": [
+            "招商银行股份有限公司"
+          ],
+          "basis": [
+            "本集团"
+          ],
+          "periods": [
+            "2025",
+            "2024"
+          ],
+          "materials": [
+            "cmb-2025-annual-report-a"
+          ],
+          "templates": [
+            "annual-report/1"
+          ]
+        },
+        "input": {
+          "schema": "analysis/1",
+          "requires_sections_any": [
+            "经营",
+            "资产质量"
+          ]
+        },
+        "output": {
+          "schema": "report/1",
+          "ref": "annual-report/1"
+        }
+      }
+    },
+    {
+      "id": "checker@1",
+      "name": "数值/期间/口径/来源检查",
+      "version": "1",
+      "kind": "check",
+      "input_schema": "report/1",
+      "output_schema": "check/1",
+      "scope": "group-annual-report",
+      "enabled": true
+    },
+    {
+      "id": "select@1",
+      "name": "选择已通过检查的报告",
+      "version": "1",
+      "kind": "select",
+      "input_schema": "check/1",
+      "output_schema": "selection/1",
+      "scope": "group-annual-report",
+      "enabled": true
+    },
+    {
+      "id": "parent-only@1",
+      "name": "仅支持母公司口径的候选（应排除）",
+      "version": "1",
+      "kind": "business",
+      "agent_id": "parent-only-analyst",
+      "input_schema": "indicators/1",
+      "output_schema": "analysis/1",
+      "scope": "parent-company",
+      "enabled": true,
+      "remote_binding": {
+        "card_version": "1.0.0",
+        "contract_version": "1.0.0",
+        "capability_version": "1.0.0"
+      },
+      "selection": {
+        "focus": [
+          "经营"
+        ],
+        "applicability": {
+          "entities": [
+            "招商银行股份有限公司"
+          ],
+          "basis": [
+            "母公司"
+          ],
+          "periods": [
+            "2025",
+            "2024"
+          ],
+          "materials": [
+            "cmb-2025-annual-report-a"
+          ],
+          "templates": [
+            "annual-report/1"
+          ]
+        },
+        "input": {
+          "schema": "indicators/1"
+        },
+        "output": {
+          "schema": "analysis/1",
+          "section": "经营"
+        }
+      }
+    },
+    {
+      "id": "unknown@1",
+      "name": "未声明适用范围的候选（未知不通过）",
+      "version": "1",
+      "kind": "business",
+      "agent_id": "unknown-analyst",
+      "input_schema": "indicators/1",
+      "output_schema": "analysis/1",
+      "scope": "group-annual-report",
+      "enabled": true
+    }
+  ],
+  "selection": {
+    "package": "annual-report-cmb-2025",
+    "version": "1",
+    "entity": "招商银行股份有限公司",
+    "basis": "本集团",
+    "period": "2025",
+    "compare_period": "2024",
+    "deliverable": "annual-report/1",
+    "policy": {
+      "recall": "finite approved catalog; configured ranking, not semantic search",
+      "source_schema": "node-input/1",
+      "must_declare": {
+        "node-input/1": [
+          "entities",
+          "basis",
+          "periods",
+          "materials",
+          "templates"
+        ],
+        "indicators/1": [
+          "entities",
+          "basis",
+          "periods",
+          "materials",
+          "templates"
+        ],
+        "analysis/1": [
+          "entities",
+          "basis",
+          "periods",
+          "materials",
+          "templates"
+        ]
+      },
+      "weights": {
+        "focus": 2,
+        "io": 1,
+        "current": 1
+      },
+      "min_score": 3
+    }
+  }
+}
