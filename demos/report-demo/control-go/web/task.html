@@ -8,7 +8,34 @@ async function api(path,body){const res=await fetch(path,{method:body===undefine
 async function refresh(){const sequence=++refreshSequence;try{const snapshot=await api('/v1/tasks/'+id);if(!projection.accept(snapshot))return;task=snapshot;document.getElementById('error').textContent='';document.getElementById('status').textContent=task.status+(task.pause_requested?' / 已请求暂停':'');document.getElementById('goal').textContent=task.graph.goal;document.getElementById('digest').textContent=`任务 ${task.task_id}\n图 ${task.graph_revision}\n采纳摘要 ${task.graph_digest}\n编译摘要 ${task.runtime_spec_digest}`;document.getElementById('admit').disabled=task.status!=='AWAITING_APPROVAL'||!csrf;document.getElementById('pause').disabled=!csrf;document.getElementById('resume').disabled=!csrf;const root=document.getElementById('nodes');root.replaceChildren();for(const n of task.graph.nodes){const d=document.createElement('details');const state=task.nodes[n.id];d.append(elem('summary',`${n.role} / ${n.id} / ${state.status}`),elem('pre',JSON.stringify({plan:n,state},null,2)));root.append(d)}const events=await api('/v1/tasks/'+id+'/events');if(sequence===refreshSequence)document.getElementById('events').textContent=JSON.stringify(events,null,2)}catch(e){document.getElementById('error').textContent=e.message}}
 document.getElementById('login-form').onsubmit=async event=>{event.preventDefault();try{const v=await api('/auth/login',{user:document.getElementById('user').value,password:document.getElementById('password').value});csrf=v.csrf;sessionStorage.setItem('report-csrf',csrf);document.getElementById('password').value='';await refresh()}catch(e){document.getElementById('error').textContent=e.message}};
 for(const action of ['admit','pause','resume'])document.getElementById(action).onclick=async()=>{try{await projection.runCommand('task-command',()=>api(`/v1/tasks/${id}/${action}`,action==='admit'?{graph_digest:task.graph_digest}:{}));await refresh()}catch(e){document.getElementById('error').textContent=e.message}};
-async function refreshReports(){if(!task)return;reportList.replaceChildren();for(const n of task.graph.nodes){const state=task.nodes[n.id];if(!state.result||(!state.result.output?.indicators||!state.result.output?.scope)||!state.result.valid)continue;const artifact=state.result.artifact_id;const row=document.createElement('div');row.append(elem('h3',n.id),elem('pre',JSON.stringify(state.result,null,2)));for(const action of ['approve','deliver']){const b=elem('button',action==='approve'?'验收此版本':'确认交付此版本');b.disabled=!csrf||!['AWAITING_ACCEPTANCE','DELIVERED'].includes(task.status);b.onclick=async()=>{try{const receipt=await projection.runCommand(`artifact-${artifact}`,()=>api(`/v1/tasks/${id}/artifacts/${artifact}/${action}`,action==='deliver'?{delivery_id:`ui-${id}-${artifact}`}:{ }));row.append(elem('pre',JSON.stringify(receipt,null,2)));await refresh()}catch(e){document.getElementById('error').textContent=e.message}};row.append(b)}const download=elem('a','下载已交付 JSON');download.href=`/v1/tasks/${id}/artifacts/${artifact}/download`;row.append(download);reportList.append(row)}}
+async function refreshReports(){
+  if(!csrf||!task)return;
+  const current=task;
+  const view=await api('/v1/workbench/tasks/'+id);
+  if(task!==current||view.rev!==current.generation)return;
+  reportList.replaceChildren();
+  for(const report of view.reports??[]){
+    const artifact=report.artifact_id;
+    const row=document.createElement('div');
+    row.append(elem('h3',report.node),elem('pre',JSON.stringify(current.nodes[report.node].result,null,2)));
+    for(const action of ['approve','deliver']){
+      const button=elem('button',action==='approve'?'验收此版本':'确认交付此版本');
+      button.disabled=!report.can_approve;
+      button.onclick=async()=>{
+        try{
+          const receipt=await projection.runCommand(`artifact-${artifact}`,()=>api(`/v1/tasks/${id}/artifacts/${artifact}/${action}`,action==='deliver'?{delivery_id:`ui-${id}-${artifact}`}:{}));
+          row.append(elem('pre',JSON.stringify(receipt,null,2)));
+          await refresh();
+        }catch(e){document.getElementById('error').textContent=e.message}
+      };
+      row.append(button);
+    }
+    const download=elem('a','下载已交付 JSON');
+    download.href=`/v1/tasks/${id}/artifacts/${artifact}/download`;
+    row.append(download);
+    reportList.append(row);
+  }
+}
 const reviews=document.createElement('section');reviews.append(elem('h2','待人工核验的检查'));const reviewList=document.createElement('div');reviews.append(reviewList);document.body.insertBefore(reviews,reports);
 let reviewRows=new Map();
 function refreshReviews(){
@@ -56,6 +83,6 @@ function refreshReviews(){
     reviewRows=nextRows;
   }
 }
-const originalRefresh=refresh;refresh=async()=>{await originalRefresh();if(task?.bus_binding)document.getElementById('digest').textContent+='\nBus 环境 '+JSON.stringify(task.bus_binding);await refreshReports();refreshReviews();if(csrf&&task){const currentGeneration=task.generation;try{const calls=await api('/v1/tasks/'+id+'/calls');if(currentGeneration!==task.generation)return;document.getElementById('events').appendChild(elem('pre',JSON.stringify({remote_calls:calls},null,2)))}catch(e){document.getElementById('error').textContent=e.message}}};
+const originalRefresh=refresh;refresh=async()=>{await originalRefresh();if(task?.bus_binding)document.getElementById('digest').textContent+='\nBus 环境 '+JSON.stringify(task.bus_binding);refreshReviews();if(csrf&&task){const currentGeneration=task.generation;try{const calls=await api('/v1/tasks/'+id+'/calls');if(currentGeneration!==task.generation)return;document.getElementById('events').appendChild(elem('pre',JSON.stringify({remote_calls:calls},null,2)));await refreshReports()}catch(e){document.getElementById('error').textContent=e.message}}};
 document.getElementById('refresh').onclick=refresh;refresh();setInterval(()=>{if(csrf)refresh()},3000);
 </script></body></html>

@@ -73,6 +73,7 @@ test('trusted review preserves the current draft over polling and a rejected sub
     nodes: {check: {result: {valid: true, artifact_id: artifact, output: {outcome: 'HUMAN', object_digest: digest}}, review}},
   });
   const form = () => p.run('reviewList.children[0]?.children ?? []');
+  const reasonField = () => form().find(field => field.placeholder);
   p.context.fetch = async (url, options) => {
     if (options.method === 'POST') {
       writes.push(JSON.parse(options.body));
@@ -82,27 +83,64 @@ test('trusted review preserves the current draft over polling and a rejected sub
   };
 
   await p.run('refresh()');
-  const reason = form()[2];
+  const reason = reasonField();
   reason.value = '已对照原材料的第十四页，核验完成';
   reason.oninput?.();
   for (let i = 0; i < 2; i++) {
     p.intervals[0]();
     await new Promise(resolve => setImmediate(resolve));
   }
-  assert.equal(form()[2], reason);
-  assert.equal(form()[2].value, reason.value);
-  await form()[3].onclick();
+  assert.equal(reasonField(), reason);
+  assert.equal(reasonField().value, reason.value);
+  await form().find(field => field.textContent === '人工核验接受').onclick();
   assert.deepEqual(writes, [{
     check_artifact: 'check-a', object_digest: 'sha256:report-a', decision: 'ACCEPT', reason: reason.value,
   }]);
   await p.run('refresh()');
-  assert.equal(form()[2].value, reason.value);
+  assert.equal(reasonField().value, reason.value);
 
   artifact = 'check-b';
   digest = 'sha256:report-b';
   await p.run('refresh()');
-  assert.equal(form()[2].value, '');
+  assert.equal(reasonField().value, '');
   review = {receipt: 'human-review-b'};
   await p.run('refresh()');
-  assert.equal(form().length, 2);
+  assert.equal(reasonField(), undefined);
+  assert.ok(form().some(field => field.textContent.includes('human-review-b')));
+});
+
+test('trusted page only offers approval for formal reports in the control projection', async () => {
+  const p = page('task.html');
+  await new Promise(resolve => setImmediate(resolve));
+  const result = artifact_id => ({valid:true,artifact_id,output:{indicators:{},scope:{}}});
+  const current = {
+    ...snapshot('2'), status:'AWAITING_ACCEPTANCE',
+    graph:{goal:'fixture',nodes:[{id:'extract'},{id:'draft'}]},
+    nodes:{extract:{result:result('extract-artifact')},draft:{result:result('draft-artifact')}},
+  };
+  let canApprove = false;
+  const writes = [];
+  p.context.fetch = async (url, options) => {
+    if (options.method === 'POST') { writes.push(url); return {ok:true,json:async()=>({})}; }
+    return {ok:true,json:async()=>{
+      if (url === '/v1/tasks/T-ui') return current;
+      if (url === '/v1/workbench/tasks/T-ui') {
+        return {rev:current.generation,reports:[{node:'draft',artifact_id:'draft-artifact',can_approve:canApprove}]};
+      }
+      return [];
+    }};
+  };
+  await p.run('refresh()');
+  const rows = () => p.run('reportList.children');
+  assert.equal(rows().length, 1);
+  assert.equal(rows()[0].children[0].textContent, 'draft');
+  assert.equal(rows()[0].children[2].disabled, true);
+
+  canApprove = true;
+  current.generation = '3';
+  await p.run('refresh()');
+  const approve = rows()[0].children.find(field => field.textContent === '验收此版本');
+  assert.equal(approve.disabled, false);
+  await approve.onclick();
+  assert.deepEqual(writes, ['/v1/tasks/T-ui/artifacts/draft-artifact/approve']);
 });
