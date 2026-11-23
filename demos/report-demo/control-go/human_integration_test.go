@@ -83,19 +83,55 @@ func TestPGHumanReviewDoesNotRewriteCheckerAndRevocationStillWins(t *testing.T) 
 	if readReview()["human_review"] == nil {
 		t.Fatal("HUMAN task has no trusted fallback in the HTTP projection")
 	}
-	if _, err = s.ReviewCheck(ctx, task.ID, "check", in, "test-reviewer"); err != nil {
-		t.Fatal(err)
-	}
-	if readReview()["human_review"] != nil {
-		t.Fatal("resolved check still offers pending manual review")
-	}
-	in.Reason = "changed explanation is a new fact and cannot replace the original review"
-	_, err = s.ReviewCheck(ctx, task.ID, "check", in, "test-reviewer")
-	requireCode(t, err, "INPUT_CONFLICT")
-	state, err := s.GetTask(ctx, task.ID)
+	first, err := s.ReviewCheck(ctx, task.ID, "check", in, "test-reviewer")
 	if err != nil {
 		t.Fatal(err)
 	}
+	firstReview := first.(CheckReview)
+	firstState, err := s.GetTask(ctx, task.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertSingleReview := func() *Task {
+		t.Helper()
+		state, err := s.GetTask(ctx, task.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var events int
+		err = s.Pool.QueryRow(ctx, "SELECT count(*) FROM audit_outbox WHERE scope=$1 AND aggregate=$2 AND kind='HUMAN_REVIEW_RECORDED'", s.Scope, task.ID).Scan(&events)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if state.Generation != firstState.Generation || events != 1 {
+			t.Fatalf("generation = %s, want %s; review events = %d, want 1", state.Generation, firstState.Generation, events)
+		}
+		if review := state.Nodes["check"].Review; review == nil || *review != firstReview {
+			t.Fatal("the persisted review changed")
+		}
+		return state
+	}
+	assertSingleReview()
+	retry, err := s.ReviewCheck(ctx, task.ID, "check", in, "test-reviewer")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if *retry.(*CheckReview) != firstReview {
+		t.Fatal("identical retry did not return the first review receipt")
+	}
+	assertSingleReview()
+	if readReview()["human_review"] != nil {
+		t.Fatal("resolved check still offers pending manual review")
+	}
+	changed := in
+	changed.Decision = "REJECT"
+	_, err = s.ReviewCheck(ctx, task.ID, "check", changed, "test-reviewer")
+	requireCode(t, err, "INPUT_CONFLICT")
+	changed = in
+	changed.Reason = "changed explanation is a new fact and cannot replace the original review"
+	_, err = s.ReviewCheck(ctx, task.ID, "check", changed, "test-reviewer")
+	requireCode(t, err, "INPUT_CONFLICT")
+	state := assertSingleReview()
 	var original map[string]any
 	json.Unmarshal(state.Nodes["check"].Result.Output, &original)
 	if original["outcome"] != "HUMAN" || effectiveCheck(state, state.Nodes["check"]) != "PASS" {

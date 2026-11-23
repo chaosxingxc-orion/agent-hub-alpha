@@ -97,7 +97,7 @@ func (s *Store) ReviewCheck(ctx context.Context, id, node string, in CheckReview
 		}
 		if ns.Review != nil {
 			if reviewMatches(t, ns, object) && ns.Review.Decision == in.Decision && ns.Review.Reason == in.Reason && ns.Review.Principal == principal {
-				return ns.Review, nil
+				return existingReceipt{value: ns.Review}, nil
 			}
 			return nil, fault("INPUT_CONFLICT", "review fact is immutable; new changed content requires a new check", 409)
 		}
