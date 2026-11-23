@@ -65,6 +65,7 @@ type CapabilityCard struct {
 	Input         *CapabilityIO  `json:"input,omitempty"`
 	Output        *CapabilityIO  `json:"output,omitempty"`
 	Limits        []string       `json:"limits,omitempty"`
+	Reusable      bool           `json:"reusable,omitempty"` // a later task may reuse its result for identical inputs and sources
 }
 
 // Applicability is the hard scope a capability declares. A declared dimension
