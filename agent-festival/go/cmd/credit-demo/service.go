@@ -1035,16 +1035,19 @@ func (s *Service) Effect(runID, token, step string) (string, error) {
 	if state == adopt.StateAdopted {
 		out := m.Dispatch(op, s.liveGrants(r))
 		s.record(r, "dispatch", map[string]any{"grants": s.liveGrants(r)})
-		if st := r.Steps[step]; st != nil {
-			st.Activity = "已派发，等银行回执"
-		}
 		if out.Status != "dispatched" {
+			if st := r.Steps[step]; st != nil {
+				st.Status, st.Activity, st.FinishedAt = "failed", "派发被拒", now()
+			}
 			saveErr := s.save()
 			s.mu.Unlock()
 			if saveErr != nil {
 				return "", saveErr
 			}
 			return "", fmt.Errorf("dispatch %s: %s", out.Status, out.Detail)
+		}
+		if st := r.Steps[step]; st != nil {
+			st.Status, st.Activity, st.FinishedAt = "running", "已派发，等银行回执", ""
 		}
 		saveErr := s.save()
 		s.mu.Unlock()

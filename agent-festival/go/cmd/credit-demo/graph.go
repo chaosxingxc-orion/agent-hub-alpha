@@ -197,7 +197,8 @@ func (s *Service) graph(p *Plan, withVerify bool) (*Graph, error) {
 					n.Status = "reused"
 				}
 				n.Output = clip(strings.TrimSpace(stripStepTag(rec.Output)), 240)
-				if rec.Status == "running" || rec.Status == "waiting" || rec.Status == "unknown" {
+				if rec.Status == "running" || rec.Status == "waiting" || rec.Status == "unknown" ||
+					(rec.Status == "failed" && e.Kind == "effect" && rec.Call == nil) {
 					n.Activity = rec.Activity
 				}
 				if c := rec.Call; c != nil {
