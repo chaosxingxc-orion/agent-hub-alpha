@@ -129,6 +129,10 @@ type GraphRun struct {
 	Stalled  bool   `json:"stalled,omitempty"` // heartbeats stopped; the lease is running out
 	URL      string `json:"url"`
 	Waiting  string `json:"waiting,omitempty"` // why a queued run is not running yet (e.g. no executor on its bound model)
+	// Blocked: why a blocked run stopped (stable code + short note).
+	// Reconciliation: a finished run whose records failed the startup check.
+	Blocked        *BlockReason `json:"blocked,omitempty"`
+	Reconciliation *BlockReason `json:"reconciliation,omitempty"`
 }
 
 func (s *Service) graph(p *Plan, withVerify bool) (*Graph, error) {
@@ -216,6 +220,11 @@ func (s *Service) graph(p *Plan, withVerify bool) (*Graph, error) {
 			URL: fmt.Sprintf("%s/ui/run/%s", s.cfg.PublicURL, run.ID)}
 		if run.Decision != nil {
 			g.Run.Decision = fmt.Sprint(run.Decision["level"])
+		}
+		g.Run.Blocked = blockReasonOf(run)
+		if run.Reconciliation != nil {
+			c := *run.Reconciliation
+			g.Run.Reconciliation = &c
 		}
 		if run.Status == "queued" && len(run.LeaseRefusals) > 0 {
 			f := run.LeaseRefusals[len(run.LeaseRefusals)-1]
