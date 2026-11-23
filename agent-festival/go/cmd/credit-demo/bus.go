@@ -96,8 +96,13 @@ func (s *Service) readBinding(expert string) (BusBinding, error) {
 // lookup runs outside the service lock (see BeginCall).
 var discoveryClient = &http.Client{Timeout: 5 * time.Second}
 
-func (s *Service) observeBinding(expert string) (BusBinding, *DiscoverySnapshot, error) {
+func (s *Service) observeBinding(expert string, plans ...*Plan) (BusBinding, *DiscoverySnapshot, error) {
 	id := busAgents[expert]
+	contractDigest := s.cat.Hashes[expert]
+	if len(plans) > 0 && plans[0] != nil {
+		id = plans[0].busAgent(expert)
+		contractDigest = plans[0].contractHash(expert, s.cat.Hashes)
+	}
 	if id == "" || s.cfg.BusRegistryURL == "" || s.cfg.BusRegistryToken == "" {
 		return BusBinding{}, nil, fmt.Errorf("real capability discovery is not configured for %s", expert)
 	}
@@ -175,19 +180,22 @@ func (s *Service) observeBinding(expert string) (BusBinding, *DiscoverySnapshot,
 	if err != nil {
 		return BusBinding{}, nil, err
 	}
-	return BusBinding{AgentID: id, Version: version, CardDigest: digest, ContractDigest: s.cat.Hashes[expert]}, snapshot, nil
+	return BusBinding{AgentID: id, Version: version, CardDigest: digest, ContractDigest: contractDigest}, snapshot, nil
 }
 
 func (s *Service) bindPlan(p *Plan) error {
 	if s.cfg.BusRegistryURL == "" {
+		if p.ExecutionBinding != nil {
+			return fmt.Errorf("profile requires original Bus discovery")
+		}
 		return nil
 	}
 	p.BusBindings = map[string]BusBinding{}
 	for _, a := range p.Agents {
-		if busAgents[a.Expert] == "" {
+		if p.busAgent(a.Expert) == "" {
 			continue
 		}
-		b, err := s.readBinding(a.Expert)
+		b, _, err := s.observeBinding(a.Expert, p)
 		if err != nil {
 			return err
 		}
@@ -199,7 +207,7 @@ func (s *Service) bindPlan(p *Plan) error {
 func (s *Service) checkBindings(p *Plan) error {
 	if s.cfg.BusRegistryURL != "" {
 		for _, agent := range p.Agents {
-			if busAgents[agent.Expert] != "" {
+			if p.busAgent(agent.Expert) != "" {
 				if _, ok := p.BusBindings[agent.ID]; !ok {
 					return fmt.Errorf("plan has no approved Agent Bus binding for %s; propose a new version", agent.ID)
 				}
@@ -211,7 +219,7 @@ func (s *Service) checkBindings(p *Plan) error {
 		if a == nil {
 			return errCallConflict
 		}
-		actual, err := s.readBinding(a.Expert)
+		actual, _, err := s.observeBinding(a.Expert, p)
 		if err != nil {
 			return err
 		}
@@ -254,11 +262,13 @@ func copyCall(c *RemoteCall) *RemoteCall {
 // beginSnapshot is what BeginCall checked under the lock before leaving it
 // for capability discovery; the send intent is written only if it still holds.
 type beginSnapshot struct {
-	epoch   int
-	plan    string
-	binding BusBinding
-	digest  string
-	expert  string
+	input, goal string
+	planRef     *Plan
+	epoch       int
+	plan        string
+	binding     BusBinding
+	digest      string
+	expert      string
 }
 
 // beginCheck validates the caller and the node under s.mu. If the node already
@@ -278,6 +288,17 @@ func (s *Service) beginCheck(in CallCommand) (map[string]any, *beginSnapshot, er
 	if !ok {
 		return nil, nil, fmt.Errorf("node has no approved remote capability")
 	}
+	if p.ExecutionBinding != nil {
+		if in.Input != "" || in.Goal != "" {
+			return nil, nil, fmt.Errorf("caller input/goal is not authoritative")
+		}
+		input, goal, err := s.h03Input(r, p, in.Step)
+		if err != nil {
+			return nil, nil, err
+		}
+		in.Input = h03Canonical(input)
+		in.Goal = goal
+	}
 	digest, err := canonicalHash(map[string]any{"input": in.Input, "goal": in.Goal, "binding": binding, "model": s.runModel(r)})
 	if err != nil {
 		return nil, nil, err
@@ -289,6 +310,11 @@ func (s *Service) beginCheck(in CallCommand) (map[string]any, *beginSnapshot, er
 		}
 		action := "unknown"
 		if st.Status == "done" {
+			if p.ExecutionBinding != nil {
+				if _, err := s.h03FormalOutput(r, p, st); err != nil {
+					return nil, nil, err
+				}
+			}
 			action = "reuse"
 			st.Reused++
 			if err := s.save(); err != nil {
@@ -299,7 +325,7 @@ func (s *Service) beginCheck(in CallCommand) (map[string]any, *beginSnapshot, er
 		}
 		return map[string]any{"action": action, "call": copyCall(c), "output": st.Output}, nil, nil
 	}
-	return nil, &beginSnapshot{epoch: r.Epoch, plan: p.Key(), binding: binding, digest: digest, expert: st.Expert}, nil
+	return nil, &beginSnapshot{epoch: r.Epoch, plan: p.Key(), binding: binding, digest: digest, expert: st.Expert, input: in.Input, goal: in.Goal, planRef: p}, nil
 }
 
 // BeginCall records the send intent of a remote node (AR-05, #27). Capability
@@ -316,7 +342,7 @@ func (s *Service) BeginCall(in CallCommand) (map[string]any, error) {
 		return out, err
 	}
 
-	actual, discovery, err := s.observeBinding(snap.expert)
+	actual, discovery, err := s.observeBinding(snap.expert, snap.planRef)
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -340,7 +366,7 @@ func (s *Service) BeginCall(in CallCommand) (map[string]any, error) {
 	binding, digest := snap.binding, snap.digest
 	node := sha(r.ID, p.Key(), in.Step, "iteration:0")
 	c := &RemoteCall{NodeExecutionID: node, GraphRevision: p.Key(), NodePath: in.Step, LoopIteration: 0, Attempt: 1, Binding: binding,
-		InputDigest: digest, Input: in.Input, Goal: in.Goal, RequestID: newToken(), MessageID: newToken(), ContextID: "ctx-" + newToken(),
+		InputDigest: digest, Input: snap.input, Goal: snap.goal, RequestID: newToken(), MessageID: newToken(), ContextID: "ctx-" + newToken(),
 		Status: "dispatching", CreatedAt: now(), UpdatedAt: now(), CapabilityToken: newToken() + newToken(), ModelEvents: map[string]string{}, Discovery: discovery}
 	st.Call, st.Status, st.StartedAt, st.Epoch = c, "running", now(), r.Epoch
 	st.Activity = "经 Agent Bus 调用专业 Agent"
@@ -400,9 +426,15 @@ func (s *Service) UpdateCall(in CallCommand) error {
 func (s *Service) CommitCall(in CallCommand) (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	_, st, err := s.callFor(in)
+	r, st, err := s.callFor(in)
 	if err != nil {
 		return "", err
+	}
+	p := s.h03RunPlan(r)
+	if p != nil && p.ExecutionBinding != nil {
+		if err := s.h03CommitCheck(r, p, st, in); err != nil {
+			return "", err
+		}
 	}
 	c := st.Call
 	if st.Status == "failed" {
@@ -449,6 +481,14 @@ func (s *Service) agentCall(in CallCommand) (*Run, *StepRec, error) {
 		// and audit go through other endpoints and are not affected.
 		return nil, nil, errFenced
 	}
+	if p := s.h03RunPlan(r); p != nil && p.ExecutionBinding != nil {
+		if err := s.h03Ready(p, false); err != nil {
+			return nil, nil, err
+		}
+	}
+	if p := s.h03RunPlan(r); p != nil && s.cfg.H03Profile != nil && p.ExecutionBinding == nil {
+		return nil, nil, errFenced
+	}
 	st := r.Steps[in.Step]
 	if st == nil || st.Call == nil || in.Token == "" || st.Call.CapabilityToken != in.Token {
 		return nil, nil, errFenced
@@ -477,6 +517,9 @@ func (s *Service) AgentContext(in CallCommand) (map[string]any, error) {
 	if err := s.save(); err != nil {
 		return nil, err
 	}
+	if p := s.h03RunPlan(r); p != nil && p.ExecutionBinding != nil {
+		return s.h03AgentView(p, st), nil
+	}
 	return map[string]any{"call": copyCall(c), "expert": st.Expert, "tools": expertByID(st.Expert).Tools, "model": s.runModel(r)}, nil
 }
 
@@ -490,6 +533,9 @@ func (s *Service) ModelCall(in CallCommand) error {
 	r, st, err := s.agentCall(in)
 	if err != nil {
 		return err
+	}
+	if p := s.h03RunPlan(r); p != nil && p.ExecutionBinding != nil {
+		return fmt.Errorf("engineering profile has no model capability")
 	}
 	if in.EventID == "" || len(in.EventID) > 150 {
 		return fmt.Errorf("model event id required")
@@ -523,6 +569,15 @@ func (s *Service) ResumeRun(runID string) error {
 	r := s.st.Runs[runID]
 	if r == nil || r.Status != "waiting" {
 		return fmt.Errorf("run is not waiting")
+	}
+	p := s.h03RunPlan(r)
+	if p != nil {
+		if s.cfg.H03Profile != nil && p.ExecutionBinding == nil {
+			return fmt.Errorf("legacy resume disabled in controlled profile deployment")
+		}
+		if err := s.h03Ready(p, false); err != nil {
+			return err
+		}
 	}
 	r.Status, r.Final = "queued", ""
 	return s.save()

@@ -1,0 +1,35 @@
+# JSON scalars below are also YAML scalars. No user-supplied YAML is evaluated.
+# Candidate version-source is explicit per static instance, never a global default.
+server:
+  address: 127.0.0.1
+  port: $rdc_port
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:$db_port/agent_rdc
+    username: agent_rdc
+    password: $${RDC_DB_PASSWORD}
+  flyway:
+    enabled: true
+rdc:
+  deployment-discovery:
+    enabled: true
+    reconcile-interval: 5s
+    binding-defaults:
+      framework-type: JIUWEN
+      route-key: /a2a/jsonrpc/
+      contract-version: "1.0.0"
+      card-path: /.well-known/agent-card.json
+      max-concurrency: 3
+    instances: $instances
+  registry:
+    card-fetch:
+      # Only owned loopback unsigned synthetic agents, never production trust.
+      verify-signatures: false
+      target-cidrs: ["127.0.0.1/32"]
+openjiuwen:
+  registry:
+    registration-paths: [reconciliation]
+    route-handle-secret: $${RDC_ROUTE_HANDLE_SECRET}
+    auth:
+      adapter: static-token
+      token: $${RDC_REGISTRY_API_TOKEN}

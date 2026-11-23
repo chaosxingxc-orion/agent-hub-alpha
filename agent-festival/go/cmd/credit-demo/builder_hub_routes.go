@@ -100,6 +100,11 @@ func (s *Service) builderHubRoutes(mux *http.ServeMux, c *builderHubClient) {
 		}
 		w.Header().Set("Cache-Control", "no-store")
 		body := builderHubBody
+		if build := s.cfg.BuilderBuild; build != nil {
+			if actor, _, ok := build.user(r); ok && actor == user {
+				body += builderBuildBody
+			}
+		}
 		ids := []string{}
 		if p := s.cfg.BuilderPublication; p != nil {
 			if after, ok := p.user(r); ok && after == user {

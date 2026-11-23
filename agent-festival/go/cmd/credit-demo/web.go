@@ -62,10 +62,16 @@ func currentUser(r *http.Request) string {
 
 var page = template.Must(template.New("page").Funcs(template.FuncMap{
 	"expert": func(id string) *Expert { return expertByID(id) },
-	"clip":   clip,
-	"short":  func(h string) string { return clip(strings.TrimPrefix(h, "sha256:"), 12) },
-	"join":   func(ss []string) string { return strings.Join(ss, "、") },
-	"json":   compact,
+	"planExpert": func(p *Plan, id string) *Expert {
+		if p != nil {
+			return p.expert(id)
+		}
+		return expertByID(id)
+	},
+	"clip":  clip,
+	"short": func(h string) string { return clip(strings.TrimPrefix(h, "sha256:"), 12) },
+	"join":  func(ss []string) string { return strings.Join(ss, "、") },
+	"json":  compact,
 }).Parse(`<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>{{.Title}}</title>
 <link rel="stylesheet" href="{{$.Base}}/static/style.css"><script src="{{$.Base}}/static/graph-flow.js?v={{$.Lib}}" defer></script></head><body>
 <header><b>授信编排</b>{{if .User}}{{if .BuilderHubEnabled}}<a href="{{$.Base}}/ui/builder">Builder</a>{{end}}<span class="user">{{.User}}</span>{{else}}<a class="user" href="{{$.Base}}/ui/login?next={{.Path}}">登录</a>{{end}}</header>
@@ -100,7 +106,7 @@ const planBody = `{{with .Plan}}<h1>编排单 {{.ID}} · 第 {{.Version}} 版 <s
 {{range .Candidates}}<tr><td>{{.Name}} <code>{{.Capability}}</code></td><td>{{if eq .Result "selected"}}<b>选中</b> → <code>{{.Node}}</code>{{else if eq .Result "excluded"}}<span class="bad">排除</span>{{else if eq .Result "unknown"}}未知（不算通过）{{else}}合格未选{{end}}</td><td>{{printf "%.2f" .Score}}</td><td>{{.Reason}}</td></tr>{{end}}</table>
 <ul>{{range .Bindings}}<li><code>{{.From}}</code> → <code>{{.To}}</code>：{{.Check}}</li>{{end}}</ul></details>{{end}}
 <table><tr><th>步骤</th><th>专家</th><th>角色</th><th>子任务</th><th>依赖</th><th>契约</th></tr>
-{{range .Agents}}{{$e := expert .Expert}}<tr><td><code>{{.ID}}</code></td><td>{{$e.Name}}</td><td>{{.Role}}</td><td>{{.Task}}</td><td>{{join .DependsOn}}{{with .RunIf}}<br><span class="muted">条件：{{.Step}} {{if .Negate}}不含{{else}}含{{end}} {{.Contains}}</span>{{end}}</td><td><code>{{short (index $.Hashes .Expert)}}</code> ✓</td></tr>{{end}}</table>
+{{range .Agents}}{{$e := planExpert $.Plan .Expert}}<tr><td><code>{{.ID}}</code></td><td>{{$e.Name}}</td><td>{{.Role}}</td><td>{{.Task}}</td><td>{{join .DependsOn}}{{with .RunIf}}<br><span class="muted">条件：{{.Step}} {{if .Negate}}不含{{else}}含{{end}} {{.Contains}}</span>{{end}}</td><td><code>{{short (index $.Hashes .Expert)}}</code> ✓</td></tr>{{end}}</table>
 <p class="muted">编排单摘要 <code>{{.Hash}}</code></p>
 {{if .RunID}}<p><a class="btn" href="{{$.Base}}/ui/run/{{.RunID}}">查看执行 {{.RunID}}</a></p>
 {{else if .Precheck.OK}}{{if $.User}}<form method="post" action="{{$.Base}}/ui/plan/{{.ID}}/v{{.Version}}/approve"><input type="hidden" name="hash" value="{{.Hash}}"><button class="btn primary">批准并执行</button></form>
@@ -207,7 +213,7 @@ func (s *Service) routes(mux *http.ServeMux) {
 	})
 	mux.HandleFunc("/ui/run/", func(w http.ResponseWriter, r *http.Request) {
 		parts := strings.Split(strings.Trim(strings.TrimPrefix(r.URL.Path, "/ui/run/"), "/"), "/")
-		run, _, ok := s.RunByID(parts[0])
+		run, runPlan, ok := s.RunByID(parts[0])
 		if !ok {
 			http.NotFound(w, r)
 			return
@@ -237,8 +243,17 @@ func (s *Service) routes(mux *http.ServeMux) {
 		}
 		s.mu.Lock()
 		view := *run
+		if runPlan != nil && runPlan.ExecutionBinding != nil {
+			view.Steps = map[string]*StepRec{}
+			for id, st := range run.Steps {
+				copy := *st
+				copy.Output = ""
+				copy.Call = nil
+				view.Steps[id] = &copy
+			}
+		}
 		s.mu.Unlock()
-		s.render(w, runBody, map[string]any{"Title": "执行 " + run.ID, "Run": &view, "User": user, "Path": r.URL.Path})
+		s.render(w, runBody, map[string]any{"Title": "执行 " + run.ID, "Run": &view, "Plan": runPlan, "User": user, "Path": r.URL.Path})
 	})
 	mux.HandleFunc("/ui/", func(w http.ResponseWriter, r *http.Request) {
 		s.mu.Lock()
@@ -375,6 +390,11 @@ func (s *Service) routes(mux *http.ServeMux) {
 	mux.HandleFunc("/debug/state", func(w http.ResponseWriter, _ *http.Request) {
 		s.mu.Lock()
 		defer s.mu.Unlock()
+		w.Header().Set("Cache-Control", "no-store")
+		if s.privateIntegrationStateLocked() {
+			http.Error(w, "private integration state is not a debug export", http.StatusForbidden)
+			return
+		}
 		jsonOut(w, 200, s.st)
 	})
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {

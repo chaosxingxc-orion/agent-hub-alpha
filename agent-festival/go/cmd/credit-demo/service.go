@@ -23,21 +23,24 @@ import (
 )
 
 type Config struct {
-	BuilderHubEnabled  bool
-	BuilderPublication *builderPublicationConfig
-	Addr               string
-	DataDir            string
-	OrchestratorURL    string
-	PublicURL          string   // where browsers reach this service: a path behind the front proxy, e.g. /credit
-	Origins            []string // browser origins of the WorkSwarm UI; the MCP App may fetch /api/graph from them
-	MemberMCPURL       string
-	Model              string
-	SpecPath           string
-	LeaseSeconds       int
-	BusRegistryURL     string
-	BusRegistryToken   string
-	BusTenant          string
-	ScenarioDir        string // operator-imported approved scenario packages (*.json); built-in packages always load
+	H03Profile           *H03Profile
+	H03RuntimeCredential string
+	BuilderHubEnabled    bool
+	BuilderPublication   *builderPublicationConfig
+	BuilderBuild         *builderBuildClient
+	Addr                 string
+	DataDir              string
+	OrchestratorURL      string
+	PublicURL            string   // where browsers reach this service: a path behind the front proxy, e.g. /credit
+	Origins              []string // browser origins of the WorkSwarm UI; the MCP App may fetch /api/graph from them
+	MemberMCPURL         string
+	Model                string
+	SpecPath             string
+	LeaseSeconds         int
+	BusRegistryURL       string
+	BusRegistryToken     string
+	BusTenant            string
+	ScenarioDir          string // operator-imported approved scenario packages (*.json); built-in packages always load
 }
 
 // StepRec is the authoritative record of one blueprint step in a run.
@@ -104,10 +107,11 @@ type Run struct {
 }
 
 type State struct {
-	Plans    map[string][]*Plan `json:"plans"`
-	Runs     map[string]*Run    `json:"runs"`
-	NextPlan int                `json:"next_plan"`
-	NextRun  int                `json:"next_run"`
+	BuilderActions map[string]builderActionIntent `json:"builder_actions,omitempty"`
+	Plans          map[string][]*Plan             `json:"plans"`
+	Runs           map[string]*Run                `json:"runs"`
+	NextPlan       int                            `json:"next_plan"`
+	NextRun        int                            `json:"next_run"`
 	// Selections are the capability selection records plans were proposed from.
 	Selections    map[string]*SelectionRecord `json:"selections,omitempty"`
 	NextSelection int                         `json:"next_selection,omitempty"`
@@ -274,10 +278,13 @@ func (s *Service) Propose(in ProposeInput) (*Plan, error) {
 	if pkg == nil {
 		return nil, fmt.Errorf("scenario %s is not loaded", defaultScenario)
 	}
+	if s.cfg.H03Profile != nil && (pkg.Package != s.cfg.H03Profile.Package.ID || sel == nil) {
+		return nil, fmt.Errorf("controlled engineering deployment only accepts its selected profile")
+	}
 	if err := checkAgents(pkg, in.Agents); err != nil {
 		return nil, err
 	}
-	res, team, err := s.compile(in.Agents)
+	res, team, err := s.compile(in.Agents, pkg)
 	if err != nil {
 		return nil, err
 	}
@@ -287,6 +294,9 @@ func (s *Service) Propose(in ProposeInput) (*Plan, error) {
 		p.Selection = &SelectionRef{ID: sel.ID, Digest: sel.Digest}
 	}
 	if p.Layers, err = layers(p.Steps); err != nil {
+		return nil, err
+	}
+	if err := s.h03Bind(p, sel); err != nil {
 		return nil, err
 	}
 	p.Precheck = precheck(p)
@@ -397,6 +407,12 @@ func (s *Service) Approve(planID string, version int, hash, user string, via *Vi
 	if !ok || p.Version != version {
 		return nil, fmt.Errorf("unknown plan version")
 	}
+	if s.cfg.H03Profile != nil && p.ExecutionBinding == nil {
+		return nil, fmt.Errorf("legacy adoption disabled in controlled profile deployment")
+	}
+	if err := s.h03Ready(p, false); err != nil {
+		return nil, err
+	}
 	if p.Hash != hash || planHash(p, s.cat.Hashes) != hash {
 		return nil, fmt.Errorf("the plan changed after it was shown — reload and review again")
 	}
@@ -419,6 +435,14 @@ func (s *Service) Approve(planID string, version int, hash, user string, via *Vi
 	defer s.mu.Unlock()
 	if s.storageErr != nil {
 		return nil, s.storageErr
+	}
+	if p.ExecutionBinding != nil {
+		if user == "" {
+			return nil, fmt.Errorf("authenticated approval required")
+		}
+		if err := s.h03Ready(p, true); err != nil {
+			return nil, err
+		}
 	}
 	if p.Selection != nil {
 		if rec := s.st.Selections[p.Selection.ID]; rec == nil || rec.Digest != p.Selection.Digest || rec.digest() != rec.Digest {
@@ -473,18 +497,19 @@ func (s *Service) RunForPlan(planID string) (*Run, bool) {
 // ---------- executor protocol (lease, steps, judgment, effect) ----------
 
 type Job struct {
-	RunID         string                    `json:"run_id"`
-	Token         string                    `json:"token"`
-	Epoch         int                       `json:"epoch"`
-	Mode          string                    `json:"mode"`
-	Team          []map[string]any          `json:"team"`
-	SpecDigest    string                    `json:"spec_digest"`
-	UserInput     string                    `json:"user_input"`
-	Members       map[string]map[string]any `json:"members"`
-	MemberMCPURL  string                    `json:"member_mcp_url"`
-	LeaseSeconds  int                       `json:"lease_seconds"`
-	GraphRevision string                    `json:"graph_revision"`
-	Model         string                    `json:"model"` // the run's bound model; the executor must run exactly this
+	ExecutionProfile string                    `json:"execution_profile,omitempty"`
+	RunID            string                    `json:"run_id"`
+	Token            string                    `json:"token"`
+	Epoch            int                       `json:"epoch"`
+	Mode             string                    `json:"mode"`
+	Team             []map[string]any          `json:"team"`
+	SpecDigest       string                    `json:"spec_digest"`
+	UserInput        string                    `json:"user_input"`
+	Members          map[string]map[string]any `json:"members"`
+	MemberMCPURL     string                    `json:"member_mcp_url"`
+	LeaseSeconds     int                       `json:"lease_seconds"`
+	GraphRevision    string                    `json:"graph_revision"`
+	Model            string                    `json:"model"` // the run's bound model; the executor must run exactly this
 }
 
 func newToken() string {
@@ -524,6 +549,19 @@ func (s *Service) LeaseAs(worker, executorModel string) (*Job, error) {
 		}
 		vs := s.st.Plans[r.PlanID]
 		p := vs[r.PlanVersion-1]
+		if s.cfg.H03Profile != nil && p.ExecutionBinding == nil {
+			continue
+		}
+		if p.ExecutionBinding != nil {
+			if err := s.h03Ready(p, false); err != nil || p.Hash != r.PlanHash || planHash(p, s.cat.Hashes) != p.Hash {
+				r.Status = "blocked"
+				r.Final = "adopted profile dependencies unavailable or changed"
+				if err := s.save(); err != nil {
+					return nil, err
+				}
+				continue
+			}
+		}
 		// A run whose bound spec cannot be resolved stops here, explicitly; it
 		// is never resumed under the currently published spec.
 		var spec *boundSpec
@@ -566,12 +604,19 @@ func (s *Service) LeaseAs(worker, executorModel string) (*Job, error) {
 		if err := s.save(); err != nil {
 			return nil, err
 		}
+		executionProfile := ""
+		if p.ExecutionBinding != nil {
+			executionProfile = p.ExecutionBinding.Profile
+		}
 		members := map[string]map[string]any{}
 		for _, a := range p.Agents {
-			e := expertByID(a.Expert)
+			e := p.expert(a.Expert)
 			m := map[string]any{"kind": e.Kind, "expert": e.ID, "name": e.Name, "tools": e.Tools}
 			if binding, ok := p.BusBindings[a.ID]; ok {
 				m["bus_binding"] = binding
+			}
+			if p.ExecutionBinding != nil {
+				m["node_contract"] = p.ExecutionBinding.NodeContracts[a.ID]
 			}
 			if e.Kind == "judge" {
 				var deps []string
@@ -596,10 +641,9 @@ func (s *Service) LeaseAs(worker, executorModel string) (*Job, error) {
 					q.Entity, q.Basis, period, strings.Join(q.Materials, "、"), q.Deliverable, p.Goal)
 			}
 		}
-		return &Job{RunID: r.ID, Token: r.Token, Epoch: r.Epoch, Mode: "graph", Team: p.Team, SpecDigest: p.SpecDigest,
+		return &Job{ExecutionProfile: executionProfile, RunID: r.ID, Token: r.Token, Epoch: r.Epoch, Mode: "graph", Team: p.Team, SpecDigest: p.SpecDigest,
 			UserInput: input,
-			Members:   members, MemberMCPURL: s.cfg.MemberMCPURL, LeaseSeconds: s.cfg.LeaseSeconds, GraphRevision: p.Key(),
-			Model: executorModel}, nil
+			Members:   members, MemberMCPURL: s.cfg.MemberMCPURL, LeaseSeconds: s.cfg.LeaseSeconds, GraphRevision: p.Key(), Model: executorModel}, nil
 	}
 	return nil, nil
 }
@@ -693,6 +737,12 @@ func (s *Service) fence(runID, token string) (*Run, error) {
 	r, ok := s.st.Runs[runID]
 	if !ok {
 		return nil, fmt.Errorf("unknown run")
+	}
+	if p := s.h03RunPlan(r); p != nil && p.ExecutionBinding != nil && (s.cfg.H03Profile == nil || p.ExecutionBinding.BusTenant != s.cfg.BusTenant) {
+		return nil, errFenced
+	}
+	if p := s.h03RunPlan(r); p != nil && s.cfg.H03Profile != nil && p.ExecutionBinding == nil {
+		return nil, errFenced
 	}
 	if token == "" || r.Token != token {
 		return nil, errFenced
@@ -831,6 +881,16 @@ func (s *Service) Done(runID, token string, skipped []string, final string, fail
 			r.Status, r.Final = "waiting", "等待远端结果；未确认的调用不会自动重发"
 			r.Token = ""
 			return s.save()
+		}
+	}
+	if p := s.h03RunPlan(r); p != nil && p.ExecutionBinding != nil {
+		if len(skipped) > 0 {
+			return fmt.Errorf("required nodes cannot be skipped")
+		}
+		if failed == "" {
+			if err := s.h03DoneCheck(r, p, skipped); err != nil {
+				return err
+			}
 		}
 	}
 	for _, id := range skipped {
@@ -1110,6 +1170,9 @@ func (s *Service) ToolCall(runID, token, step, tool, arg string) (map[string]any
 	}
 	if err != nil {
 		return nil, err
+	}
+	if p := s.h03RunPlan(r); p != nil && p.ExecutionBinding != nil {
+		return nil, fmt.Errorf("engineering profile exposes no member tools")
 	}
 	st, ok := r.Steps[step]
 	if !ok {

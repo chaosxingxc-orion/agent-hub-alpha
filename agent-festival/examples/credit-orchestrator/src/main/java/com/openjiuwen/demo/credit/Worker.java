@@ -76,6 +76,9 @@ final class Worker implements Runnable {
     }
 
     private void execute(JsonNode job) {
+        String profile = job.path("execution_profile").asText();
+        if (!profile.isEmpty() && !profile.equals(H03NodeCodec.PROFILE)) throw new IllegalArgumentException("Unknown execution profile");
+        boolean h03 = profile.equals(H03NodeCodec.PROFILE);
         String run = job.path("run_id").asText();
         String token = job.path("token").asText();
         String bound = job.path("model").asText();
@@ -113,9 +116,10 @@ final class Worker implements Runnable {
             for (MemberSpec m : spec.members()) {
                 JsonNode mj = job.path("members").path(m.id());
                 if (mj.has("bus_binding")) {
-                    bindings.put(m.id(), new RemoteAgentMember(go, run, token, m.id(), env));
+                    bindings.put(m.id(), new RemoteAgentMember(go, run, token, m.id(), env, h03, mj.path("node_contract")));
                     continue;
                 }
+                if (h03) throw new IllegalArgumentException("Profile requires an original remote binding for every member");
                 SubAgentExecutor inner = member(job, run, token, m.id(), mj, mounts);
                 bindings.put(m.id(), new Ledgered(run, token, m.id(), inner, fenced));
             }

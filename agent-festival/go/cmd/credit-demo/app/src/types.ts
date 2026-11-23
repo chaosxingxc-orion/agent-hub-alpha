@@ -7,11 +7,18 @@ export interface Branch {
 export interface RunIf { step: string; contains: string; negate?: boolean }
 export type { BusSummary, CapabilityBinding, ExecutionBinding, GatewayExchange, RemoteExecution } from "./flow/bus-detail";
 import type { BusSummary, ExecutionBinding, RemoteExecution } from "./flow/bus-detail";
+export interface FieldConsumption {
+  status: "pending" | "input_bound" | "committed";
+  execution_binding_sha256: string; node_contract_sha256: string;
+  input_fields: string[]; output_fields: string[]; input_digest?: string; artifact_digest?: string;
+  dependencies?: { kind: "material" | "step"; id: string; sha256?: string; node_execution_id?: string; artifact_digest?: string }[];
+}
 export interface GraphNode {
   id: string; name: string; kind: string; role?: string; task: string; deps?: string[]; when?: RunIf;
   effect?: string; reads?: string[]; contract?: string; denied?: string; status?: string; activity?: string; output?: string; branches?: Branch[];
   // Set when the node runs through Agent Bus: the capability it is bound to and what its call recorded.
   execution?: ExecutionBinding; remote?: RemoteExecution;
+  consumption?: FieldConsumption;
 }
 export interface Check { name: string; ok: boolean; detail: string; items?: string[] }
 export interface Graph {
@@ -22,6 +29,7 @@ export interface Graph {
   live?: string;
   bus?: BusSummary;
   rev?: number; // state revision the snapshot was read at (see order.ts)
+  selection?: { id: string; digest: string; package: string; score_source: string; candidates: { capability: string; name: string; result: string; score: number; reason: string; node?: string }[] };
 }
 export interface Options {
   // Approve in the card: resolves to an error message, or undefined when approved.

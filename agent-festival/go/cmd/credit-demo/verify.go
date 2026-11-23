@@ -32,7 +32,8 @@ func (s *Service) Verify(runID string, tamper bool) (*Report, error) {
 	if !ok || p == nil {
 		return nil, fmt.Errorf("unknown run %s", runID)
 	}
-	s.mu.Lock()
+	if p.ExecutionBinding!=nil{return s.h03Verify(runID,tamper)}
+ s.mu.Lock()
 	defer s.mu.Unlock()
 	rep := &Report{RunID: runID, OK: true}
 	add := func(c Check) {

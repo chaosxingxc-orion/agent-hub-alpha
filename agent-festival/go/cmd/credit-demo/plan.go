@@ -51,35 +51,45 @@ type Precheck struct {
 
 // Plan is one immutable version of the f proposed for a case.
 type Plan struct {
-	ID          string                `json:"id"`
-	Version     int                   `json:"version"`
-	CaseID      string                `json:"case_id"`
-	Goal        string                `json:"goal"`
-	Agents      []PlanAgent           `json:"agents"`
-	Blueprint   string                `json:"blueprint_yaml"`
-	SpecDigest  string                `json:"spec_digest"`
-	Team        []map[string]any      `json:"team"`
-	Type        string                `json:"type"`
-	Steps       []Step                `json:"steps"`
-	Layers      [][]string            `json:"layers"`
-	Precheck    Precheck              `json:"precheck"`
-	Hash        string                `json:"hash"`
-	ProposedAt  string                `json:"proposed_at"`
-	ApprovedBy  string                `json:"approved_by,omitempty"`
-	RunID       string                `json:"run_id,omitempty"`
-	BusBindings map[string]BusBinding `json:"bus_bindings,omitempty"`
-	Scenario    string                `json:"scenario,omitempty"`  // package id; empty for plans proposed before packages
-	Selection   *SelectionRef         `json:"selection,omitempty"` // the capability selection the team came from
+	ExecutionBinding *H03ExecutionBinding  `json:"execution_binding,omitempty"`
+	ID               string                `json:"id"`
+	Version          int                   `json:"version"`
+	CaseID           string                `json:"case_id"`
+	Goal             string                `json:"goal"`
+	Agents           []PlanAgent           `json:"agents"`
+	Blueprint        string                `json:"blueprint_yaml"`
+	SpecDigest       string                `json:"spec_digest"`
+	Team             []map[string]any      `json:"team"`
+	Type             string                `json:"type"`
+	Steps            []Step                `json:"steps"`
+	Layers           [][]string            `json:"layers"`
+	Precheck         Precheck              `json:"precheck"`
+	Hash             string                `json:"hash"`
+	ProposedAt       string                `json:"proposed_at"`
+	ApprovedBy       string                `json:"approved_by,omitempty"`
+	RunID            string                `json:"run_id,omitempty"`
+	BusBindings      map[string]BusBinding `json:"bus_bindings,omitempty"`
 	// Binding is the judgment spec and execution config the plan was proposed
 	// under; the approval digest covers it (AR-04).
-	Binding *ExecBinding `json:"exec_binding,omitempty"`
+	Binding   *ExecBinding  `json:"exec_binding,omitempty"`
+	Scenario  string        `json:"scenario,omitempty"`  // package id; empty for plans proposed before packages
+	Selection *SelectionRef `json:"selection,omitempty"` // the capability selection the team came from
 }
 
 func (p *Plan) Key() string { return fmt.Sprintf("%s-v%d", p.ID, p.Version) }
 
 // scenario is the package whose rules, grants and budget the plan is checked
 // against; nil if that package is no longer loaded.
-func (p *Plan) scenario() *ScenarioPackage { return scenarios.get(p.Scenario) }
+func (p *Plan) scenario() *ScenarioPackage {
+	if p.ExecutionBinding != nil {
+		pkg, err := parseScenario(p.ExecutionBinding.ScenarioSnapshot)
+		if err != nil {
+			return nil
+		}
+		return pkg
+	}
+	return scenarios.get(p.Scenario)
+}
 
 func (p *Plan) agent(id string) *PlanAgent {
 	for i := range p.Agents {
@@ -137,10 +147,16 @@ type compileResult struct {
 	Error      string `json:"error"`
 }
 
-func (s *Service) compile(agents []PlanAgent) (*compileResult, []map[string]any, error) {
+func (s *Service) compile(agents []PlanAgent, packages ...*ScenarioPackage) (*compileResult, []map[string]any, error) {
 	team := []map[string]any{}
 	for _, a := range agents {
 		e := expertByID(a.Expert)
+		if len(packages) > 0 && packages[0] != nil {
+			e = packages[0].expert(a.Expert)
+		}
+		if e == nil {
+			return nil, nil, fmt.Errorf("member capability unavailable")
+		}
 		m := map[string]any{"id": a.ID, "role": a.Role, "task": a.Task, "systemPrompt": expertInstruction(e)}
 		if len(a.DependsOn) > 0 {
 			m["dependsOn"] = a.DependsOn
@@ -218,7 +234,7 @@ func execGraph(p *Plan) map[string]any {
 	nodes := map[string]any{}
 	for _, st := range p.Steps {
 		if a := p.agent(st.Member); a != nil {
-			nodes[st.ID] = expertByID(a.Expert).contract()
+			nodes[st.ID] = p.expert(a.Expert).contract()
 		}
 	}
 	seq := []any{}
@@ -277,7 +293,7 @@ func ruleViolations(p *Plan) []string {
 	reads := map[string]bool{}
 	for _, st := range p.Steps {
 		if a := p.agent(st.Member); a != nil {
-			e := expertByID(a.Expert)
+			e := p.expert(a.Expert)
 			kind[st.ID] = e.Kind
 			for _, g := range e.requires {
 				reads[g.selector] = true
@@ -336,6 +352,9 @@ func ruleViolations(p *Plan) []string {
 }
 
 func precheck(p *Plan) Precheck {
+	if errs := h03BindingErrors(p); len(errs) > 0 {
+		return Precheck{OK: false, Rules: errs, CheckedAt: now()}
+	}
 	pkg := p.scenario()
 	res := compose.ComposeErrors(execGraph(p))
 	pc := Precheck{OK: len(res.Errors) == 0, Errors: res.Errors, Composed: res.Composed, CheckedAt: now()}
@@ -347,9 +366,9 @@ func precheck(p *Plan) Precheck {
 		if a == nil {
 			continue
 		}
-		for _, g := range expertByID(a.Expert).requires {
+		for _, g := range p.expert(a.Expert).requires {
 			if !pkg.held(g) {
-				pc.NotHeld = append(pc.NotHeld, fmt.Sprintf("%s（%s）需要 %s %s，客户经理没有这项权限", st.ID, expertByID(a.Expert).Name, g.selector, strings.Join(g.actions, ",")))
+				pc.NotHeld = append(pc.NotHeld, fmt.Sprintf("%s（%s）需要 %s %s，客户经理没有这项权限", st.ID, p.expert(a.Expert).Name, g.selector, strings.Join(g.actions, ",")))
 			}
 		}
 	}
@@ -363,12 +382,18 @@ func precheck(p *Plan) Precheck {
 func planHash(p *Plan, contractHashes map[string]string) string {
 	members := map[string]any{}
 	for _, a := range p.Agents {
-		members[a.ID] = map[string]any{"expert": a.Expert, "contract_hash": contractHashes[a.Expert]}
+		members[a.ID] = map[string]any{"expert": a.Expert, "contract_hash": p.contractHash(a.Expert, contractHashes)}
 		if b, ok := p.BusBindings[a.ID]; ok {
 			members[a.ID].(map[string]any)["bus_binding"] = b
 		}
 	}
 	doc := map[string]any{"case": p.CaseID, "goal": p.Goal, "spec_digest": p.SpecDigest, "members": members}
+	if p.ExecutionBinding != nil {
+		doc["execution_binding"] = h03RawHash(p.ExecutionBinding)
+	}
+	if p.Binding != nil {
+		doc["exec_binding"] = p.Binding
+	}
 	if p.Scenario != "" {
 		scenario := map[string]any{"package": p.Scenario}
 		if pkg := p.scenario(); pkg != nil {
@@ -378,9 +403,6 @@ func planHash(p *Plan, contractHashes map[string]string) string {
 	}
 	if p.Selection != nil {
 		doc["selection"] = map[string]any{"id": p.Selection.ID, "digest": p.Selection.Digest}
-	}
-	if p.Binding != nil {
-		doc["exec_binding"] = p.Binding
 	}
 	raw, _ := rfc8785.Canonicalize(jsonDoc(doc))
 	sum := sha256.Sum256(raw)
