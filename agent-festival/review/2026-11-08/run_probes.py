@@ -8,8 +8,10 @@ and a passing rc=0 is accepted only when every TestNGAReview_* probe defined in
 the injected file actually ran. Zero tests matched, an empty injected probe set,
 or missing probes exit 3 (instrument failure). Any nonzero go test exit code is
 still propagated unchanged: open acceptance items stay red for their own reason.
-The E-report's overlay-key/cwd divergence claim was re-measured via a symlinked
-checkout path (record R3) and does not exist; no key-normalization change made.
+go_root is resolved: a symlinked agent-festival/go otherwise keeps the overlay
+key on the lexical path while the child cwd is physical, silently dropping the
+injection (review-loop R3 finding; the family guard alone would only mask that
+topology as a misleading rc=3).
 """
 import json
 from pathlib import Path
@@ -19,7 +21,7 @@ import sys
 import tempfile
 
 here = Path(__file__).resolve().parent
-go_root = here.parents[1] / "go"
+go_root = (here.parents[1] / "go").resolve()
 go = sys.argv[1] if len(sys.argv) > 1 else "go"
 PROBE_DEF = re.compile(r"^func (TestNGAReview_\w+)\(", re.MULTILINE)
 RUN_LINE = re.compile(r"^=== RUN\s+(\S+)")

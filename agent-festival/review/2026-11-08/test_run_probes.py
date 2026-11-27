@@ -4,19 +4,25 @@
 Precedent form: xs3/test_xs3_validate.py (F7 battery — pure additive file,
 runner touched zero). The fake `go` stub makes the battery hermetic: no
 toolchain, deterministic, seconds-fast. The live overlay path stays covered
-by the adjudication record (R0-R3 in INSTRUMENT-ADJUDICATION-G12.md).
+by the adjudication record (R0-R3b in INSTRUMENT-ADJUDICATION-G12.md).
 
 Run:  python3 -I agent-festival/review/2026-11-08/test_run_probes.py
 All PASS -> rc=0; any red -> rc=1.
 
-Mutation coupling (kill list lives in the adjudication record):
-  drop the missing-probe guard   -> S1/S6 red
-  drop the zero-total guard      -> S2/S7 red (message assertions are load-
-                                    bearing: both branches would else exit 3)
-  drop the empty-set guard       -> S10 red
-  invert the top-level filter    -> S3/S7 red
-  neutralize the instrument exit -> S1/S2/S6/S7/S10 red (rc 3 -> 0)
-  unconditional exit rewrite     -> S4/S5 red (real rc must survive)
+Mutation coupling (kill list, full table in the adjudication record):
+  drop the missing-probe guard        -> S1/S6 red
+  drop the zero-total guard           -> S2/S7 red (message assertions are
+                                         load-bearing: the rc would else stay 3)
+  drop the empty-set guard            -> S10 red
+  invert the top-level filter         -> S1/S3/S4/S6/S7/S10 red
+  instrument exit 3 -> 0              -> S1/S2/S6/S7/S10 red
+  instrument branch masks rc!=0       -> S5 red
+  final pass-through exit -> 3        -> S3/S4 red
+  drop stream replay (stdout swallow) -> S3 red
+  drop go_root .resolve()             -> S11 red (key/cwd split under a
+                                         symlinked agent-festival/go)
+  narrow PROBE_DEF parse breadth      -> S12 red (expected set must cover the
+                                         whole injected family, not one probe)
 """
 import json
 import os
@@ -28,7 +34,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 RUNNER = HERE / "run_probes.py"
-GO_ROOT = HERE.parents[1] / "go"
+GO_ROOT = (HERE.parents[1] / "go").resolve()
 PROBE_FILE = HERE / "system_contract_probes.go.txt"
 
 # README.md evidence-table names, transcribed independently of the runner's
@@ -66,30 +72,45 @@ def stream(names, extra_lines=()):
     return "\n".join(out) + "\n"
 
 
-def run_probe_case(lines, stub_rc, runner=RUNNER, probe_text=None):
-    """Invoke run_probes.py with a fake go; return (proc, dump_path)."""
+def run_probe_case(lines, stub_rc, runner=RUNNER, probe_text=None, go_symlink=False):
+    """Invoke run_probes.py with a fake go; return (proc, expected_overlay_root).
+
+    probe_text/go_symlink build a synthetic same-depth tree in /tmp (the repo
+    is never written): go_symlink replaces agent-festival/go with a symlink,
+    reproducing the review-loop R3 topology where an unresolved go_root splits
+    the overlay key (lexical) from the child cwd (physical).
+    """
     with tempfile.TemporaryDirectory(prefix="g12-battery-") as dump:
-        stub = Path(dump) / "go"
+        stub = Path(dump) / "go-stub"
         stub.write_text(STUB)
         stub.chmod(0o755)
         env = dict(os.environ)
         env.update(G12_STUB_DUMP=dump, G12_STUB_OUT=lines, G12_STUB_RC=str(stub_rc))
-        target = runner
-        if probe_text is not None:  # synthetic tree with a custom probe file
+        target, expected_root = runner, GO_ROOT
+        if probe_text is not None or go_symlink:
             root = Path(dump) / "agent-festival"
             leaf = root / "review" / "syn"
             leaf.mkdir(parents=True)
-            (root / "go").mkdir()
+            expected_root = root / "go"
+            if go_symlink:
+                phys = Path(dump) / "phys-go"
+                phys.mkdir()
+                expected_root.symlink_to(phys)
+                expected_root = phys
+            else:
+                expected_root.mkdir()
             (leaf / "run_probes.py").write_text(Path(runner).read_text())
-            (leaf / "system_contract_probes.go.txt").write_text(probe_text)
+            (leaf / "system_contract_probes.go.txt").write_text(
+                probe_text if probe_text is not None else PROBE_FILE.read_text())
             target = leaf / "run_probes.py"
         proc = subprocess.run(
             [sys.executable, "-I", str(target), str(stub)],
             capture_output=True, text=True, env=env)
         files = {p.name: Path(dump, p.name).read_text()
-                 for p in Path(dump).iterdir() if p.name.endswith(".txt")
-                 or p.name == "overlay.json"}
+                 for p in Path(dump).iterdir()
+                 if p.name.endswith(".txt") or p.name == "overlay.json"}
         proc.dump = files
+        proc.expected_root = expected_root
         return proc
 
 
@@ -101,12 +122,17 @@ def check(results, name, cond, detail=""):
 
 def main():
     results = []
-    full = stream(FAMILY + ["TestP0A_ScanRegenerated", "TestXS2_MachineInternalFormImmune"])
+    extra = ["TestP0A_ScanRegenerated", "TestXS2_MachineInternalFormImmune"]
+    full = stream(FAMILY + extra)
 
     p3 = run_probe_case(full, 0)
-    check(results, "S3 full-probe stream passes (positive control, rc=0)",
-          p3.returncode == 0 and "instrument failure" not in p3.stderr,
-          "rc=%s stderr=%r" % (p3.returncode, p3.stderr[:200]))
+    check(results, "S3 full-probe stream passes (positive control, rc=0) and the "
+                   "go stream is replayed to stdout in full",
+          p3.returncode == 0 and "instrument failure" not in p3.stderr
+          and all(n in p3.stdout for n in FAMILY + extra)
+          and p3.stdout.count("=== RUN") == len(FAMILY) + len(extra),
+          "rc=%s stderr=%r stdout_len=%d" % (p3.returncode, p3.stderr[:200],
+                                             len(p3.stdout)))
 
     p1 = run_probe_case(stream(["TestP0A_ScanRegenerated", "TestP0A_SixCellMatrix",
                                 "TestXS2_MachineInternalFormImmune",
@@ -165,6 +191,33 @@ def main():
     check(results, "S10 injected file defining no probes is instrument failure",
           p10.returncode == 3 and "no TestNGAReview_ functions" in p10.stderr,
           "rc=%s stderr=%r" % (p10.returncode, p10.stderr[:200]))
+
+    p11 = run_probe_case(full, 0, go_symlink=True)
+    key11 = list(json.loads(p11.dump["overlay.json"])["Replace"])
+    check(results, "S11 symlinked agent-festival/go: key and child cwd land on the "
+                   "physical root (go_root .resolve() normalization)",
+          p11.returncode == 0
+          and key11 == [str(p11.expected_root
+                            / "internal/e2e/nga_external_review_test.go")]
+          and p11.dump["cwd.txt"] == str(p11.expected_root),
+          "rc=%s key=%r cwd=%r phys=%r" % (p11.returncode, key11,
+                                           p11.dump["cwd.txt"],
+                                           str(p11.expected_root)))
+
+    p11b = run_probe_case(stream(extra), 0, go_symlink=True)
+    check(results, "S11b injection-dead stream under go-symlink topology still reds "
+                   "via the family guard",
+          p11b.returncode == 3 and "never ran" in p11b.stderr,
+          "rc=%s stderr=%r" % (p11b.returncode, p11b.stderr[:200]))
+
+    one_only = stream(["TestNGAReview_OriginalLowBandRule"] + extra)
+    p12 = run_probe_case(one_only, 0)
+    check(results, "S12 six-of-seven probes absent while one runs -> red listing them "
+                   "(pins PROBE_DEF parse breadth)",
+          p12.returncode == 3
+          and "TestNGAReview_SupersededDecisionMustNotDispatch" in p12.stderr
+          and p12.stderr.count("TestNGAReview_") >= 6,
+          "rc=%s stderr=%r" % (p12.returncode, p12.stderr[:220]))
 
     failed = [n for n, ok, _ in results if not ok]
     print("%d/%d PASS" % (len(results) - len(failed), len(results)))
