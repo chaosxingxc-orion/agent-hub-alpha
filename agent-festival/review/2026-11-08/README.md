@@ -12,6 +12,10 @@ Go is installed there. Brackets denote an optional argument, not literal text.
 The runner uses a temporary Go overlay. It returns the actual test exit code;
 **nonzero currently means known system acceptance gaps remain**, not a successful
 production acceptance. Future fixes must update this evidence table.
+Since G12 (2026-11-27) the runner also self-checks: exit 3 is an instrument
+failure (`zero tests matched` / injected probes never ran), never a pass.
+`test_run_probes.py` (same directory) pins that behavior with a fake-`go`
+battery; the adjudication record is `INSTRUMENT-ADJUDICATION-G12.md`.
 
 | External probe | Actual result | Scope |
 | --- | --- | --- |
