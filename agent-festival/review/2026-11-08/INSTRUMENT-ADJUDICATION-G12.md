@@ -24,11 +24,13 @@ Copy at same tree depth, pattern `"TestNGAReview_|TestP0A|TestXS2"` replaced by
 testing: warning: no tests to run
 PASS
 ok  	github.com/openjiuwen/agent-festival/go/internal/e2e	0.007s [no tests to run]
-R1_RC=0
 ```
 
-Zero tests ran; the old runner propagated rc=0 — a "probe suite passed" signal
-with nothing probed.
+(The `rc=0` marker was echoed by the harness terminal, not part of the archived
+`g12-R1.log` body — review round 6 flagged the quote-block contamination; the
+three lines above are exactly what the log holds. Exit code 0 independently
+re-measured by rounds 4-6.) Zero tests ran; the old runner propagated rc=0 — a
+"probe suite passed" signal with nothing probed.
 
 ### R2 — overlay-ineffective shape (CONFIRMED false green, family-granular)
 
@@ -97,8 +99,8 @@ R2-shape `rc=3` listing all 7 probe names; live baseline `rc=1` unchanged,
 7 probes still running and still honestly red (also under the go-symlink
 topology, generation C).
 
-## 4. Mutation table (re-run on committed state 28856ea, detached worktree;
-raw logs shipped `g12-evidence-mut-M*.log`)
+## 4. Mutation table (M1-M8 re-run on committed state 28856ea; M9-M11 on
+879d44c; detached worktrees; raw logs shipped `g12-evidence-mut-M*.log`)
 
 | ID | Mutation | Battery cases turned red | Result |
 | --- | --- | --- | --- |
@@ -111,6 +113,13 @@ raw logs shipped `g12-evidence-mut-M*.log`)
 | M6b | final pass-through exit -> 3 | S3, S4, S11 | killed |
 | M7 | drop `.resolve()` on go_root | S11 | killed |
 | M8 | narrow PROBE_DEF to a one-probe prefix | S12 | killed |
+| M9 | replay only matched RUN lines (swallow transcript) | S3, S13 | killed |
+| M10 | child stderr -> DEVNULL (evidence swallow) | S13 | killed |
+| M11 | delete one README evidence-table row | S8 | killed |
+
+M9-M11 pin the round-6 closings (byte-exact replay, stderr merge, README as the
+runtime anchor) and were re-run on committed state 879d44c; the M1-M8 rows hold
+case-for-case there too (logs shipped).
 
 M8 mechanically confirms the round-3 reviewer's survivor claim: against the
 pre-S12 battery the PROBE_DEF-narrowing mutant passed every functional case;
@@ -133,7 +142,14 @@ stubs, precedent `xs3/test_xs3_validate.py` F7 battery).
 - `go test -count=1 -shuffle=on ./...` → `SHUF_RC=0` (re-run 0; three distinct
   log md5s — not copies).
 - `python3 -I agent-festival/review/2026-11-08/test_run_probes.py` → `rc=0`,
-  13/13 PASS (test surface 0 → 13 executable pins for this instrument).
+  14/14 PASS (test surface 0 → 14 executable pins for this instrument; earlier
+  rounds measured 10 then 13 — monotone accumulation, nothing dropped).
+- Post-polish self-attested live baseline (`g12-R0post3.log`: UTC stamp, HEAD,
+  go version inline): `rc=1`, 20 RUN lines, honest red preserved. The earlier
+  `g12-R0fix2.log` is content-identical to `g12-R0fix.log` by construction
+  (normalization is a no-op on this physical path); the stamped re-run exists
+  precisely because review round 6 correctly noted the pair was
+  indistinguishable from a copy.
 
 ## 6. Deviations from the estimated "one file + one record" shape
 
@@ -167,6 +183,12 @@ stubs, precedent `xs3/test_xs3_validate.py` F7 battery).
 - Exit code 3 is new and means "instrument failure" — all three triggers
   (zero tests matched / injected probes never ran / injected file defines no
   `TestNGAReview_` functions) are documented in README §note and the docstring.
+- A real `nga_external_review_test.go` file committed at the overlay's target
+  path would shadow the injection by content (same-path on-disk variant,
+  round-6 note): verified nonexistent today (overlay wins over absent files by
+  construction and the battery's expected set comes from the injected file),
+  but a future commit there would need content-level review, not this
+  instrument.
 
 ## 8. Reproduce
 
@@ -176,5 +198,6 @@ python3 -I agent-festival/review/2026-11-08/test_run_probes.py       # battery: 
 ```
 
 Raw logs: bundle `~/nga-handoff/g12-evidence/` on aws-claw — R0-R3b
-(three-generation symlink experiment included), fixed retests, mutation logs
-M1-M8 (complete set), battery 13/13, three regression variants x2 rounds.
+(three-generation symlink experiment included), self-attested post-polish
+baseline `g12-R0post3.log`, mutation logs M1-M11 (complete set), battery logs
+(10→13→14 growth), three regression variants x2 rounds (six distinct md5s).
