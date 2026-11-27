@@ -99,8 +99,9 @@ R2-shape `rc=3` listing all 7 probe names; live baseline `rc=1` unchanged,
 7 probes still running and still honestly red (also under the go-symlink
 topology, generation C).
 
-## 4. Mutation table (M1-M8 re-run on committed state 28856ea; M9-M11 on
-879d44c; detached worktrees; raw logs shipped `g12-evidence-mut-M*.log`)
+## 4. Mutation table (all M1-M11 re-run on final committed state 14d1fb3 with
+the 14-case battery, detached worktree; logs `g12-evidence-mut14-M*.log`;
+earlier-generation logs `g12-evidence-mut-M*.log` kept for provenance)
 
 | ID | Mutation | Battery cases turned red | Result |
 | --- | --- | --- | --- |
@@ -118,8 +119,10 @@ topology, generation C).
 | M11 | delete one README evidence-table row | S8 | killed |
 
 M9-M11 pin the round-6 closings (byte-exact replay, stderr merge, README as the
-runtime anchor) and were re-run on committed state 879d44c; the M1-M8 rows hold
-case-for-case there too (logs shipped).
+runtime anchor). Every row M1-M11 was re-run at final state 14d1fb3 against the
+14-case battery — all killed (review round 7 had correctly noted the earlier
+"holds at 879d44c" claim referenced 13-case-era artifacts; now replaced by a
+fresh full re-run, not by wording).
 
 M8 mechanically confirms the round-3 reviewer's survivor claim: against the
 pre-S12 battery the PROBE_DEF-narrowing mutant passed every functional case;
@@ -183,12 +186,15 @@ stubs, precedent `xs3/test_xs3_validate.py` F7 battery).
 - Exit code 3 is new and means "instrument failure" — all three triggers
   (zero tests matched / injected probes never ran / injected file defines no
   `TestNGAReview_` functions) are documented in README §note and the docstring.
-- A real `nga_external_review_test.go` file committed at the overlay's target
-  path would shadow the injection by content (same-path on-disk variant,
-  round-6 note): verified nonexistent today (overlay wins over absent files by
-  construction and the battery's expected set comes from the injected file),
-  but a future commit there would need content-level review, not this
-  instrument.
+- Same-path on-disk file at the overlay target: **the overlay wins** — the
+  round-6/7 wording here was direction-inverted and is corrected by direct
+  measurement (scratch experiment, `g12-shadow-decoy.log` + no-overlay
+  control): with a decoy `nga_external_review_test.go` on disk and the runner
+  active, the decoy function is invisible to the test binary (0 RUN) while all
+  7 injected probes run; without the overlay the decoy compiles and passes.
+  So a future commit at that path cannot shadow the injection — but the
+  runner would also silently ignore that file's content, which is a
+  content-review obligation for whoever commits there, not an instrument face.
 
 ## 8. Reproduce
 
@@ -199,5 +205,9 @@ python3 -I agent-festival/review/2026-11-08/test_run_probes.py       # battery: 
 
 Raw logs: bundle `~/nga-handoff/g12-evidence/` on aws-claw — R0-R3b
 (three-generation symlink experiment included), self-attested post-polish
-baseline `g12-R0post3.log`, mutation logs M1-M11 (complete set), battery logs
-(10→13→14 growth), three regression variants x2 rounds (six distinct md5s).
+baseline `g12-R0post3.log`, shadow-direction experiment
+`g12-shadow-decoy.log`, mutation logs at final state `g12-evidence-mut14-M*`
+(all 11 rows, 14-case battery) plus earlier-generation `g12-evidence-mut-M*`
+provenance set, battery logs `g12-battery14.log` (the 10- and 13-case-era
+bundle logs were superseded by later runs of the same filename — noted, not
+hidden), three regression variants x2 rounds (six distinct md5s).
