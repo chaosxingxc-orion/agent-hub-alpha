@@ -40,15 +40,41 @@ reported green.
 Consequence for fix design: a total-count-only zero check does NOT close this
 form (total was 13). Detection must be probe-family-granular.
 
-### R3 — symlinked checkout invocation (E-report key-divergence REFUTED)
+### R3 — repo-root symlink invocation (E-report mechanism REFUTED as scoped)
 
 `ln -sfn ~/nga-handoff/agent-hub-wt /tmp/nga-sym-repo`, then run the real
-script through the symlink path. Measured: `rc=1`, 7 probes ran — byte-identical
-behavior to R0. The overlay key and the `cwd` both derive from the same
-`Path(__file__).resolve()` root, so the E-report's `/private/tmp` vs `/tmp`
-key-divergence mechanism does not exist in this script (matches the 169 adversarial
-note; re-verified independently here). **No key-normalization change was made**
-— per the explicit rule: no fix for an unadjudicated etiology.
+script through that symlink path. Measured: `rc=1`, 7 probes ran — RUN/FAIL
+structure and rc identical to R0 (timing strings differ). The E-report's claim
+(macOS `/private/tmp` vs `/tmp` aliasing between the overlay key and go's
+package path) is refuted for this script: the tempdir never becomes the key,
+and `cwd=go_root` and the overlay key derive from the same `__file__`-resolved
+root — so that specific mechanism cannot occur (the 169 adversarial note
+confirmed; re-verified independently here).
+
+### R3b — symlinked `agent-festival/go`: a real key-divergence channel (found by review-loop round 3)
+
+The original record sentence said the divergence "does not exist" — true for the
+E-report mechanism, but the way it was written invited a broader reading that
+exceeded R3's evidence radius (campaign rule: closing-word strength = evidence
+radius; own violation, own correction). R3 symlinks the repo ROOT, which
+`Path(__file__).resolve()` collapses before `go_root` is formed. If instead
+`agent-festival/go` itself is a symlink, the appended `go` component is NOT
+resolved: the overlay key stays on the lexical path while the child cwd is
+physical, and go silently drops the injection. Measured on this machine
+(logs `g12-evidence-symgo-*.log`):
+
+| Generation | Runner | Result under a symlinked `agent-festival/go` |
+| --- | --- | --- |
+| A | main, pre-fix | `rc=0`, 13 RUN lines, **0** probes — a real false green; the original etiology note was incomplete |
+| B | commit-2 (family guard, no normalization) | `rc=3` — red, but misattributed ("never ran" blames the probes; injection died) |
+| C | commit-3 (`go_root` resolved) | `rc=1`, 20 RUN, 7 probes — injection works, honest red preserved |
+
+Per 169 §五 G12.2 ("key normalization per adjudication outcome"), the
+adjudication outcome now identifies this channel, so normalization was applied
+(commit 3). The round-3 verifier REFUTED the finding's MAJOR grade (no live
+false green on the tree; the record sentence holds under its literal E-scoped
+reading) — accepted — but the substance (an unadjudicated real channel + an
+overreaching absolute) is corrected here under the claim-fidelity duty.
 
 ## 3. The fix (run_probes.py)
 
@@ -63,36 +89,51 @@ note; re-verified independently here). **No key-normalization change was made**
 - Any nonzero go-test code is propagated unchanged (open acceptance items stay
   red for their own reason; a real failure is never rewritten to 3).
 - go test call semantics unchanged (flag list byte-identical, pinned by S9).
+- (commit 3) `go_root` resolved per R3b: overlay key and child cwd pinned to the
+  same physical root under a symlinked `agent-festival/go` (battery S11).
 
 Post-fix retests (real go): R1-shape `rc=3` with `zero tests matched`;
 R2-shape `rc=3` listing all 7 probe names; live baseline `rc=1` unchanged,
-7 probes still running and still honestly red.
+7 probes still running and still honestly red (also under the go-symlink
+topology, generation C).
 
-## 4. Mutation table (all on committed state 19afcf2, detached worktree)
+## 4. Mutation table (re-run on committed state 28856ea, detached worktree;
+raw logs shipped `g12-evidence-mut-M*.log`)
 
 | ID | Mutation | Battery cases turned red | Result |
 | --- | --- | --- | --- |
-| M1 | drop `expected - seen` guard | S1, S6 | killed |
+| M1 | drop `expected - seen` guard | S1, S6, S11b, S12 | killed |
 | M2 | drop `total == 0` guard | S2, S7 (message assertions) | killed |
 | M3 | drop empty-`expected` guard | S10 | killed |
-| M4 | invert top-level `/` filter | S1, S3, S4, S6, S7, S10 | killed |
-| M5 | instrument exit 3 -> 0 | S1, S2, S6, S7, S10 | killed |
+| M4 | invert top-level `/` filter | S1, S3, S4, S6, S7, S10, S11, S11b, S12 | killed |
+| M5 | instrument exit 3 -> 0 | S1, S2, S6, S7, S10, S11b, S12 | killed |
 | M6 | instrument branch masks rc!=0 to 3 | S5 | killed |
-| M6b | final pass-through exit -> 3 | S3, S4 | killed |
+| M6b | final pass-through exit -> 3 | S3, S4, S11 | killed |
+| M7 | drop `.resolve()` on go_root | S11 | killed |
+| M8 | narrow PROBE_DEF to a one-probe prefix | S12 | killed |
+
+M8 mechanically confirms the round-3 reviewer's survivor claim: against the
+pre-S12 battery the PROBE_DEF-narrowing mutant passed every functional case;
+S12 now kills it. (Round-1/2 mutant families — stream-swallow closed by the S3
+replay assertion; R3's reviewer bonus mutant, symlinked module dir, closed by
+S11/M7.)
 
 Full revert (checkout of the pre-fix main version of the script) revives both
-real disease shapes: R1-shape `rc=0`, R2-shape `rc=0` — the fix is load-bearing,
-not decoration. Every guard in the fix has ≥1 killing battery case
-(`test_run_probes.py`, hermetic fake-`go` stubs, precedent
-`xs3/test_xs3_validate.py` F7 battery).
+real disease shapes: R1-shape `rc=0`, R2-shape `rc=0` (logs `g12-R1.log`,
+`g12-R2.log`), plus the R3b generation-A revival `rc=0` under a symlinked
+`agent-festival/go` — the fix is load-bearing, not decoration. Every guard in
+the fix has ≥1 killing battery case (`test_run_probes.py`, hermetic fake-`go`
+stubs, precedent `xs3/test_xs3_validate.py` F7 battery).
 
 ## 5. Regression
 
-- `go test -count=1 ./...` → `FULL_RC=0`, 21/21 packages ok (none dropped).
-- `go test -count=1 -race ./...` → `RACE_RC=0`.
-- `go test -count=1 -shuffle=on ./...` → `SHUF_RC=0`.
+- `go test -count=1 ./...` → `FULL_RC=0`, 21/21 packages ok (none dropped);
+  re-run after commit 3: `FULL_RC=0` again, 21 ok, 0 FAIL lines.
+- `go test -count=1 -race ./...` → `RACE_RC=0` (re-run 0).
+- `go test -count=1 -shuffle=on ./...` → `SHUF_RC=0` (re-run 0; three distinct
+  log md5s — not copies).
 - `python3 -I agent-festival/review/2026-11-08/test_run_probes.py` → `rc=0`,
-  10/10 PASS (test surface 0 → 10 executable pins for this instrument).
+  13/13 PASS (test surface 0 → 13 executable pins for this instrument).
 
 ## 6. Deviations from the estimated "one file + one record" shape
 
@@ -102,6 +143,12 @@ not decoration. Every guard in the fix has ≥1 killing battery case
 - README one-sentence update: the behavior change made the old "returns the
   actual test exit code" sentence incomplete for the rc=3 case; outbound doc
   truthfulness kept in the same commit.
+- Third code commit (28856ea, go_root normalization) originated inside the
+  review-loop itself: round-3 filed it MAJOR, the falsification verifier
+  REFUTED the grade (record held under its literal E-scoped reading; no live
+  false green), and the author corrected the etiology + applied the spec-listed
+  key normalization anyway because the R3b channel is physically real. Provenance
+  kept in full in §2 R3b — findings must not launder their route to a change.
 
 ## 7. Documented boundaries (not closed by this instrument, honest scope)
 
@@ -112,9 +159,14 @@ not decoration. Every guard in the fix has ≥1 killing battery case
   for whoever edits the file, but only when the battery is run.
 - Output is buffered until `go test` exits (liveness of streaming not claimed).
 - Skipped probes still count as executed (`=== RUN` present) — by design: zero
-  *matching* is the disease, per-test skip policy is out of scope.
-- Exit code 3 is new and means "instrument failure" (documented in README §note
-  and the docstring).
+  *matching* is the disease, per-test skip policy is out of scope. Round-2
+  confirmed no currently reachable skip in the run set (only `t1_llm_test.go`
+  skips; it is outside the `-run` pattern); silencing a failing probe via
+  `t.Skip` would require editing the boundary-forbidden probe bodies — accepted
+  residual, flagged by review round 3 as minor.
+- Exit code 3 is new and means "instrument failure" — all three triggers
+  (zero tests matched / injected probes never ran / injected file defines no
+  `TestNGAReview_` functions) are documented in README §note and the docstring.
 
 ## 8. Reproduce
 
@@ -123,5 +175,6 @@ python3 agent-festival/review/2026-11-08/run_probes.py /path/to/go   # live: rc=
 python3 -I agent-festival/review/2026-11-08/test_run_probes.py       # battery: rc=0
 ```
 
-Raw logs: transferred bundle `~/nga-handoff/g12-evidence/` on aws-claw
-(R0-R3, fixed retests, mutation logs, three regression variants).
+Raw logs: bundle `~/nga-handoff/g12-evidence/` on aws-claw — R0-R3b
+(three-generation symlink experiment included), fixed retests, mutation logs
+M1-M8 (complete set), battery 13/13, three regression variants x2 rounds.
