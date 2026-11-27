@@ -6,8 +6,9 @@ Use an exact source checkout with LF fixtures; no model or business API is used.
 Instrument self-check (G12 adjudication 2026-11-27): the -v stream is counted
 and a passing rc=0 is accepted only when every TestNGAReview_* probe defined in
 the injected file actually ran. Zero tests matched, an empty injected probe set,
-or missing probes exit 3 (instrument failure). Any nonzero go test exit code is
-still propagated unchanged: open acceptance items stay red for their own reason.
+or missing probes is an instrument failure: exit 3 when go test returned 0,
+otherwise the nonzero code is propagated unchanged (open acceptance items stay
+red for their own reason).
 go_root is resolved: a symlinked agent-festival/go otherwise keeps the overlay
 key on the lexical path while the child cwd is physical, silently dropping the
 injection (review-loop R3 finding; the family guard alone would only mask that

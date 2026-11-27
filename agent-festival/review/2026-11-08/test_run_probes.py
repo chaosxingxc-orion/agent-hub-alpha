@@ -23,6 +23,10 @@ Mutation coupling (kill list, full table in the adjudication record):
                                          symlinked agent-festival/go)
   narrow PROBE_DEF parse breadth      -> S12 red (expected set must cover the
                                          whole injected family, not one probe)
+  replay only RUN lines (swallow PASS/FAIL transcript) -> S3 red (byte-exact)
+  drop stderr merge (stderr=DEVNULL)  -> S13 red (notice must reach the stream)
+  drop a README evidence-table row    -> S8 red (table is the runtime anchor)
+Full kill matrix incl. logs: record §4.
 """
 import json
 import os
@@ -37,17 +41,16 @@ RUNNER = HERE / "run_probes.py"
 GO_ROOT = (HERE.parents[1] / "go").resolve()
 PROBE_FILE = HERE / "system_contract_probes.go.txt"
 
-# README.md evidence-table names, transcribed independently of the runner's
-# regex (instrument-side anchor: file drift vs README table must go red here).
-FAMILY = [
-    "TestNGAReview_RecentShortOverdueMustNotPassUpperGrant",
-    "TestNGAReview_SupersededDecisionMustNotDispatch",
-    "TestNGAReview_UnadoptedResultMustNotBecomeCurrent",
-    "TestNGAReview_VerifierRefusalNeedsDurableEvidence",
-    "TestNGAReview_OriginalLowBandRule",
-    "TestNGAReview_RequiredWindowCannotDisappear",
-    "TestNGAReview_ExpectedEpochIsNotDecisionAuthority",
-]
+README = HERE / "README.md"
+
+
+def probe_family_from_readme():
+    """Names straight from the README evidence table, parsed at runtime —
+    no transcription list to drift (review R1/R2 finding family closed by
+    structure: the table itself is the anchor)."""
+    rows = re.findall(r"^\| ([A-Za-z][A-Za-z0-9]*) \|",
+                      README.read_text(encoding="utf-8"), re.MULTILINE)
+    return {"TestNGAReview_" + n for n in rows}
 
 STUB = """#!/usr/bin/env python3
 import os, shutil, sys
@@ -57,6 +60,8 @@ shutil.copy(ov.split("=", 1)[1], os.path.join(dump, "overlay.json"))
 open(os.path.join(dump, "cwd.txt"), "w").write(os.getcwd())
 open(os.path.join(dump, "argv.txt"), "w").write("\\n".join(sys.argv))
 sys.stdout.write(os.environ["G12_STUB_OUT"])
+if os.environ.get("G12_STUB_ERR"):
+    sys.stderr.write(os.environ["G12_STUB_ERR"])
 sys.exit(int(os.environ["G12_STUB_RC"]))
 """
 
@@ -72,7 +77,8 @@ def stream(names, extra_lines=()):
     return "\n".join(out) + "\n"
 
 
-def run_probe_case(lines, stub_rc, runner=RUNNER, probe_text=None, go_symlink=False):
+def run_probe_case(lines, stub_rc, runner=RUNNER, probe_text=None, go_symlink=False,
+                   stub_stderr=None):
     """Invoke run_probes.py with a fake go; return (proc, expected_overlay_root).
 
     probe_text/go_symlink build a synthetic same-depth tree in /tmp (the repo
@@ -86,6 +92,8 @@ def run_probe_case(lines, stub_rc, runner=RUNNER, probe_text=None, go_symlink=Fa
         stub.chmod(0o755)
         env = dict(os.environ)
         env.update(G12_STUB_DUMP=dump, G12_STUB_OUT=lines, G12_STUB_RC=str(stub_rc))
+        if stub_stderr:
+            env["G12_STUB_ERR"] = stub_stderr
         target, expected_root = runner, GO_ROOT
         if probe_text is not None or go_symlink:
             root = Path(dump) / "agent-festival"
@@ -123,16 +131,27 @@ def check(results, name, cond, detail=""):
 def main():
     results = []
     extra = ["TestP0A_ScanRegenerated", "TestXS2_MachineInternalFormImmune"]
+    file_defs = set(re.findall(
+        r"^func (TestNGAReview_\w+)\(",
+        PROBE_FILE.read_text(encoding="utf-8"), re.MULTILINE))
+    FAMILY = sorted(file_defs)
     full = stream(FAMILY + extra)
 
     p3 = run_probe_case(full, 0)
     check(results, "S3 full-probe stream passes (positive control, rc=0) and the "
-                   "go stream is replayed to stdout in full",
+                   "go stream is replayed to stdout byte-exactly",
           p3.returncode == 0 and "instrument failure" not in p3.stderr
-          and all(n in p3.stdout for n in FAMILY + extra)
-          and p3.stdout.count("=== RUN") == len(FAMILY) + len(extra),
-          "rc=%s stderr=%r stdout_len=%d" % (p3.returncode, p3.stderr[:200],
-                                             len(p3.stdout)))
+          and p3.stdout == full,
+          "rc=%s stderr=%r stdout_len=%d vs %d" % (p3.returncode, p3.stderr[:200],
+                                                   len(p3.stdout), len(full)))
+
+    p13 = run_probe_case(stream(FAMILY + extra), 0, stub_stderr="go build notice\n")
+    check(results, "S13 child stderr is merged into the replayed stream (evidence "
+                   "transcript survives as one merged stdout; no swallow)",
+          p13.returncode == 0 and "go build notice" in p13.stdout
+          and "go build notice" not in p13.stderr,
+          "rc=%s stdout_tail=%r stderr=%r" % (p13.returncode, p13.stdout[-120:],
+                                              p13.stderr[:120]))
 
     p1 = run_probe_case(stream(["TestP0A_ScanRegenerated", "TestP0A_SixCellMatrix",
                                 "TestXS2_MachineInternalFormImmune",
@@ -159,10 +178,11 @@ def main():
     check(results, "S5 build-failure shape: nonzero rc passes through, no mask",
           p5.returncode == 1, "rc=%s" % p5.returncode)
 
-    six = [n for n in FAMILY if n != "TestNGAReview_OriginalLowBandRule"]
+    absent = FAMILY[0]
+    six = FAMILY[1:]
     p6 = run_probe_case(stream(six), 0)
     check(results, "S6 one injected probe missing from run -> red with name",
-          p6.returncode == 3 and "TestNGAReview_OriginalLowBandRule" in p6.stderr,
+          p6.returncode == 3 and absent in p6.stderr,
           "rc=%s stderr=%r" % (p6.returncode, p6.stderr[:200]))
 
     p7 = run_probe_case("=== RUN   TestP0A_SixCellMatrix/cell1\n"
@@ -172,10 +192,12 @@ def main():
           p7.returncode == 3 and "zero tests matched" in p7.stderr,
           "rc=%s stderr=%r" % (p7.returncode, p7.stderr[:200]))
 
-    defs = set(re.findall(r"^func (TestNGAReview_\w+)\(",
-                          PROBE_FILE.read_text(encoding="utf-8"), re.MULTILINE))
-    check(results, "S8 probe file equals README evidence-table family",
-          defs == set(FAMILY), "diff=%r" % (defs ^ set(FAMILY)))
+    readme_defs = probe_family_from_readme()
+    check(results, "S8 probe file equals README evidence-table family (README parsed "
+                   "at runtime; transcription list abolished)",
+          file_defs == readme_defs and len(file_defs) >= 1,
+          "diff=%r readme_n=%d file_n=%d" % (file_defs ^ readme_defs,
+                                             len(readme_defs), len(file_defs)))
 
     argv = p3.dump["argv.txt"].splitlines()
     overlay_key = list(json.loads(p3.dump["overlay.json"])["Replace"])
@@ -210,13 +232,14 @@ def main():
           p11b.returncode == 3 and "never ran" in p11b.stderr,
           "rc=%s stderr=%r" % (p11b.returncode, p11b.stderr[:200]))
 
-    one_only = stream(["TestNGAReview_OriginalLowBandRule"] + extra)
+    one_only = stream([FAMILY[0]] + extra)
     p12 = run_probe_case(one_only, 0)
-    check(results, "S12 six-of-seven probes absent while one runs -> red listing them "
+    missing_names = FAMILY[1:]
+    check(results, "S12 all-but-one probes absent while one runs -> red listing them "
                    "(pins PROBE_DEF parse breadth)",
           p12.returncode == 3
-          and "TestNGAReview_SupersededDecisionMustNotDispatch" in p12.stderr
-          and p12.stderr.count("TestNGAReview_") >= 6,
+          and all(n in p12.stderr for n in missing_names)
+          and p12.stderr.count("TestNGAReview_") >= len(missing_names),
           "rc=%s stderr=%r" % (p12.returncode, p12.stderr[:220]))
 
     failed = [n for n, ok, _ in results if not ok]
